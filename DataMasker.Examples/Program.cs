@@ -35,6 +35,7 @@ namespace DataMasker.Examples
         private static List<KeyValuePair<string, Dictionary<string, string>>> copyJsTable = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static List<KeyValuePair<string, Dictionary<string, string>>> _allNull = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static readonly Dictionary<ProgressType, ProgressbarUpdate> _progressBars = new Dictionary<ProgressType, ProgressbarUpdate>();
+        private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
 
         private static Options cliOptions;
         public static string jsonpath { get; private set; }
@@ -54,6 +55,8 @@ namespace DataMasker.Examples
             List<string> _comment = new List<string> { "Description", "DESCRIPTION","TEXT","MEMO", "describing", "Descr", "COMMENT", "comment", "Comment", "REMARK", "remark","DESC" };
             List<string> _fullName = new List<string> { "full name", "AGENT_NAME", "OFFICER_NAME","FULL_NAME","CONTACT_NAME","MANAGER_NAME" };
             List<Table> tableList = new List<Table>();
+            
+            
             DataGeneration dataGeneration = new DataGeneration
             {
                 locale = "en"
@@ -664,6 +667,7 @@ namespace DataMasker.Examples
             
             foreach (TableConfig tableConfig in config.Tables)
             {
+                File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
                 IEnumerable<IDictionary<string, object>> rows = dataSource.GetData(tableConfig);
                 //UpdateProgress(ProgressType.Masking, 0, rows.Count(), "Masking Progress");
                // UpdateProgress(ProgressType.Updating, 0, rows.Count(), "Update Progress");
@@ -681,7 +685,17 @@ namespace DataMasker.Examples
 
                 //update all rows
                 Console.WriteLine("writing table " + tableConfig.Name + " on database "  + _nameDatabase + "" +  " .....");
-                dataSource.UpdateRows(rows, tableConfig);
+                try
+                {
+                    dataSource.UpdateRows(rows, tableConfig);
+                }
+                catch (Exception ex)
+                {
+                    //string path = Directory.GetCurrentDirectory() + $@"\Output\MaskedExceptions.txt";
+                    File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
+                    Console.WriteLine(ex.Message);
+                }
+               
                // UpdateProgress(ProgressType.Overall, i + 1);
                // i++;
 
