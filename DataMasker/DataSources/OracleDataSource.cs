@@ -161,8 +161,7 @@ namespace DataMasker.DataSources
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
-                var values = result.Select(n => n.Values).SelectMany(x => x).ToArray();
-
+                var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
                 return values[rnd.Next(values.Count())];
 
             }

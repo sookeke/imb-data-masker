@@ -140,7 +140,9 @@
     <Content Include="output\failedColumn.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="output\MaskExceptions.txt" />
+    <Content Include="output\MaskExceptions.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="output\NullPrimaryKey.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
