@@ -105,5 +105,10 @@ namespace DataMasker.DataSources
         {
             throw new NotImplementedException();
         }
+
+        public object GetData(string column, string table)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

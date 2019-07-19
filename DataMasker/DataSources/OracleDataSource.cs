@@ -168,7 +168,11 @@ namespace DataMasker.DataSources
 
             //return list;
         }
+      
 
-        
+        public object GetData(string column, string table)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

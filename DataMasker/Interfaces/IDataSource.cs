@@ -41,5 +41,6 @@ namespace DataMasker.Interfaces
             IEnumerable<IDictionary<string, object>> rows,
             TableConfig config,
             Action<int> updatedCallback = null);
+        object GetData(string column, string table);
     }
 }

@@ -73,8 +73,12 @@ namespace DataMasker
                 }
                 if (columnConfig.Type.ToString() == "Shuffle")
                 {
-                    existingValue = _dataGenerator.GetValueShuffle(columnConfig,tableConfig.Name,columnConfig.Name, dataSource,existingValue,gender);
+                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, gender);
                 }
+                //else if (columnConfig.Type.ToString() == "Blob" && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
+                //{
+                //   // existingValue = _dataGenerator.GetBlobValue(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
+                //}
                 else
                 {
                   existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
@@ -108,6 +112,38 @@ namespace DataMasker
             obj[columnConfig.Name] = colValue.ToString();
           }
           return obj;
+        }
+        public IDictionary<string, object> MaskBLOB(IDictionary<string, object> obj,
+            TableConfig tableConfig, IDataSource dataSource, string fileExtension)
+        {
+            foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
+            {
+                object existingValue = obj[columnConfig.Name];
+
+                Name.Gender? gender = null;
+                if (!string.IsNullOrEmpty(columnConfig.UseGenderColumn))
+                {
+                    object g = obj[columnConfig.UseGenderColumn];
+                    gender = Utils.Utils.TryParseGender(g?.ToString());
+                }
+
+                if (columnConfig.Unique)
+                {
+                    existingValue = GetUniqueValue(tableConfig.Name, columnConfig, existingValue, gender);
+                }
+                else if (columnConfig.Type.ToString() == "Filename" && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
+                {
+                    //   // existingValue = _dataGenerator.GetBlobValue(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
+                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, fileExtension, gender);
+                }
+                else
+                {
+                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, fileExtension, gender);
+                }
+                //replace the original value
+                obj[columnConfig.Name] = existingValue;
+            }
+            return obj;
         }
 
         private object GetUniqueValue(string tableName,

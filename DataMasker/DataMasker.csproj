@@ -109,6 +109,8 @@
     <Compile Include="DataSourceProvider.cs" />
     <Compile Include="DataSources\InMemoryFakeDataSource.cs" />
     <Compile Include="DataSources\OracleDataSource.cs" />
+    <Compile Include="FileType.cs" />
+    <Compile Include="Interfaces\IFileType.cs" />
     <Compile Include="Models\DataGenerationConfig.cs" />
     <Compile Include="Models\DataSourceConfig.cs" />
     <Compile Include="Models\DataSourceType.cs" />

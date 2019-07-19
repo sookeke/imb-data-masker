@@ -14,5 +14,6 @@ namespace DataMasker.Interfaces
             ColumnConfig columnConfig, string table, string column, IDataSource dataSources,
             object existingValue,
             Name.Gender? gender);
+        object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue, string FileExtension, Name.Gender? gender);
     }
 }

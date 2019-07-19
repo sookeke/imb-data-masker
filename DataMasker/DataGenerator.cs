@@ -1,4 +1,4 @@
-﻿using System;
+﻿ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -232,7 +232,9 @@ namespace DataMasker
                 case DataType.File:
                     return _faker.System.FileName(columnConfig.StringFormatPattern);
                 case DataType.Blob:
+                   
                     var fileUrl = _faker.Image.LoremPixelUrl();
+                    //_faker.System.
                     //FileStream stream = new FileStream(fileUrl, FileMode.Open, FileAccess.Read);
                     ///BinaryReader reader = new BinaryReader(stream);
                     string someUrl = fileUrl;
@@ -411,6 +413,56 @@ namespace DataMasker
                     return shuffle;
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
+        }
+
+        public object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue, string fileExtension, Name.Gender? gender = null )
+        {
+            switch (columnConfig.Type)
+            {
+                case DataType.Blob:
+                    IFileType fileType =  new FileType();
+                    fileType.GenerateDOCX("", "");
+                    switch (fileExtension.ToUpper())
+                    {
+                        case "PDF":
+                            return fileType.GeneratePDF(@"\", "");
+                        case "TXT":
+                            return fileType.GenerateTXT(@"\", "");
+                        case "DOCX":
+                            return fileType.GenerateDOCX(@"\", "");
+                        case "RTF":
+                            return fileType.GenerateRTF(@"\", "");
+                        case "JPG":
+                            var fileUrl = _faker.Image.LoremPixelUrl();
+                            //_faker.System.
+                            //FileStream stream = new FileStream(fileUrl, FileMode.Open, FileAccess.Read);
+                            ///BinaryReader reader = new BinaryReader(stream);
+                            string someUrl = fileUrl;
+                            using (var WebClient = new WebClient())
+                            {
+
+                                byte[] imageBytes = WebClient.DownloadData(someUrl);
+                                return imageBytes;
+                            }
+                        case "MSG":
+                            return fileType.GenerateMSG(@"\", "");
+                        case "HTM":
+                            return fileType.GenerateHTML(@"\", "");
+                        case "TIF":
+                            return fileType.GenerateTIF(@"\", "");
+                        default:
+                            {
+                                //return fileType.GenerateRandom(@"\");
+                                break;
+                            }
+                    }
+
+                    return fileType.GenerateRandom(@"\");
+                case DataType.Filename:
+
+                    return _faker.System.FileName(fileExtension);
+            }
+                throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
 
         private enum MinMax

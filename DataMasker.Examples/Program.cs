@@ -649,7 +649,7 @@ namespace DataMasker.Examples
         private static Config LoadConfig(
             int example)
         {
-           // return Config.Load(jsonpath);
+           //return Config.Load(jsonpath);
             return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\json1.json");
         }
 
@@ -671,6 +671,9 @@ namespace DataMasker.Examples
             
             foreach (TableConfig tableConfig in config.Tables)
             {
+                //checked if table contains blob column datatype and get column that is blob
+                var isblob = tableConfig.Columns.Where(x => !x.Ignore && x.Type == DataType.Blob);
+                object extension = null;
                 File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
                 IEnumerable<IDictionary<string, object>> rows = dataSource.GetData(tableConfig);
                 //UpdateProgress(ProgressType.Masking, 0, rows.Count(), "Masking Progress");
@@ -678,8 +681,25 @@ namespace DataMasker.Examples
                 //int rowIndex = 0;
                 foreach (IDictionary<string, object> row in rows)
                 {
-                   // var ob = row["NAME"];
-                    dataMasker.Mask(row, tableConfig,dataSource);
+                    //for blob
+                    var selct = string.Join("", isblob.Select(n => n.StringFormatPattern));
+
+                   // var ro = row.Select(n => n.Key).ToArray().Where(x=>x.Equals("NAME"));
+                    //var ressss = Array.FindAll(ro, x => x.Equals(selct));
+
+
+                    if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0 && row[string.Join("", isblob.Select(n => n.StringFormatPattern))].ToString().Contains("."))
+                    {
+                        extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
+                        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                    }
+                    else
+                    {
+                        dataMasker.Mask(row, tableConfig, dataSource);
+                    }
+                    Console.WriteLine(extension);
+                   
+                   
                     //rowIndex++;
 
                     //update per row, or see below,
