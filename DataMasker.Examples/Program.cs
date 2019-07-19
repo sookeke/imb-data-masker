@@ -682,7 +682,7 @@ namespace DataMasker.Examples
                 foreach (IDictionary<string, object> row in rows)
                 {
                     //for blob
-                    var selct = string.Join("", isblob.Select(n => n.StringFormatPattern));
+                    //var selct = string.Join("", isblob.Select(n => n.StringFormatPattern));
 
                    // var ro = row.Select(n => n.Key).ToArray().Where(x=>x.Equals("NAME"));
                     //var ressss = Array.FindAll(ro, x => x.Equals(selct));
@@ -691,7 +691,7 @@ namespace DataMasker.Examples
                     if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0 && row[string.Join("", isblob.Select(n => n.StringFormatPattern))].ToString().Contains("."))
                     {
                         extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
-                        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
                     }
                     else
                     {

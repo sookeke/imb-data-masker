@@ -20,6 +20,6 @@ namespace DataMasker.Interfaces
             TableConfig tableConfig, IDataSource dataSource);
         IDictionary<string, object> MaskBLOB(
             IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource,string fileExtension);
+            TableConfig tableConfig, IDataSource dataSource,string filename,string fileExtension);
     }
 }

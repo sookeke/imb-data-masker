@@ -114,7 +114,7 @@ namespace DataMasker
           return obj;
         }
         public IDictionary<string, object> MaskBLOB(IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource, string fileExtension)
+            TableConfig tableConfig, IDataSource dataSource,string filename, string fileExtension)
         {
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
@@ -134,11 +134,16 @@ namespace DataMasker
                 else if (columnConfig.Type.ToString() == "Filename" && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
                 {
                     //   // existingValue = _dataGenerator.GetBlobValue(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
-                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, fileExtension, gender);
+                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue,filename, fileExtension, gender);
+                }
+                else if (columnConfig.Type.ToString() == "Blob")
+                {
+                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, gender);
                 }
                 else
                 {
-                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, fileExtension, gender);
+                    //existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, gender);
+                    existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
                 }
                 //replace the original value
                 obj[columnConfig.Name] = existingValue;
