@@ -232,6 +232,9 @@ namespace DataMasker
                     return _faker.Address.FullAddress();
                 case DataType.File:
                     return _faker.System.FileName(columnConfig.StringFormatPattern);
+                case DataType.Filename:
+                    var file = _faker.System.FileName("");
+                    return file.Remove(file.Length - 1);
                 case DataType.Blob:
                    
                     var fileUrl = _faker.Image.LoremPixelUrl();
@@ -458,9 +461,49 @@ namespace DataMasker
                             return byteArray;
                           
                         case "DOCX":
-                            return fileType.GenerateDOCX(@"\", "");
+                            fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            byteArray = null;
+
+                            using (FileStream fs = new FileStream
+                                (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+
+                                byteArray = new byte[fs.Length];
+
+                                int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                            }
+                            File.Delete(fileName);
+                            return byteArray;
+                        // return fileType.GenerateDOCX(@"\", "");
+                        case "DOC":
+                            fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            byteArray = null;
+
+                            using (FileStream fs = new FileStream
+                                (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+
+                                byteArray = new byte[fs.Length];
+
+                                int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                            }
+                            File.Delete(fileName);
+                            return byteArray;
                         case "RTF":
-                            return fileType.GenerateRTF(@"\", "");
+                            fileName = fileType.GenerateRTF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            byteArray = null;
+
+                            using (FileStream fs = new FileStream
+                                (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+
+                                byteArray = new byte[fs.Length];
+
+                                int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                            }
+                            File.Delete(fileName);
+                            return byteArray;
+                            //return fileType.GenerateRTF(@"\", "");
                         case "JPG":
                             var fileUrl = _faker.Image.LoremPixelUrl();
                             string someUrl = fileUrl;
@@ -487,9 +530,62 @@ namespace DataMasker
                             return byteArray;
                             //return fileType.GenerateMSG(@"\", "");
                         case "HTM":
-                            return fileType.GenerateHTML(@"\", "");
+                            fileName = fileType.GenerateHTML(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            byteArray = null;
+
+                            using (FileStream fs = new FileStream
+                                (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+
+                                byteArray = new byte[fs.Length];
+
+                                int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                            }
+                            File.Delete(fileName);
+                            return byteArray;
+                           // return fileType.GenerateHTML(@"\", "");
                         case "TIF":
-                            return fileType.GenerateTIF(@"\", "");
+                            fileName = fileType.GenerateTIF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            byteArray = null;
+
+                            using (FileStream fs = new FileStream
+                                (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+
+                                byteArray = new byte[fs.Length];
+
+                                int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                            }
+                            File.Delete(fileName);
+                            return byteArray;
+                        case "HTML":
+                            fileName = fileType.GenerateHTML(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            byteArray = null;
+
+                            using (FileStream fs = new FileStream
+                                (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+
+                                byteArray = new byte[fs.Length];
+
+                                int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                            }
+                            File.Delete(fileName);
+                            return byteArray;
+                        case "TIFF":
+                            fileName = fileType.GenerateTIF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            byteArray = null;
+
+                            using (FileStream fs = new FileStream
+                                (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+
+                                byteArray = new byte[fs.Length];
+
+                                int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                            }
+                            File.Delete(fileName);
+                            return byteArray;
                         case "XLSX":
                             
                             fileName = fileType.GenerateXLSX(Environment.CurrentDirectory + @"\output\" + fileName, string.Join(" ", _faker.Rant.Reviews(" ", 10).ToArray())).ToString();
@@ -507,14 +603,29 @@ namespace DataMasker
                             return byteArray;
                         default:
                             {
+                                fileName = fileType.GenerateRandom(Environment.CurrentDirectory + @"\output\" + fileName).ToString();
+                                byteArray = null;
+
+                                using (FileStream fs = new FileStream
+                                    (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+
+                                    byteArray = new byte[fs.Length];
+
+                                    int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                                }
+                                File.Delete(fileName);
+                                return byteArray;
                                 //return fileType.GenerateRandom(@"\");
-                                break;
+                                //break;
                             }
                     }
+                    
 
-                    return fileType.GenerateRandom(@"\");
+                    //return fileType.GenerateRandom(@"\");
                 case DataType.Filename:
-                    var filename3 = _faker.System.FileName(fileExtension);
+                    //var filename3 = _faker.System.FileName(fileExtension);
+                   
 
                     return _faker.System.FileName(fileExtension);
             }

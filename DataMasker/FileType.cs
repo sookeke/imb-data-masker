@@ -13,20 +13,110 @@ using System.Text;
 using System.Threading.Tasks;
 using MessageImportance = MsgKit.Enums.MessageImportance;
 using GemBox.Spreadsheet;
+using SautinSoft.Document;
+using PaperType = SautinSoft.Document.PaperType;
+using PdfSaveOptions = SautinSoft.Document.PdfSaveOptions;
+using Color1 = System.Drawing.Color;
+using System.Windows.Media.Imaging;
+using System.Drawing;
+using Color = SautinSoft.Document.Color;
 
 namespace DataMasker
 {
     public class FileType : IFileType
     {
         Faker faker = new Faker();
-        public object GenerateDOCX(string path, string table)
+        public object GenerateDOCX(string docPath, string text)
         {
-            throw new NotImplementedException();
+            // Let's create a simple document.
+            DocumentCore dc = new DocumentCore();
+
+            // Add new section.
+            Section section = new Section(dc);
+            dc.Sections.Add(section);
+
+            // Let's set page size A4.
+            section.PageSetup.PaperType = PaperType.A4;
+
+            // Add two paragraphs using different ways:
+            // Way 1: Add 1st paragraph.
+            Paragraph par1 = new Paragraph(dc);
+            par1.ParagraphFormat.Alignment = HorizontalAlignment.Center;
+            section.Blocks.Add(par1);
+
+            // Let's create a characterformat for text in the 1st paragraph.
+            CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
+
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure");
+            text1.CharacterFormat = cf;
+            par1.Inlines.Add(text1);
+
+            // Let's add a line break into our paragraph.
+            par1.Inlines.Add(new SpecialCharacter(dc, SpecialCharacterType.LineBreak));
+
+            Run text2 = text1.Clone();
+            text2.Text = "Property Information Management System.";
+            par1.Inlines.Add(text2);
+
+            // Way 2 (easy): Add 2nd paragraph using ContentRange.
+            dc.Content.End.Insert(string.Join("", faker.Rant.Reviews(text2.Text,5).ToArray()), new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
+            SpecialCharacter lBr = new SpecialCharacter(dc, SpecialCharacterType.LineBreak);
+            dc.Content.End.Insert(lBr.Content);
+            dc.Content.End.Insert("Signed: Business SMEs.", new CharacterFormat() { Size = 20, FontColor = Color.DarkGreen, UnderlineStyle = UnderlineType.Single });
+
+            // Save a document to a file into DOCX format.
+            dc.Save(docPath, new DocxSaveOptions());
+            if (File.Exists(docPath))
+            {
+                return docPath;
+            }
+            return null;
         }
 
-        public object GenerateHTML(string path, string table)
+        public object GenerateHTML(string htmlFixedPath, string text)
         {
-            throw new NotImplementedException();
+            DocumentCore dc = new DocumentCore();
+
+            // Add new section.
+            Section section = new Section(dc);
+            dc.Sections.Add(section);
+            text = string.Join("", faker.Rant.Reviews("product", 5).ToArray());
+
+            // Add two paragraphs using different ways:
+            // Way 1: Add 1st paragraph.
+            Paragraph par1 = new Paragraph(dc);
+            par1.ParagraphFormat.Alignment = HorizontalAlignment.Center;
+            section.Blocks.Add(par1);
+
+            // Let's create a characterformat for text in the 1st paragraph.
+            CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
+
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure");
+            text1.CharacterFormat = cf;
+            par1.Inlines.Add(text1);
+
+            // Let's add a line break into our paragraph.
+            par1.Inlines.Add(new SpecialCharacter(dc, SpecialCharacterType.LineBreak));
+
+            Run text2 = text1.Clone();
+            text2.Text = "Property Information Management System";
+            par1.Inlines.Add(text2);
+
+            // Way 2 (easy): Add 2nd paragraph using ContentRange.
+            dc.Content.End.Insert(text, new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
+            SpecialCharacter lBr = new SpecialCharacter(dc, SpecialCharacterType.LineBreak);
+            dc.Content.End.Insert(lBr.Content);
+            dc.Content.End.Insert("Signed: Business SMEs", new CharacterFormat() { Size = 20, FontColor = Color.DarkGreen, UnderlineStyle = UnderlineType.Single });
+
+            // Save HTML document as HTML-fixed format.
+            dc.Save(htmlFixedPath, new HtmlFixedSaveOptions());
+            if (File.Exists(htmlFixedPath))
+            {
+                return htmlFixedPath;
+
+            }
+            return null;
+
         }
 
         public object GenerateJPEG(string path, string table)
@@ -61,39 +151,121 @@ namespace DataMasker
             }
         }
 
-        public object GeneratePDF(string path, string table)
+        public object GeneratePDF(string pdfPath, string table)
         {
-            PdfDocument pdf = new PdfDocument();
-            PdfPage pdfPage = pdf.AddPage();
-            
+            //PdfDocument pdf = new PdfDocument();
+            //PdfPage pdfPage = pdf.AddPage();
 
-            XGraphics graph = XGraphics.FromPdfPage(pdfPage);
 
-            XFont font = new XFont("Verdana", 12, XFontStyle.Regular);
-            graph.DrawString("Property Information Management System: " + Environment.NewLine  + faker.Rant.Review(), font, XBrushes.Black,
-            new XRect(0, 0, pdfPage.Width.Point, pdfPage.Height.Point), XStringFormats.TopLeft
-            );
+            //XGraphics graph = XGraphics.FromPdfPage(pdfPage);
+
+            //XFont font = new XFont("Verdana", 12, XFontStyle.Regular);
+            //graph.DrawString("Property Information Management System: " + Environment.NewLine  + faker.Rant.Review(), font, XBrushes.Black,
+            //new XRect(0, 0, pdfPage.Width.Point, pdfPage.Height.Point), XStringFormats.TopLeft
+            //);
             //graph.DrawString(faker.Rant.Review(), font, XBrushes.Black,
             //new XRect(0, 0, pdfPage.Width.Point, pdfPage.Height.Point), XStringFormats.TopLeft);
-           // graph.DrawString()
+            // graph.DrawString()
+
+            DocumentCore dc = new DocumentCore();
+
+            // Add new section.
+            Section section = new Section(dc);
+            dc.Sections.Add(section);
+
+            // Let's set page size A4.
+            section.PageSetup.PaperType = PaperType.A4;
+
+            // Add two paragraphs using different ways:
+
+            // Way 1: Add 1st paragraph.
+            Paragraph par1 = new Paragraph(dc);
+            par1.ParagraphFormat.Alignment = HorizontalAlignment.Center;
+            section.Blocks.Add(par1);
+
+            // Let's create a characterformat for text in the 1st paragraph.
+            CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
+
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastruction!");
+            text1.CharacterFormat = cf;
+            par1.Inlines.Add(text1);
+
+            // Let's add a line break into our paragraph.
+            par1.Inlines.Add(new SpecialCharacter(dc, SpecialCharacterType.LineBreak));
+
+            Run text2 = text1.Clone();
+            text2.Text = "Property Information Management System.";// + Environment.NewLine;
+            par1.Inlines.Add(text2);
+            //par1.Inlines.Add(Environment.NewLine)
+
+            // Way 2 (easy): Add 2nd paragraph using ContentRange.
+            dc.Content.End.Insert(string.Join(Environment.NewLine, faker.Rant.Reviews("", 6).ToArray()), new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
+            SpecialCharacter lBr = new SpecialCharacter(dc, SpecialCharacterType.LineBreak);
+            dc.Content.End.Insert(lBr.Content);
+            dc.Content.End.Insert("Signed: Business SMEs.", new CharacterFormat() { Size = 20, FontColor = Color.DarkGreen, UnderlineStyle = UnderlineType.Single });
+
+            // Save PDF to a file
+            dc.Save(Environment.CurrentDirectory + pdfPath, new PdfSaveOptions());
 
 
-            pdf.Save(Environment.CurrentDirectory+path);
-            if (File.Exists(Environment.CurrentDirectory+path))
+            //pdf.Save(Environment.CurrentDirectory+path);
+            if (File.Exists(Environment.CurrentDirectory+ pdfPath))
             {
-                return Environment.CurrentDirectory+path;
+                return Environment.CurrentDirectory+ pdfPath;
             }
             return null ;
         }
 
         public object GenerateTIF(string path, string table)
         {
-            throw new NotImplementedException();
+            return MakeRandomImage(path);
         }
 
-        public object GenerateRTF(string path, string table)
+        public object GenerateRTF(string rtfPath, string text)
         {
-            throw new NotImplementedException();
+            // Let's create a simple Rtf document.
+            DocumentCore dc = new DocumentCore();
+
+            // Add new section.
+            Section section = new Section(dc);
+            dc.Sections.Add(section);
+
+            // Let's set page size A4.
+            section.PageSetup.PaperType = PaperType.A4;
+
+            // Add two paragraphs using different ways:
+            // Way 1: Add 1st paragraph.
+            Paragraph par1 = new Paragraph(dc);
+            par1.ParagraphFormat.Alignment = HorizontalAlignment.Center;
+            section.Blocks.Add(par1);
+
+            // Let's create a characterformat for text in the 1st paragraph.
+            CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
+
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure");
+            text1.CharacterFormat = cf;
+            par1.Inlines.Add(text1);
+
+            // Let's add a line break into our paragraph.
+            par1.Inlines.Add(new SpecialCharacter(dc, SpecialCharacterType.LineBreak));
+
+            Run text2 = text1.Clone();
+            text2.Text = "Property Information Management System";
+            par1.Inlines.Add(text2);
+
+            // Way 2 (easy): Add 2nd paragraph using ContentRange.
+            dc.Content.End.Insert(string.Join("",faker.Rant.Reviews(text2.Text,5).ToArray()), new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
+            SpecialCharacter lBr = new SpecialCharacter(dc, SpecialCharacterType.LineBreak);
+            dc.Content.End.Insert(lBr.Content);
+            dc.Content.End.Insert("Signed: Business SMEs", new CharacterFormat() { Size = 20, FontColor = Color.DarkGreen, UnderlineStyle = UnderlineType.Single });
+
+            // Save Rtf to a file
+            dc.Save(rtfPath, new RtfSaveOptions());
+            if (File.Exists(rtfPath))
+            {
+                return rtfPath;
+            }
+            return null;
         }
 
         public object GenerateTXT(string path, string table)
@@ -124,7 +296,66 @@ namespace DataMasker
         }
         public object GenerateRandom(string path)
         {
-            throw new NotImplementedException();
+            PdfDocument pdf = new PdfDocument();
+            PdfPage pdfPage = pdf.AddPage();
+
+
+            XGraphics graph = XGraphics.FromPdfPage(pdfPage);
+
+            XFont font = new XFont("Verdana", 12, XFontStyle.Regular);
+            graph.DrawString("Property Information Management System: " + Environment.NewLine + faker.Rant.Review(), font, XBrushes.Black,
+            new XRect(0, 0, pdfPage.Width.Point, pdfPage.Height.Point), XStringFormats.TopLeft
+            );
+            pdf.Save(path);
+            if (File.Exists(path))
+            {
+                return  path;
+            }
+            return null;
+        }
+
+
+        private static Random rnd = new Random();
+        private static string MakeRandomImage(string imagePath)
+        {
+            System.Drawing.Image img = new System.Drawing.Bitmap(400, 400, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+
+            using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(img))
+            {
+                g.Clear(Color1.White);
+                for (int i = 0; i < 42; i++)
+                {
+                    Pen p = GetRandomPen();
+                    Point start = GetRandomPoint();
+                    Point end = GetRandomPoint();
+                    g.DrawLine(p, start, end);
+                    g.Save();
+                }
+            }
+            var imgStream = new MemoryStream();
+            img.Save(imgStream, System.Drawing.Imaging.ImageFormat.Png);
+            img.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png);
+            imgStream.Position = 0;
+            if (File.Exists(imagePath))
+            {
+                return imagePath;
+            }
+            return string.Empty;
+        }
+        /// Generates a random Pen
+        private static System.Drawing.Pen GetRandomPen()
+        {
+            Int32 LineWidth = rnd.Next(3, 25);
+            Color1 rndColor = Color1.FromArgb(rnd.Next(256), rnd.Next(256), rnd.Next(256));
+            return new Pen(rndColor, LineWidth);
+        }
+
+        /// Gets a random point
+        private static Point GetRandomPoint()
+        {
+            int start = rnd.Next(0, 390);
+            int end = rnd.Next(0, 390);
+            return new Point(start, end);
         }
     }
 }
