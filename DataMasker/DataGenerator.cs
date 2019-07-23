@@ -10,6 +10,11 @@ using GeoAPI.Geometries;
 using NetTopologySuite.Geometries;
 using DataMasker.DataSources;
 using System.Linq;
+using NetTopologySuite.IO;
+using Microsoft.SqlServer.Types;
+using System.Data.SqlTypes;
+using System.Data.Entity.Spatial;
+using Dapper;
 
 namespace DataMasker
 {
@@ -30,6 +35,8 @@ namespace DataMasker
         private const int DEFAULT_LOREM_MAX = 30;
 
         private const int DEFAULT_RANT_MAX = 25;
+        
+       
 
         /// <summary>
         /// The data generation configuration
@@ -201,6 +208,7 @@ namespace DataMasker
             ColumnConfig columnConfig,
             Name.Gender? gender = null)
         {
+            //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
             switch (columnConfig.Type)
             {
                 case DataType.FirstName:
@@ -270,22 +278,48 @@ namespace DataMasker
                 case DataType.Geometry:
                     //generate 20 SIZE LINESTRING random polygon coordinate with same precision model using GEOAPI and NETOPOLOGY SUITE
                     Random random = new Random();
-                    var SDO_GTYPElist = new List<string> { "2003", "2006" };
+                    SdoGeometry sdoGeometry = new SdoGeometry();
+                    
+                    var SDO_GTYPElist = new List<string> { "2003", "2006", "2002" };
                     int index = random.Next(SDO_GTYPElist.Count);
                     string SDO_GTYPE = SDO_GTYPElist[index];
                     var gf = new GeometryFactory(new PrecisionModel(), 3857);
                     //Identify the centre of the polygon
                     Coordinate center = new Coordinate((random.NextDouble() * 360) - 180, (random.NextDouble() * 180) - 90);
+                    //decimal center1 = new decimal((random.NextDouble() * 360) - 180, (random.NextDouble() * 180) - 90);
                     Coordinate[] coords = new Coordinate[20];
+                    decimal[] cood = new decimal[20];
                     for (int i = 0; i < 20; i++)
                     {
                         coords[i] = new Coordinate(center.X + random.NextDouble(-4291402.04717672, 16144349.4032217), center.Y + random.NextDouble(-4291402.04717672, 16144349.4032217));
+                        cood[i] = new decimal(random.NextDouble(-4291402.04717672, 16144349.4032217));
                     }
                     //creates a new polygon from the coordinate array
                     coords[19] = new Coordinate(coords[0].X, coords[0].Y);
-                    var pCoordinate = gf.CreateLineString(coords).ToString().Replace(",", string.Empty).Replace(" ", ",").Split(new string[] { "LINESTRING," }, StringSplitOptions.None)[1];
+
+                    var obj = new HazSqlGeo
+                    {
+                        
+                        Geo = new SdoGeometry()
+                        {
+                            ElemArray = new decimal[3] { 1, 2, 1 },
+                            OrdinatesArray = cood,
+                            Sdo_Gtype =Convert.ToInt32(_faker.PickRandom(SDO_GTYPElist)),
+                            Sdo_Srid = 3005
+                        }
+                    };
+
+                    var pCoordinate = gf.CreateMultiPointFromCoords(coords);
+                    //Geo = new SdoGeometry();
+                   
+                    //.ToString().Replace(",", string.Empty).Replace(" ", ",").Split(new string[] { "LINESTRING," }, StringSplitOptions.None)[1];
                     var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + SDO_GTYPE + "," + 5255 + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(1,2,1),MDSYS.SDO_ORDINATE_ARRAY" + pCoordinate + ")";
-                    return sdo_geometry_command_text;
+                    var values = "ST_GeomFromText(" + pCoordinate +")";
+                    //GeographyMapper geographyMapper = new GeographyMapper();
+                    SqlMapper.AddTypeHandler(new GeographyMapper());
+                    //geographyMapper.SetValue("@GEO", obj.Geo);
+
+                    return obj.Geo;
 
                 case DataType.RandomInt:
                     var min = columnConfig.Min;
@@ -293,7 +327,7 @@ namespace DataMasker
                     return _faker.Random.Int(Convert.ToInt32(min),Convert.ToInt32(max));
                 //return _faker.Random.Int(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));
                 case DataType.CompanyPersonName:
-                    var _compName = _faker.Company.CompanyName();
+                    var _compName = new Faker().Company.CompanyName();
                     var _personName = _faker.Person.FullName;
                     string[] _array = new string[] { _compName,_personName};
 
@@ -302,8 +336,8 @@ namespace DataMasker
                     var xx = _xeger.Generate().ToUpper();
                     return _xeger.Generate().ToUpper().Replace(" ",string.Empty);
                 case DataType.Company:
-
-                    var _genCompany = _faker.Company.CompanyName(columnConfig.StringFormatPattern); ;
+                    var company = new Faker();
+                    var _genCompany = company.Company.CompanyName(columnConfig.StringFormatPattern); ;
                     if (!string.IsNullOrEmpty(columnConfig.Max) && _genCompany.Length > Convert.ToInt32(columnConfig.Max))
                     {
                         var _shortComp = _genCompany.Substring(0, Convert.ToInt32(columnConfig.Max));
@@ -342,7 +376,8 @@ namespace DataMasker
                     }
                     return _gen;
                 case DataType.RandomUsername:
-                    return _faker.Person.UserName;
+                    var ussername = new Faker();
+                    return ussername.Person.UserName;
                 case DataType.Computed:
                   return null;
             }
@@ -380,7 +415,12 @@ namespace DataMasker
             throw new ArgumentOutOfRangeException(nameof(dataType), dataType, null);
         }
 
-         
+        class HazSqlGeo
+        {
+            //public int Id { get; set; }
+            public SdoGeometry Geo { get; set; }
+        }
+        
 
         private dynamic ParseMinMaxValue(
             ColumnConfig columnConfig,

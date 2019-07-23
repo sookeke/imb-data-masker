@@ -649,14 +649,14 @@ namespace DataMasker.Examples
         private static Config LoadConfig(
             int example)
         {
-           return Config.Load(jsonpath);
-            //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\json1.json");
+           //return Config.Load(jsonpath);
+            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\json1.json");
         }
 
         public static void Example1()
         {
             copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
-            JsonConfig(copyjsonPath);
+            //JsonConfig(copyjsonPath);
             _nameDatabase = ConfigurationManager.AppSettings["DatabaseName"];
             if (string.IsNullOrEmpty(_nameDatabase))
             {

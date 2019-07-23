@@ -11,12 +11,15 @@ using DataMasker.Utils;
 using System.Data;
 using Z.Dapper.Plus;
 using System.Collections;
+using System.Data.Entity.Spatial;
 
 namespace DataMasker.DataSources
 {
     public class OracleDataSource : IDataSource
     {
         private readonly DataSourceConfig _sourceConfig;
+        //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
+
 
         private readonly string _connectionString;
 
@@ -56,6 +59,7 @@ namespace DataMasker.DataSources
 
         public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, TableConfig config, Action<int> updatedCallback = null)
         {
+            SqlMapper.AddTypeHandler(new GeographyMapper());
             int? batchSize = _sourceConfig.UpdateBatchSize;
             if (batchSize == null ||
                 batchSize <= 0)
@@ -88,6 +92,9 @@ namespace DataMasker.DataSources
                         
                         try
                         {
+                            
+                           // GeographyMapper geographyMapper = new GeographyMapper();
+                            //geographyMapper.SetValue("@GEO",)
                             connection.Execute(sql, batch.Items, sqlTransaction);
 
                             if (_sourceConfig.DryRun)
