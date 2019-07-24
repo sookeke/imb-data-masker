@@ -12,6 +12,8 @@ using System.Data;
 using Z.Dapper.Plus;
 using System.Collections;
 using System.Data.Entity.Spatial;
+using System.IO;
+using System.Configuration;
 
 namespace DataMasker.DataSources
 {
@@ -19,6 +21,8 @@ namespace DataMasker.DataSources
     {
         private readonly DataSourceConfig _sourceConfig;
         //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
+        private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\"+ ConfigurationManager.AppSettings["APP_NAME"] + "_exception.txt";
+        private static string _successfulCommit = Directory.GetCurrentDirectory() + $@"\Output\"+ ConfigurationManager.AppSettings["APP_NAME"] +"_successfulCommit.txt";
 
 
         private readonly string _connectionString;
@@ -74,6 +78,17 @@ namespace DataMasker.DataSources
                     enumerable) => enumerable.Count() < batchSize);
 
             int totalUpdated = 0;
+            if (!(File.Exists(_successfulCommit) && File.Exists(_exceptionpath)))
+            {
+                File.Create(_successfulCommit);
+                File.Create(_exceptionpath);
+            }
+            if (new FileInfo(_exceptionpath).Length == 0 || new FileInfo(_successfulCommit).Length == 0)
+            {
+                File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+            }
+           
             using (OracleConnection connection = new OracleConnection(_connectionString))
             {
                 connection.Open();
@@ -92,9 +107,6 @@ namespace DataMasker.DataSources
                         
                         try
                         {
-                            
-                           // GeographyMapper geographyMapper = new GeographyMapper();
-                            //geographyMapper.SetValue("@GEO",)
                             connection.Execute(sql, batch.Items, sqlTransaction);
 
                             if (_sourceConfig.DryRun)
@@ -104,6 +116,7 @@ namespace DataMasker.DataSources
                             else
                             {
                                 sqlTransaction.Commit();
+                                File.AppendAllText(_successfulCommit, "Successful Commit on table " + config.Name + Environment.NewLine + Environment.NewLine);
                             }
 
 
@@ -117,6 +130,8 @@ namespace DataMasker.DataSources
                         {
 
                             Console.WriteLine(ex.Message);
+                            File.AppendAllText(_exceptionpath, ex.Message + " on table " + config.Name + Environment.NewLine + Environment.NewLine);
+                            //Console.WriteLine(ex.Message);
                         }
 
                         

@@ -649,7 +649,7 @@ namespace DataMasker.Examples
         private static Config LoadConfig(
             int example)
         {
-           //return Config.Load(jsonpath);
+          // return Config.Load(jsonpath);
             return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\json1.json");
         }
 
@@ -716,7 +716,7 @@ namespace DataMasker.Examples
                 catch (Exception ex)
                 {
                     //string path = Directory.GetCurrentDirectory() + $@"\Output\MaskedExceptions.txt";
-                    File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
+                    //File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
                     Console.WriteLine(ex.Message);
                 }
                

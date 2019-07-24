@@ -15,6 +15,7 @@ using Microsoft.SqlServer.Types;
 using System.Data.SqlTypes;
 using System.Data.Entity.Spatial;
 using Dapper;
+using System.Configuration;
 
 namespace DataMasker
 {
@@ -299,13 +300,13 @@ namespace DataMasker
 
                     var obj = new HazSqlGeo
                     {
-                        
+
                         Geo = new SdoGeometry()
                         {
                             ElemArray = new decimal[3] { 1, 2, 1 },
                             OrdinatesArray = cood,
-                            Sdo_Gtype =Convert.ToInt32(_faker.PickRandom(SDO_GTYPElist)),
-                            Sdo_Srid = 3005
+                            Sdo_Gtype = Convert.ToInt32(_faker.PickRandom(SDO_GTYPElist)),
+                            Sdo_Srid = Convert.ToDecimal(ConfigurationManager.AppSettings["SRID"])
                         }
                     };
 
@@ -324,6 +325,11 @@ namespace DataMasker
                 case DataType.RandomInt:
                     var min = columnConfig.Min;
                     var max = columnConfig.Max;
+                    if (min.Contains(".") || max.Contains("."))
+                    {
+                        //return decimal
+                        return _faker.Random.Decimal(Convert.ToDecimal(min), Convert.ToDecimal(max));
+                    }
                     return _faker.Random.Int(Convert.ToInt32(min),Convert.ToInt32(max));
                 //return _faker.Random.Int(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));
                 case DataType.CompanyPersonName:

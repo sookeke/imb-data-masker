@@ -875,7 +875,7 @@
     "Public": "N/A",
     "Personal": "N/A",
     "Sensitive": "N/A",
-    "Masking Rule": "No masking required",
+    "Masking Rule": "Replace Value with fake data",
     "Rule set by": "Abisoye",
     "Rule Reasoning": "References spatial coordinates",
     "COMPLETED": "",

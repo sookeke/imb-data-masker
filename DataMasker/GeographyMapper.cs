@@ -13,7 +13,7 @@ using NetTopologySuite.Geometries;
 
 namespace DataMasker
 {
-   public class GeographyMapper : Dapper.SqlMapper.TypeHandler<SdoGeometry>
+    public class GeographyMapper : Dapper.SqlMapper.TypeHandler<SdoGeometry>
     {
         public override void SetValue(IDbDataParameter parameter, SdoGeometry value)
         {
