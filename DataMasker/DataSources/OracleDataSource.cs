@@ -78,16 +78,42 @@ namespace DataMasker.DataSources
                     enumerable) => enumerable.Count() < batchSize);
 
             int totalUpdated = 0;
+          
             if (!(File.Exists(_successfulCommit) && File.Exists(_exceptionpath)))
             {
-                File.Create(_successfulCommit);
-                File.Create(_exceptionpath);
+                
+                    //write to the file
+                    File.Create(_successfulCommit).Close();
+               
+                    //write to the file
+                    File.Create(_exceptionpath).Close();
+               
+               
+               
             }
-            if (new FileInfo(_exceptionpath).Length == 0 || new FileInfo(_successfulCommit).Length == 0)
+            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_exceptionpath))
             {
-                File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
-                File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                if (new FileInfo(_exceptionpath).Length == 0)
+                {
+                    sw.WriteLine("exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                  //  File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                }
+               // sw.WriteLine(""); 
             }
+            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_successfulCommit))
+            {
+                //write my text 
+                if (new FileInfo(_successfulCommit).Length == 0)
+                {
+                   // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+
+                    sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                }
+            }
+            
+           
+            
+           
            
             using (OracleConnection connection = new OracleConnection(_connectionString))
             {
@@ -107,6 +133,8 @@ namespace DataMasker.DataSources
                         
                         try
                         {
+                            //File.AppendAllText(_successfulCommit, "Successful Commit on table " + config.Name + Environment.NewLine + Environment.NewLine);
+
                             connection.Execute(sql, batch.Items, sqlTransaction);
 
                             if (_sourceConfig.DryRun)

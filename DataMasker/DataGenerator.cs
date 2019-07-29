@@ -328,7 +328,7 @@ namespace DataMasker
                     if (min.Contains(".") || max.Contains("."))
                     {
                         //return decimal
-                        return _faker.Random.Decimal(Convert.ToDecimal(min), Convert.ToDecimal(max));
+                        return Math.Round(_faker.Random.Decimal(Convert.ToDecimal(min), Convert.ToDecimal(max)), 2);
                     }
                     return _faker.Random.Int(Convert.ToInt32(min),Convert.ToInt32(max));
                 //return _faker.Random.Int(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));

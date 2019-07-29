@@ -38,7 +38,7 @@ namespace DataMasker.Examples
         private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
 
         private static Options cliOptions;
-        private static string copyjsonPath;
+        private static string copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
 
         public static string jsonpath { get; private set; }
 
@@ -77,7 +77,7 @@ namespace DataMasker.Examples
             #endregion
 
             #region Create root json objects
-            var rootObj = JsonConvert.DeserializeObject<List<RootObject>>(File.ReadAllText(@"example-configs//copyJS.json"));
+            var rootObj = JsonConvert.DeserializeObject<List<RootObject>>(File.ReadAllText(json));
             var query = from root in rootObj
                             //where root.__invalid_name__Masking_Rule.Contains("No masking")
                         group root by root.TableName into newGroup
@@ -88,110 +88,125 @@ namespace DataMasker.Examples
             #region build and map column datatype with masked column datatype
             foreach (var nameGroup in query)
             {
-                Table table = new Table();
-                List<Column> colList = new List<Column>();
-                table.name = nameGroup.Key;
-                //table.primaryKeyColumn = nameGroup.Select
-                foreach (var col in nameGroup.Where(n=>!(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))))
+                
+                var cc = nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))).Count();
+
+                if (nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))).Count() > 0)
                 {
+                    Table table = new Table();
+                    List<Column> colList = new List<Column>();
+                    table.name = nameGroup.Key;
 
-                    table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
+                    //table.primaryKeyColumn = nameGroup.Select
+                    foreach (var col in nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))))
+                    {
 
-                    //col.Comments = "";
-                    //col.MaskingRule = "";
-                    Column column = new Column
-                    {
-                        name = col.ColumnName,
-                        retainNullValues = true,
-                        
-                        
-                    };
-                    var rule = col.MaskingRule;
-                    if (col.MaskingRule.Contains("Shuffle"))
-                    {
-                        column.type = "Shuffle";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-                    }
-                    else if (col.ColumnName.Contains("FIRST_NAME") || col.ColumnName.Contains("MIDDLE_NAME"))
-                    {
-                        column.type = "Bogus";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "{{NAME.FIRSTNAME}}";
-                        column.useGenderColumn = "Gender";
-                    }
-                    else if (col.DataType.Equals("BLOB") || col.DataType.Equals("IMAGE"))
-                    {
-                        column.type = "Blob";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "Gender";
-                    }
-                    else if (col.DataType.Equals("CLOB"))
-                    {
-                        column.type = "Clob";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-                    }
-                    else if (col.ColumnName.Contains("CITY"))
-                    {
-                        column.type = "Bogus";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "{{ADDRESS.CITY}}";
-                        column.useGenderColumn = "";
-                    }
-                    else if (col.ColumnName.Contains("COUNTRY"))
-                    {
-                        column.type = "Bogus";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "{{ADDRESS.COUNTRY}}";
-                        column.useGenderColumn = "";
-                    }
-                    else if (col.DataType.Contains("Geometry") || col.DataType.Contains("GEOMETRY"))
-                    {
-                        column.type = "Geometry";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-                    }
-                    else if (col.ColumnName.Contains("SURNAME") || col.ColumnName.Contains("LASTNAME") || col.ColumnName.Contains("LAST_NAME"))
-                    {
-                        column.type = "Bogus";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "{{NAME.LASTNAME}}";
-                        column.useGenderColumn = "Gender";
-                    }
-                    else if (col.ColumnName.Contains("COMPANY_NAME") || col.ColumnName.Contains("ORGANIZATION_NAME"))
-                    {
-                        column.type = "Company";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "{{name.lastname}} {{company.companysuffix}}";
-                        column.useGenderColumn = "";
-                    }
-                    else if (_comment.Any(n => col.ColumnName.Contains(n)) || (col.DataType.Contains("CHAR") && Convert.ToInt32(col.DataType.Replace("(", " ").Replace(")", " ").Split(' ')[1]) > 1000) || _comment.Any(x => col.Comments.Contains(x)))
-                    {
-                        var size = col.DataType.Replace("(", " ").Replace(")", " ").Split(' ');
-                        if (size.Count() > 1)
+                        table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
+
+                        //col.Comments = "";
+                        //col.MaskingRule = "";
+                        Column column = new Column
                         {
-                            var sizze = size[1].ToString();
-                            if (!string.IsNullOrEmpty(sizze))
+                            name = col.ColumnName,
+                            retainNullValues = true,
+
+
+                        };
+                        var rule = col.MaskingRule;
+                        if (col.MaskingRule.Contains("Shuffle"))
+                        {
+                            column.type = "Shuffle";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+                        }
+                        else if (col.ColumnName.Contains("FIRST_NAME") || col.ColumnName.Contains("MIDDLE_NAME"))
+                        {
+                            column.type = "Bogus";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "{{NAME.FIRSTNAME}}";
+                            column.useGenderColumn = "Gender";
+                        }
+                        else if (col.DataType.Equals("BLOB") || col.DataType.Equals("IMAGE"))
+                        {
+                            column.type = "Blob";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "Gender";
+                        }
+                        else if (col.DataType.Equals("CLOB"))
+                        {
+                            column.type = "Clob";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+                        }
+                        else if (col.ColumnName.Contains("CITY"))
+                        {
+                            column.type = "Bogus";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "{{ADDRESS.CITY}}";
+                            column.useGenderColumn = "";
+                        }
+                        else if (col.ColumnName.Contains("COUNTRY"))
+                        {
+                            column.type = "Bogus";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "{{ADDRESS.COUNTRY}}";
+                            column.useGenderColumn = "";
+                        }
+                        else if (col.DataType.Contains("Geometry") || col.DataType.Contains("GEOMETRY"))
+                        {
+                            column.type = "Geometry";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+                        }
+                        else if (col.ColumnName.Contains("SURNAME") || col.ColumnName.Contains("LASTNAME") || col.ColumnName.Contains("LAST_NAME"))
+                        {
+                            column.type = "Bogus";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "{{NAME.LASTNAME}}";
+                            column.useGenderColumn = "Gender";
+                        }
+                        else if (col.ColumnName.Contains("COMPANY_NAME") || col.ColumnName.Contains("ORGANIZATION_NAME"))
+                        {
+                            column.type = "Company";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "{{name.lastname}} {{company.companysuffix}}";
+                            column.useGenderColumn = "";
+                        }
+                        else if (_comment.Any(n => col.ColumnName.Contains(n)) || (col.DataType.Contains("CHAR") && Convert.ToInt32(col.DataType.Replace("(", " ").Replace(")", " ").Split(' ')[1]) > 1000) || _comment.Any(x => col.Comments.Contains(x)))
+                        {
+                            var size = col.DataType.Replace("(", " ").Replace(")", " ").Split(' ');
+                            if (size.Count() > 1)
                             {
-                                column.type = "Rant";
-                                column.max = Convert.ToInt32(sizze);
-                                column.min = col.Min.ToString(); ;
-                                column.StringFormatPattern = "DESCRIPTION";
-                                column.useGenderColumn = "";
+                                var sizze = size[1].ToString();
+                                if (!string.IsNullOrEmpty(sizze))
+                                {
+                                    column.type = "Rant";
+                                    column.max = Convert.ToInt32(sizze);
+                                    column.min = col.Min.ToString(); ;
+                                    column.StringFormatPattern = "DESCRIPTION";
+                                    column.useGenderColumn = "";
+                                }
+                                else
+                                {
+                                    column.type = "Rant";
+                                    column.max = col.Max.ToString(); ;
+                                    column.min = col.Min.ToString(); ;
+                                    column.StringFormatPattern = "DESCRIPTION";
+                                    column.useGenderColumn = "";
+                                }
                             }
                             else
                             {
@@ -200,94 +215,95 @@ namespace DataMasker.Examples
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "DESCRIPTION";
                                 column.useGenderColumn = "";
+                            }//split varchar(20 byte) and get max number
+
+                        }
+                        else if (col.DataType.Contains("DATE"))
+                        {
+                            column.type = "DateOfBirth";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+                        }
+
+                        else if (col.DataType.Contains("NUMBER"))
+                        {
+                            var size = col.DataType.Replace("(", " ").Replace(")", " ").Split(' ')[1].Split(',')[0].ToString();
+
+                            column.type = "RandomInt";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+
+                        }
+                        else if (col.ColumnName.Equals("YEAR"))
+                        {
+                            column.type = "RandomYear";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+                        }
+                        else if (col.ColumnName.Contains("PHONE_NO") || col.ColumnName.Contains("FAX_NO") || col.ColumnName.Contains("CONTRACT_NO") || col.ColumnName.Contains("CELL") || col.ColumnName.Contains("_PHONE"))
+                        {
+                            if (col.DataType.Contains("NUMBER"))
+                            {
+                                column.type = "PhoneNumberInt";
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min.ToString(); ;
+                                column.StringFormatPattern = "##########";
+                                column.useGenderColumn = "";
+                            }
+                            else
+                            {
+                                column.type = "PhoneNumber";
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min.ToString(); ;
+                                column.StringFormatPattern = "(###)-###-####";
+                                column.useGenderColumn = "";
                             }
                         }
-                        else
+                        else if (col.ColumnName.Contains("EMAIL_ADDRESS"))
                         {
-                            column.type = "Rant";
+                            column.type = "Bogus";
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
-                            column.StringFormatPattern = "DESCRIPTION";
-                            column.useGenderColumn = "";
-                        }//split varchar(20 byte) and get max number
-
-                    }
-                    else if (col.DataType.Contains("DATE"))
-                    {
-                        column.type = "DateOfBirth";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-                    }
-
-                    else if (col.DataType.Contains("NUMBER"))
-                    {
-                        var size = col.DataType.Replace("(", " ").Replace(")", " ").Split(' ')[1].Split(',')[0].ToString();
-
-                        column.type = "RandomInt";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-
-                    }
-                    else if (col.ColumnName.Equals("YEAR"))
-                    {
-                        column.type = "RandomYear";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-                    }
-                    else if (col.ColumnName.Contains("PHONE_NO") || col.ColumnName.Contains("FAX_NO") || col.ColumnName.Contains("CONTRACT_NO") || col.ColumnName.Contains("CELL") || col.ColumnName.Contains("_PHONE"))
-                    {
-                        if (col.DataType.Contains("NUMBER"))
+                            column.StringFormatPattern = "{{INTERNET.EMAIL}}";
+                            column.useGenderColumn = "Gender";
+                        }
+                        else if (col.ColumnName.Contains("POSTAL_CODE"))
                         {
-                            column.type = "PhoneNumberInt";
+                            column.type = "PostalCode";
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
-                            column.StringFormatPattern = "##########";
+                            column.StringFormatPattern = "";
                             column.useGenderColumn = "";
                         }
-                        else
+                        else if (col.DataType.Equals("CHAR(1 BYTE)"))
                         {
-                            column.type = "PhoneNumber";
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
-                            column.StringFormatPattern = "(###)-###-####";
-                            column.useGenderColumn = "";
-                        }
-                    }
-                    else if (col.ColumnName.Contains("EMAIL_ADDRESS"))
-                    {
-                        column.type = "Bogus";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "{{INTERNET.EMAIL}}";
-                        column.useGenderColumn = "Gender";
-                    }
-                    else if (col.ColumnName.Contains("POSTAL_CODE"))
-                    {
-                        column.type = "PostalCode";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-                    }
-                    else if (col.DataType.Equals("CHAR(1 BYTE)"))
-                    {
-                        var chr = col.DataType.Replace("(", " ").Replace(")", " ").Split(' ');
-                        if (chr.Count() > 1)
-                        {
-                            var charSize = chr[1].ToString();
-                            if (!string.IsNullOrEmpty(charSize))
+                            var chr = col.DataType.Replace("(", " ").Replace(")", " ").Split(' ');
+                            if (chr.Count() > 1)
                             {
-                                column.type = "PickRandom";
-                                column.max = Convert.ToInt32(charSize);
-                                column.min = col.Min.ToString(); ;
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "Y,N";
+                                var charSize = chr[1].ToString();
+                                if (!string.IsNullOrEmpty(charSize))
+                                {
+                                    column.type = "PickRandom";
+                                    column.max = Convert.ToInt32(charSize);
+                                    column.min = col.Min.ToString(); ;
+                                    column.StringFormatPattern = "";
+                                    column.useGenderColumn = "Y,N";
+                                }
+                                else
+                                {
+                                    column.type = "Ignore";
+                                    column.max = col.Max.ToString(); ;
+                                    column.min = col.Min.ToString(); ;
+                                    column.ignore = true;
+                                    column.StringFormatPattern = "";
+                                    column.useGenderColumn = "";
+                                }
                             }
                             else
                             {
@@ -299,124 +315,120 @@ namespace DataMasker.Examples
                                 column.useGenderColumn = "";
                             }
                         }
-                        else
+                        else if (col.ColumnName.Contains("ADDRESS") || col.Comments.Contains("address"))
                         {
-                            column.type = "Ignore";
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
-                            column.ignore = true;
-                            column.StringFormatPattern = "";
-                            column.useGenderColumn = "";
-                        }
-                    }
-                    else if (col.ColumnName.Contains("ADDRESS") || col.Comments.Contains("address"))
-                    {
-                        var size = col.DataType.Replace("(", " ").Replace(")", " ").Split(' ');
-                        if (size.Count() > 1)
-                        {
-                            var sizze = size[1].ToString();
-                            if (!string.IsNullOrEmpty(sizze))
+                            var size = col.DataType.Replace("(", " ").Replace(")", " ").Split(' ');
+                            if (size.Count() > 1)
                             {
-                                column.type = "Bogus";
-                                column.max = Convert.ToInt32(sizze);
-                                column.min = col.Min.ToString(); ;
-                                column.StringFormatPattern = "{{address.fullAddress}}";
-                                column.useGenderColumn = "";
+                                var sizze = size[1].ToString();
+                                if (!string.IsNullOrEmpty(sizze))
+                                {
+                                    column.type = "Bogus";
+                                    column.max = Convert.ToInt32(sizze);
+                                    column.min = col.Min.ToString(); ;
+                                    column.StringFormatPattern = "{{address.fullAddress}}";
+                                    column.useGenderColumn = "";
+                                }
+                                else
+                                {
+                                    column.type = "Bogus";
+                                    column.max = col.Max.ToString(); ;
+                                    column.min = col.Min.ToString(); ;
+                                    column.StringFormatPattern = "{{address.fullAddress}}";
+                                    column.useGenderColumn = "";
+                                }
                             }
                             else
                             {
                                 column.type = "Bogus";
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
+                                //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
                                 column.StringFormatPattern = "{{address.fullAddress}}";
                                 column.useGenderColumn = "";
                             }
                         }
-                        else
+                        else if (col.ColumnName.Contains("USERID"))
+                        {
+                            column.type = "RandomUsername";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min.ToString(); ;
+                            //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+                        }
+                        else if (col.ColumnName.Contains("FILE_NAME"))
                         {
                             column.type = "Bogus";
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
                             //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
-                            column.StringFormatPattern = "{{address.fullAddress}}";
+                            column.StringFormatPattern = "{{SYSTEM.FILENAME}}";
                             column.useGenderColumn = "";
                         }
-                    }
-                    else if (col.ColumnName.Contains("USERID"))
-                    {
-                        column.type = "RandomUsername";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-                    }
-                    else if (col.ColumnName.Contains("FILE_NAME"))
-                    {
-                        column.type = "Bogus";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
-                        column.StringFormatPattern = "{{SYSTEM.FILENAME}}";
-                        column.useGenderColumn = "";
-                    }
-                    else if (_fullName.Any(n => col.ColumnName.Contains(n)) || _fullName.Any(x => col.Comments.Contains(x)))
-                    {
-                        column.type = "Bogus";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
-                        column.StringFormatPattern = "{{NAME.FULLNAME}}";
-                        column.useGenderColumn = "Gender";
-                    }
-                    else if (col.ColumnName.Contains("AMOUNT") || col.ColumnName.Contains("AMT") || col.Comments.Contains("Amount"))
-                    {
-                        column.type = "RandomDec";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-                    }
-                    else
-                    {
-                        if (col.ColumnName.Equals("NAME")) //set company name
+                        else if (_fullName.Any(n => col.ColumnName.Contains(n)) || _fullName.Any(x => col.Comments.Contains(x)))
                         {
                             column.type = "Bogus";
-                            //column.type = col.DATA_TYPE;
-                            column.StringFormatPattern = "{{COMPANY.COMPANYNAME}}";
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
-                            column.useGenderColumn = "";
+                            //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
+                            column.StringFormatPattern = "{{NAME.FULLNAME}}";
+                            column.useGenderColumn = "Gender";
                         }
-                        else if (col.ColumnName.Equals("TOTAL_AREA")) //set company name
+                        else if (col.ColumnName.Contains("AMOUNT") || col.ColumnName.Contains("AMT") || col.Comments.Contains("Amount"))
                         {
-                            column.type = "Bogus";
-                            //column.type = col.DATA_TYPE;
-                            column.StringFormatPattern = "";
+                            column.type = "RandomDec";
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min;
+                            column.StringFormatPattern = "";
                             column.useGenderColumn = "";
                         }
                         else
                         {
-                            count++;
-                            collist.Add(new KeyValuePair<string, string>(col.ColumnName, col.TableName));
-                            //collist.Add(col.ColumnName, col.TableName);
-                            column.type = "Ignore";
-                            //column.type = col.DATA_TYPE;
-                            column.StringFormatPattern = "";
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
-                            column.useGenderColumn = "";
-                            column.ignore = true;
+                            if (col.ColumnName.Equals("NAME")) //set company name
+                            {
+                                column.type = "Bogus";
+                                //column.type = col.DATA_TYPE;
+                                column.StringFormatPattern = "{{COMPANY.COMPANYNAME}}";
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min.ToString(); ;
+                                column.useGenderColumn = "";
+                            }
+                            else if (col.ColumnName.Equals("TOTAL_AREA")) //set company name
+                            {
+                                column.type = "Bogus";
+                                //column.type = col.DATA_TYPE;
+                                column.StringFormatPattern = "";
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min;
+                                column.useGenderColumn = "";
+                            }
+                            else
+                            {
+                                count++;
+                                collist.Add(new KeyValuePair<string, string>(col.ColumnName, col.TableName));
+                                //collist.Add(col.ColumnName, col.TableName);
+                                column.type = "Ignore";
+                                //column.type = col.DATA_TYPE;
+                                column.StringFormatPattern = "";
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min.ToString(); ;
+                                column.useGenderColumn = "";
+                                column.ignore = true;
 
+                            }
                         }
+                        colList.Add(column);
                     }
-                    colList.Add(column);
+
+                    if (colList.Count > 0)
+                    {
+                        table.columns = colList;
+
+                        tableList.Add(table);
+                    }
+                   
                 }
-                table.columns = colList;
-               
-                tableList.Add(table);
             }
             #endregion
 
@@ -458,14 +470,15 @@ namespace DataMasker.Examples
             }
             #endregion
 
-            jsonpath = @"example-configs\jsconfigTables.json";
+            //jsonpath = @"example-configs\jsconfigTables.json";
+            jsonpath = ConfigurationManager.AppSettings["jsonMapPath"];
             string jsonresult = JsonConvert.SerializeObject(rootObject1);
 
 
             #region compare original jsonconfig for datatype errors
-            if (File.Exists(@"example-configs\jsconfigTables.json") && new FileInfo(@"example-configs\jsconfigTables.json").Length != 0)
+            if (File.Exists(jsonpath) && new FileInfo(jsonpath).Length != 0)
             {
-                var rootConfig = Config.Load(@"example-configs\jsconfigTables.json");
+                var rootConfig = Config.Load(jsonpath);
                 foreach (var tabitem in rootConfig.Tables)
                 {
                     foreach (var colitems in tabitem.Columns)
@@ -620,6 +633,7 @@ namespace DataMasker.Examples
 
             [JsonProperty("Personal")]
             public string Personal { get; set; }
+
             [JsonProperty("PKconstraintName")]
             public string PKconstraintName { get; set; }
             
@@ -644,19 +658,21 @@ namespace DataMasker.Examples
 
             [JsonProperty("COMPLETED")]
             public string Completed { get; set; }
+            [JsonProperty("Conversion Consideration (NEEDS BUSINESS DISCUSSION)")]
+            public string Consideration { get; set; }
         }
 
         private static Config LoadConfig(
             int example)
         {
-          // return Config.Load(jsonpath);
-            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\json1.json");
+          return Config.Load(jsonpath);
+            //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\json1.json");
         }
 
         public static void Example1()
         {
-            copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
-            //JsonConfig(copyjsonPath);
+            //copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
+            JsonConfig(copyjsonPath);
             _nameDatabase = ConfigurationManager.AppSettings["DatabaseName"];
             if (string.IsNullOrEmpty(_nameDatabase))
             {
@@ -688,10 +704,10 @@ namespace DataMasker.Examples
                     //var ressss = Array.FindAll(ro, x => x.Equals(selct));
 
 
-                    if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0 && row[string.Join("", isblob.Select(n => n.StringFormatPattern))].ToString().Contains("."))
+                    if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0 )
                     {
                         extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
-                        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));  
                     }
                     else
                     {

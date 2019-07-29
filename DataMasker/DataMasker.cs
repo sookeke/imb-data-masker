@@ -71,14 +71,17 @@ namespace DataMasker
                 {
                   existingValue = GetUniqueValue(tableConfig.Name, columnConfig, existingValue, gender);
                 }
-                if (columnConfig.Type.ToString() == "Shuffle")
+                if (columnConfig.Type == DataType.Shuffle)
                 {
                     existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, gender);
                 }
-                //else if (columnConfig.Type.ToString() == "Blob" && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
-                //{
-                //   // existingValue = _dataGenerator.GetBlobValue(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
-                //}
+                else if (columnConfig.Type == DataType.File)
+                {
+                    columnConfig.StringFormatPattern = existingValue.ToString().Substring(existingValue.ToString().LastIndexOf('.') + 1);
+                    existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+
+                    // existingValue = _dataGenerator.get(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
+                }
                 else
                 {
                   existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
@@ -131,12 +134,12 @@ namespace DataMasker
                 {
                     existingValue = GetUniqueValue(tableConfig.Name, columnConfig, existingValue, gender);
                 }
-                else if (columnConfig.Type.ToString() == "Filename" && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
+                else if (columnConfig.Type == DataType.Filename && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
                 {
                     //   // existingValue = _dataGenerator.GetBlobValue(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
                     existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue,filename, fileExtension, gender);
                 }
-                else if (columnConfig.Type.ToString() == "Blob")
+                else if (columnConfig.Type == DataType.Blob)
                 {
                     existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, gender);
                 }
