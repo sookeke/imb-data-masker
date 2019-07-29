@@ -15,6 +15,7 @@
         PostalCode,
         Shuffle,
         Ignore,
+        exception,
 
         /// <summary>
         /// The api data type, supports {{entity.property}} e.g. {{address.FullAddress}}

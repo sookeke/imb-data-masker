@@ -497,7 +497,7 @@
     "Public": "No",
     "Personal": "Yes",
     "Sensitive": "Yes",
-    "Masking Rule": "No masking required",
+    "Masking Rule": "Replace with Fake Data",
     "Rule set by": "Shannon",
     "Rule Reasoning": "Some file names contain addresses and owner names. Is it possible to create fake data for all except a range (DOCUMENT_ID 892-901)? This should give a selection of 9 parcels where the users could confirm that the correct documents were associated with the correct parcels.\n\nIf cannot leave a range unmasked, just use fake data for all.",
     "Conversion Consideration (NEEDS BUSINESS DISCUSSION)": "",

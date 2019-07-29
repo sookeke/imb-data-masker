@@ -152,7 +152,7 @@ namespace DataMasker.DataSources
         {
             return $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM [{tableConfig.Name}]";
         }
-        public object shuffle(string table, string column)
+        public object shuffle(string table, string column, object existingValue)
         {
             //ArrayList list = new ArrayList();
             Random rnd = new Random();
@@ -162,8 +162,15 @@ namespace DataMasker.DataSources
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                 var values = result.Select(n => n.Values).SelectMany(x => x).ToArray();
-                
-                return values[rnd.Next(values.Count())];
+                object value = values[rnd.Next(values.Count())];
+                while (value == existingValue)
+                {
+                    value = values[rnd.Next(values.Count())];
+                }
+
+
+
+                return value;
 
             }
         }

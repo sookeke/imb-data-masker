@@ -7,6 +7,8 @@ using Bogus.DataSets;
 using DataMasker.Interfaces;
 using DataMasker.Models;
 using System.Drawing;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 namespace DataMasker
 {
@@ -77,10 +79,33 @@ namespace DataMasker
                 }
                 else if (columnConfig.Type == DataType.File)
                 {
-                    columnConfig.StringFormatPattern = existingValue.ToString().Substring(existingValue.ToString().LastIndexOf('.') + 1);
+                    if (existingValue.ToString().Contains("."))
+                    {
+                        columnConfig.StringFormatPattern = existingValue.ToString().Substring(existingValue.ToString().LastIndexOf('.') + 1);
+                    }
+                    else
+                    {
+                        //columnConfig.StringFormatPattern = "{{SYSTEM.FILENAME}}";
+                        columnConfig.Type = DataType.Filename;
+                    }
+                    
                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
 
                     // existingValue = _dataGenerator.get(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
+                }
+                else if (columnConfig.Type == DataType.exception)
+                {
+                    var cc = existingValue.ToString().Length;
+                    if (existingValue.ToString().Length > Convert.ToInt32(columnConfig.StringFormatPattern))
+                    {
+                        columnConfig.Ignore = false;
+                        existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+                    }
+                    else
+                    {
+                        //columnConfig.Ignore = true;
+                        //existingValue = existingValue;
+                    }
                 }
                 else
                 {
@@ -153,7 +178,15 @@ namespace DataMasker
             }
             return obj;
         }
-
+        private int GetObjectSize(object TestObject)
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            MemoryStream ms = new MemoryStream();
+            byte[] Array;
+            bf.Serialize(ms, TestObject);
+            Array = ms.ToArray();
+            return Array.Count();
+        }
         private object GetUniqueValue(string tableName,
             ColumnConfig columnConfig,
             object existingValue,

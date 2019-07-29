@@ -691,7 +691,7 @@ namespace DataMasker.Examples
                 var isblob = tableConfig.Columns.Where(x => !x.Ignore && x.Type == DataType.Blob);
                 object extension = null;
                 File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
-                IEnumerable<IDictionary<string, object>> rows = dataSource.GetData(tableConfig);
+                IEnumerable<IDictionary<string, object>> rows = dataSource.GetData(tableConfig); //source of prd copy
                 //UpdateProgress(ProgressType.Masking, 0, rows.Count(), "Masking Progress");
                // UpdateProgress(ProgressType.Updating, 0, rows.Count(), "Update Progress");
                 //int rowIndex = 0;

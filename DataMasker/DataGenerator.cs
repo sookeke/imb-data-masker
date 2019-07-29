@@ -361,6 +361,9 @@ namespace DataMasker
                         return _shortnum;
                     }
                     return _number;
+                case DataType.exception:
+                    var fileexception = _faker.System.FileName("");
+                    return fileexception.Remove(fileexception.Length - 1);
                 case DataType.PhoneNumberInt:
                     var _phone = Convert.ToInt64(_faker.Phone.PhoneNumber(columnConfig.StringFormatPattern));
                     var numeric = "TONUMERIC(" + _phone + ")";
@@ -455,11 +458,16 @@ namespace DataMasker
         public object GetValueShuffle(ColumnConfig columnConfig , string table, string column,IDataSource dataSources, 
             object existingValue, Name.Gender? gender = null)
         {
+            if (columnConfig.RetainNullValues &&
+               existingValue == null)
+            {
+                return null;
+            }
             switch (columnConfig.Type)
             {
                 case DataType.Shuffle:
                     var random = new Random();
-                    var shuffle = dataSources.shuffle(column, table);
+                    var shuffle = dataSources.shuffle(column, table, existingValue);
                     return shuffle;
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
@@ -468,6 +476,11 @@ namespace DataMasker
         public object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,
             string fileName, string fileExtension, Name.Gender? gender = null )
         {
+            if (columnConfig.RetainNullValues &&
+               existingValue == null)
+            {
+                return null;
+            }
             switch (columnConfig.Type)
             {
                 case DataType.Blob:

@@ -101,7 +101,7 @@ namespace DataMasker.DataSources
             }
         }
 
-        public object shuffle(string table, string column)
+        public object shuffle(string table, string column, object existingValue)
         {
             throw new NotImplementedException();
         }

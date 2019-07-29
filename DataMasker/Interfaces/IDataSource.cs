@@ -26,7 +26,7 @@ namespace DataMasker.Interfaces
         void UpdateRow(
             IDictionary<string, object> row,
             TableConfig tableConfig);
-        object shuffle(string table, string column);
+        object shuffle(string table, string column, object existingValue);
 
         /// <summary>
         /// Updates the rows.

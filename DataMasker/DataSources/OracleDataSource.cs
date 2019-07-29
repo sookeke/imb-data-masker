@@ -44,7 +44,8 @@ namespace DataMasker.DataSources
         }
         public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig)
         {
-            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionString))
+            string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
+            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringGet))
             {
                 connection.Open();
                 //var retu = connection.Query(BuildSelectSql(tableConfig));
@@ -202,7 +203,7 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object shuffle(string table, string column)
+        public object shuffle(string table, string column, object existingValue)
         {
             //ArrayList list = new ArrayList();
             Random rnd = new Random();
@@ -212,7 +213,15 @@ namespace DataMasker.DataSources
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                 var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
-                return values[rnd.Next(values.Count())];
+                object value = values[rnd.Next(values.Count())];
+                while (value == existingValue)
+                {
+                    value = values[rnd.Next(values.Count())];
+                }
+                 
+                
+              
+                return value;
 
             }
 
