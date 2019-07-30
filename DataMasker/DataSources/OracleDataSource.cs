@@ -207,15 +207,28 @@ namespace DataMasker.DataSources
         {
             //ArrayList list = new ArrayList();
             Random rnd = new Random();
-            string sql = "SELECT " + table + " FROM " + " " + column;
+            string sql = "SELECT " + column + " FROM " + " " + table;
             using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionString))
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                 var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
                 object value = values[rnd.Next(values.Count())];
-                while (value == existingValue)
+                object ss = 1248200;
+                var sect = result.Select(n => n.Values).Where(n => n == ss);
+                if (values.Count() <= 1)
                 {
+                    File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + "for column " + column + Environment.NewLine + Environment.NewLine);
+                    //var sect1 = result.Select(n => n.Values).SelectMany(x => x).Where(n => n == ss);
+                    return value;
+                }
+                //if (value.Equals(existingValue))
+                //{
+                //    Console.WriteLine("MATCH");
+                //}
+                while (value.Equals(existingValue))
+                {
+                    var xxx = values.Count();
                     value = values[rnd.Next(values.Count())];
                 }
                  

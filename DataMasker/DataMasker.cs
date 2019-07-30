@@ -73,10 +73,14 @@ namespace DataMasker
                 {
                   existingValue = GetUniqueValue(tableConfig.Name, columnConfig, existingValue, gender);
                 }
+                //else if (columnConfig.Name == "VALUE" || columnConfig.Name == "KEY" || columnConfig.Name == "ACCESS_TYPE_DESCRIPTION")
+                //{
+
+                //}
                 if (columnConfig.Type == DataType.Shuffle)
                 {
                     existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, gender);
-                }
+                }          
                 else if (columnConfig.Type == DataType.File)
                 {
                     if (existingValue.ToString().Contains("."))

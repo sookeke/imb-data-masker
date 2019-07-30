@@ -467,7 +467,7 @@ namespace DataMasker
             {
                 case DataType.Shuffle:
                     var random = new Random();
-                    var shuffle = dataSources.shuffle(column, table, existingValue);
+                    var shuffle = dataSources.shuffle(table, column, existingValue);
                     return shuffle;
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);

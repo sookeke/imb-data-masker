@@ -156,14 +156,14 @@ namespace DataMasker.DataSources
         {
             //ArrayList list = new ArrayList();
             Random rnd = new Random();
-            string sql = "SELECT " + table + " FROM " + " " + column;
+            string sql = "SELECT " + column + " FROM " + " " + table;
             using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionString))
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                 var values = result.Select(n => n.Values).SelectMany(x => x).ToArray();
                 object value = values[rnd.Next(values.Count())];
-                while (value == existingValue)
+                while (value.Equals(existingValue))
                 {
                     value = values[rnd.Next(values.Count())];
                 }
