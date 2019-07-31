@@ -89,16 +89,16 @@ namespace DataMasker.Examples
             foreach (var nameGroup in query)
             {
                 
-                var cc = nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))).Count();
+                //var cc = nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))).Count();
 
-                if (nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))).Count() > 0)
-                {
+                //if (nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))).Count() > 0)
+                //{
                     Table table = new Table();
                     List<Column> colList = new List<Column>();
                     table.name = nameGroup.Key;
 
                     //table.primaryKeyColumn = nameGroup.Select
-                    foreach (var col in nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))))
+                    foreach (var col in nameGroup)
                     {
 
                         table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
@@ -113,7 +113,12 @@ namespace DataMasker.Examples
 
                         };
                         var rule = col.MaskingRule;
-                        if (col.MaskingRule.Contains("Shuffle"))
+                        if (col.MaskingRule.Contains("No masking"))
+                        {
+                            column.type = "Ignore";
+                            column.ignore = true;
+                        }
+                       else if (col.MaskingRule.Contains("Shuffle"))
                         {
                             column.type = "Shuffle";
                             column.max = col.Max.ToString(); ;
@@ -421,14 +426,14 @@ namespace DataMasker.Examples
                         colList.Add(column);
                     }
 
-                    if (colList.Count > 0)
-                    {
+                   // if (colList.Count > 0)
+                   // {
                         table.columns = colList;
 
                         tableList.Add(table);
-                    }
+                    //}
                    
-                }
+                
             }
             #endregion
 
@@ -666,7 +671,7 @@ namespace DataMasker.Examples
             int example)
         {
           //return Config.Load(jsonpath);
-            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\SheetFolder\jsconfigTables.json");
+            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\.vscode\BIP.json");
         }
 
         public static void Example1()
@@ -684,7 +689,7 @@ namespace DataMasker.Examples
             //var con = config.Tables.Where(n => n.Columns.Where(x => x.Type.ToString() == "ignore").Select(x => x).Select(n => n));
             IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
             IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
-            
+
             foreach (TableConfig tableConfig in config.Tables)
             {
                 //checked if table contains blob column datatype and get column that is blob
@@ -692,30 +697,23 @@ namespace DataMasker.Examples
                 object extension = null;
                 File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
                 IEnumerable<IDictionary<string, object>> rows = dataSource.GetData(tableConfig); //source of prd copy
-                //UpdateProgress(ProgressType.Masking, 0, rows.Count(), "Masking Progress");
-               // UpdateProgress(ProgressType.Updating, 0, rows.Count(), "Update Progress");
-                //int rowIndex = 0;
+                                                                                                 //UpdateProgress(ProgressType.Masking, 0, rows.Count(), "Masking Progress");
+                                                                                                 // UpdateProgress(ProgressType.Updating, 0, rows.Count(), "Update Progress");
+                                                                                                 //int rowIndex = 0;
                 foreach (IDictionary<string, object> row in rows)
                 {
-                    //for blob
-                    //var selct = string.Join("", isblob.Select(n => n.StringFormatPattern));
-
-                   // var ro = row.Select(n => n.Key).ToArray().Where(x=>x.Equals("NAME"));
-                    //var ressss = Array.FindAll(ro, x => x.Equals(selct));
-
-
-                    if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0 )
+                    if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                     {
                         extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
-                        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));  
+                        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
                     }
                     else
                     {
                         dataMasker.Mask(row, tableConfig, dataSource);
                     }
                     Console.WriteLine(extension);
-                   
-                   
+
+
                     //rowIndex++;
 
                     //update per row, or see below,
@@ -724,7 +722,7 @@ namespace DataMasker.Examples
                 }
 
                 //update all rows
-                Console.WriteLine("writing table " + tableConfig.Name + " on database "  + _nameDatabase + "" +  " .....");
+                Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
                 try
                 {
                     dataSource.UpdateRows(rows, tableConfig);
@@ -735,30 +733,53 @@ namespace DataMasker.Examples
                     //File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
                     Console.WriteLine(ex.Message);
                 }
-               
-               // UpdateProgress(ProgressType.Overall, i + 1);
-               // i++;
+
+                // UpdateProgress(ProgressType.Overall, i + 1);
+                // i++;
 
 
             }
             //write mapped table and column with type in csv file
             DataTable dt = new DataTable();
-            dt.Columns.Add("Table");
-            dt.Columns.Add("Masked Column");
-            dt.Columns.Add("DataType");
+            dt.Columns.Add("TABLE_NAME");
+            dt.Columns.Add("COLUMN_NAME");
+            dt.Columns.Add("MASKING RULE");
+            dt.Columns.Add("MASKING RULE APPLIED");
+           
+            dt.Columns.Add("IGNORE");
             dt.Columns.Add("Format Pattern");
             dt.Columns.Add("Min - Max");
-            foreach (var item in config.Tables)
+            var rootObj = JsonConvert.DeserializeObject<List<RootObject>>(File.ReadAllText(copyjsonPath));
+            int h = 0;
+            int k = 0;
+            for (int i = 0; i < config.Tables.Count; i++)
             {
-
-                foreach (var colitems in item.Columns)
+               
+               
+                for (int j = 0; j < config.Tables[i].Columns.Count; j++)
                 {
-                  
-                    var minMax = Convert.ToString(colitems.Min) + " - " + Convert.ToString(colitems.Max);
-                    dt.Rows.Add(item.Name, colitems.Name, colitems.Type, colitems.StringFormatPattern,minMax );
+                    
+
+
+                    var minMax = Convert.ToString(config.Tables[i].Columns[j].Min) + " - " + Convert.ToString(config.Tables[i].Columns[j].Max);
+                    dt.Rows.Add(config.Tables[i].Name, config.Tables[i].Columns[j].Name, rootObj[j+h].MaskingRule, config.Tables[i].Columns[j].Type, config.Tables[i].Columns[j].Ignore, config.Tables[i].Columns[j].StringFormatPattern, minMax);
+
+                    k++;
                 }
+                h = k;
 
             }
+            //foreach (var item in config.Tables)
+            //{
+
+            //    foreach (var colitems in item.Columns)
+            //    {
+
+            //        var minMax = Convert.ToString(colitems.Min) + " - " + Convert.ToString(colitems.Max);
+            //        dt.Rows.Add(item.Name, colitems.Name, query.Where(n=>n.Key == item.Name), colitems.Type, colitems.Ignore, colitems.StringFormatPattern, minMax);
+            //    }
+
+            //}
             if (dt.Rows != null)
             {
                 writeTofile(dt, _nameDatabase);

@@ -463,12 +463,15 @@ namespace DataMasker
             {
                 return null;
             }
-            switch (columnConfig.Type)
+            else
             {
-                case DataType.Shuffle:
-                    var random = new Random();
-                    var shuffle = dataSources.shuffle(table, column, existingValue);
-                    return shuffle;
+                switch (columnConfig.Type)
+                {
+                    case DataType.Shuffle:
+                        var random = new Random();
+                        var shuffle = dataSources.shuffle(table, column, existingValue);
+                        return shuffle;
+                }
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }

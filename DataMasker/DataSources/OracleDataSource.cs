@@ -160,7 +160,7 @@ namespace DataMasker.DataSources
 
                             Console.WriteLine(ex.Message);
                             File.AppendAllText(_exceptionpath, ex.Message + " on table " + config.Name + Environment.NewLine + Environment.NewLine);
-                            //Console.WriteLine(ex.Message);
+                           
                         }
 
                         
@@ -212,23 +212,16 @@ namespace DataMasker.DataSources
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
-                var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
-                object value = values[rnd.Next(values.Count())];
-                object ss = 1248200;
-                var sect = result.Select(n => n.Values).Where(n => n == ss);
+                var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n =>  n != null).Distinct().ToArray();
+                object value = values[rnd.Next(values.Count())];         
                 if (values.Count() <= 1)
                 {
                     File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + "for column " + column + Environment.NewLine + Environment.NewLine);
-                    //var sect1 = result.Select(n => n.Values).SelectMany(x => x).Where(n => n == ss);
                     return value;
                 }
-                //if (value.Equals(existingValue))
-                //{
-                //    Console.WriteLine("MATCH");
-                //}
-                while (value.Equals(existingValue))
+              while (value.Equals(existingValue))
                 {
-                    var xxx = values.Count();
+                    
                     value = values[rnd.Next(values.Count())];
                 }
                  
