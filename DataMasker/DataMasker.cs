@@ -163,6 +163,10 @@ namespace DataMasker
                 {
                     existingValue = GetUniqueValue(tableConfig.Name, columnConfig, existingValue, gender);
                 }
+                else if (columnConfig.Unmask == true)
+                {
+                    obj[columnConfig.Name] = existingValue;
+                }
                 else if (columnConfig.Type == DataType.Filename && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
                 {
                     //   // existingValue = _dataGenerator.GetBlobValue(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)

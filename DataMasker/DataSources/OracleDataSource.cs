@@ -219,14 +219,12 @@ namespace DataMasker.DataSources
                     File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + "for column " + column + Environment.NewLine + Environment.NewLine);
                     return value;
                 }
-              while (value.Equals(existingValue))
+                while (value.Equals(existingValue))
                 {
-                    
-                    value = values[rnd.Next(values.Count())];
+
+                    value = values[rnd.Next(0,values.Count())];
                 }
-                 
-                
-              
+
                 return value;
 
             }

@@ -60,13 +60,22 @@ namespace DataMasker.Models
     [DefaultValue(false)]
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
     public bool Ignore { get; set; }
-
-    /// <summary>
-    /// Only used for some data tables, but when generating lorem ipsum you specify the number of words
+/// <summary>
+    /// When specifying a column that need to be unmask back to its original.
+    /// You have to include a second connection string to the original production copy of the current masked database
     /// </summary>
     /// <value>
-    /// The maximum.
-    /// </value>
+    /// <c>true</c> if ignore; otherwise, <c>false</c>.
+    [DefaultValue(false)]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+    public bool Unmask { get; set; }
+
+        /// <summary>
+        /// Only used for some data tables, but when generating lorem ipsum you specify the number of words
+        /// </summary>
+        /// <value>
+        /// The maximum.
+        /// </value>
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
     public string Max { get; set; }
 

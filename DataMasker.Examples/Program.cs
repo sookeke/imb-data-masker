@@ -671,7 +671,7 @@ namespace DataMasker.Examples
             int example)
         {
           //return Config.Load(jsonpath);
-            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\.vscode\BIP.json");
+            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\SheetFolder\BIP1.json");
         }
 
         public static void Example1()
