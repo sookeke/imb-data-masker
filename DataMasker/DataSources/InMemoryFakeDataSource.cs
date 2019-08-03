@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using DataMasker.Interfaces;
 using DataMasker.Models;
@@ -107,6 +108,21 @@ namespace DataMasker.DataSources
         }
 
         public object GetData(string column, string table)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DataTable DataTableFromCsv(string csvPath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents)
         {
             throw new NotImplementedException();
         }

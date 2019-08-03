@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using DataMasker.Models;
 
 namespace DataMasker.Interfaces
@@ -17,6 +18,12 @@ namespace DataMasker.Interfaces
         /// <returns></returns>
         IEnumerable<IDictionary<string, object>> GetData(
             TableConfig tableConfig);
+
+        //For spreadshet
+        DataTable DataTableFromCsv(string csvPath);
+        IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable);
+        DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents);
+
 
         /// <summary>
         /// Updates the row.

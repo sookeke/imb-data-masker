@@ -22,6 +22,8 @@ namespace DataMasker
                     return new SqlDataSource(dataSourceConfig);
                 case DataSourceType.OracleServer:
                     return new OracleDataSource(dataSourceConfig);
+                case DataSourceType.SpreadSheet:
+                    return new SpreadSheet(dataSourceConfig);
 
             }
 

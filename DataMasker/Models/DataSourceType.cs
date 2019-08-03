@@ -4,6 +4,7 @@
     {
         InMemoryFake,
         SqlServer,
-        OracleServer
+        OracleServer,
+        SpreadSheet
     }
 }

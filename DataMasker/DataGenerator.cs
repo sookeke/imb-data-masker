@@ -263,6 +263,8 @@ namespace DataMasker
                     var bs64 = System.Convert.ToBase64String(newvalue);
                     //var base64EncodedBytes = System.Convert.FromBase64String(newvalue);
                     return bs64;
+                case DataType.Ignore:
+                    return null;
                 case DataType.RandomYear:
                     DateTime start = new DateTime(1999, 1, 1);
                     Random gen = new Random();

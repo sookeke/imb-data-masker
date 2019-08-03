@@ -82,6 +82,7 @@
     <Reference Include="Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.SqlServer.Types.14.0.1016.290\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="MimeKit, Version=2.0.0.0, Culture=neutral, PublicKeyToken=bede1c8a46c66814, processorArchitecture=MSIL">
       <HintPath>..\packages\MimeKit.2.0.7\lib\net45\MimeKit.dll</HintPath>
     </Reference>
@@ -146,12 +147,16 @@
     <Compile Include="DataSourceProvider.cs" />
     <Compile Include="DataSources\InMemoryFakeDataSource.cs" />
     <Compile Include="DataSources\OracleDataSource.cs" />
+    <Compile Include="DataSources\SpreadSheet.cs" />
     <Compile Include="FileType.cs" />
     <Compile Include="GeographyMapper.cs" />
     <Compile Include="Interfaces\IFileType.cs" />
+    <Compile Include="Models\CreateTable.cs" />
+    <Compile Include="Models\CsvToDataTable.cs" />
     <Compile Include="Models\DataGenerationConfig.cs" />
     <Compile Include="Models\DataSourceConfig.cs" />
     <Compile Include="Models\DataSourceType.cs" />
+    <Compile Include="Models\SpreadsheetObject.cs" />
     <Compile Include="OracleArrayTypeFactoryBase.cs" />
     <Compile Include="OracleCustomTypeBase.cs" />
     <Compile Include="SdoGeometry.cs" />

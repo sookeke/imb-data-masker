@@ -179,5 +179,20 @@ namespace DataMasker.DataSources
         {
             throw new NotImplementedException();
         }
+
+        public DataTable DataTableFromCsv(string csvPath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

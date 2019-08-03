@@ -14,6 +14,7 @@ using System.Collections;
 using System.Data.Entity.Spatial;
 using System.IO;
 using System.Configuration;
+using Bogus;
 
 namespace DataMasker.DataSources
 {
@@ -212,7 +213,10 @@ namespace DataMasker.DataSources
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
+                //Randomizer randomizer = new Randomizer();
+               
                 var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n =>  n != null).Distinct().ToArray();
+                //var find = randomizer.Shuffle(values);
                 object value = values[rnd.Next(values.Count())];         
                 if (values.Count() <= 1)
                 {
@@ -234,6 +238,21 @@ namespace DataMasker.DataSources
       
 
         public object GetData(string column, string table)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DataTable DataTableFromCsv(string csvPath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents)
         {
             throw new NotImplementedException();
         }
