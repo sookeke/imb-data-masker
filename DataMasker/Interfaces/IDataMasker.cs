@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Data;
 using DataMasker.Models;
 
 namespace DataMasker.Interfaces
@@ -17,7 +18,7 @@ namespace DataMasker.Interfaces
         /// <returns></returns>
         IDictionary<string, object> Mask(
             IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource);
+            TableConfig tableConfig, IDataSource dataSource, DataTable _dataTable = null);
         IDictionary<string, object> MaskBLOB(
             IDictionary<string, object> obj,
             TableConfig tableConfig, IDataSource dataSource,string filename,string fileExtension);

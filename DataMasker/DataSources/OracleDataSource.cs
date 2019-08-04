@@ -204,7 +204,7 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object shuffle(string table, string column, object existingValue)
+        public object shuffle(string table, string column, object existingValue,DataTable dataTable = null)
         {
             //ArrayList list = new ArrayList();
             Random rnd = new Random();

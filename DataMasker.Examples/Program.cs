@@ -31,7 +31,9 @@ namespace DataMasker.Examples
 {
     internal class Program
     {
+        #region system declarations
         private static string _nameDatabase;
+        private static string _SpreadSheetPath;
         private static int count;
         private static List<string> _colError = new List<string>();
         private static List<KeyValuePair<string, string>> collist = new List<KeyValuePair<string, string>>();
@@ -40,14 +42,10 @@ namespace DataMasker.Examples
         private static List<KeyValuePair<string, Dictionary<string, string>>> _allNull = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static readonly Dictionary<ProgressType, ProgressbarUpdate> _progressBars = new Dictionary<ProgressType, ProgressbarUpdate>();
         private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
-
-        private static Options cliOptions;
         private static string copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
-        
-        private static TextFieldParser cvsReader;
 
         public static string jsonpath { get; private set; }
-
+        #endregion
         private static void Main(
             string[] args)
         {
@@ -614,13 +612,15 @@ namespace DataMasker.Examples
         }
         public class RootObject
         {
-            [JsonProperty("TABLE_NAME")]
+            [DefaultValue("")]
+            [JsonProperty("TABLE_NAME", DefaultValueHandling = DefaultValueHandling.Populate))]
+
             public string TableName { get; set; }
-
-            [JsonProperty("COLUMN_NAME")]
+            [DefaultValue("")]
+            [JsonProperty("COLUMN_NAME", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string ColumnName { get; set; }
-
-            [JsonProperty("DATA_TYPE")]
+            [DefaultValue("")]
+            [JsonProperty("DATA_TYPE", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string DataType { get; set; }
 
             [JsonProperty("NULLABLE")]
@@ -628,14 +628,14 @@ namespace DataMasker.Examples
 
             [JsonProperty("DATA_DEFAULT")]
             public string DataDefault { get; set; }
-            [DefaultValue(null)]
-            [JsonProperty("COLUMN_ID")]
+            [DefaultValue(0)]
+            [JsonProperty("COLUMN_ID", DefaultValueHandling = DefaultValueHandling.Populate)]
             public long ColumnId { get; set; }
 
-            [DefaultValue("null")]
-
-            [JsonProperty("COMMENTS")]
-            public string Comments { get; set; }
+            [DefaultValue("")]
+            // [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+            [JsonProperty("COMMENTS", DefaultValueHandling = DefaultValueHandling.Populate, NullValueHandling = NullValueHandling.Ignore)]
+            public string Comments { get; set; } = "";
 
             [JsonProperty("Description")]
             public string Description { get; set; }
@@ -645,8 +645,8 @@ namespace DataMasker.Examples
 
             [JsonProperty("Personal")]
             public string Personal { get; set; }
-
-            [JsonProperty("PKconstraintName")]
+            [DefaultValue("")]
+            [JsonProperty("PKconstraintName",DefaultValueHandling = DefaultValueHandling.Populate)]
             public string PKconstraintName { get; set; }
 
             [DefaultValue("")]
@@ -658,8 +658,8 @@ namespace DataMasker.Examples
 
             [JsonProperty("Sensitive")]
             public string Sensitive { get; set; }
-
-            [JsonProperty("Masking Rule")]
+            [DefaultValue("")]
+            [JsonProperty("Masking Rule", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string MaskingRule { get; set; }
 
             [JsonProperty("Rule set by")]
@@ -683,17 +683,18 @@ namespace DataMasker.Examples
 
         public static void Example1()
         {
-            //copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
-            JsonConfig(copyjsonPath);
             _nameDatabase = ConfigurationManager.AppSettings["DatabaseName"];
+            _SpreadSheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
             if (string.IsNullOrEmpty(_nameDatabase))
             {
                 Console.WriteLine("Database name cannot be null, check app.config and specify the database name");
                 System.Environment.Exit(1);
             }
+            copyjsonPath = ExcelToJson.toJson(_SpreadSheetPath);
+            JsonConfig(copyjsonPath);
+            
 
             Config config = LoadConfig(1);
-            //var con = config.Tables.Where(n => n.Columns.Where(x => x.Type.ToString() == "ignore").Select(x => x).Select(n => n));
             IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
             IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
             foreach (TableConfig tableConfig in config.Tables)
@@ -711,7 +712,7 @@ namespace DataMasker.Examples
                     rows = dataSource.CreateObject(SheetTable);
                     foreach (IDictionary<string, object> row in rows)
                     {
-                        dataMasker.Mask(row, tableConfig, dataSource);
+                        dataMasker.Mask(row, tableConfig, dataSource, SheetTable);
                     }
                     try
                     {
@@ -719,7 +720,7 @@ namespace DataMasker.Examples
                         if (_maskSpreadSheet.Rows.Count != 0)
                         {
                             writeTofile(_maskSpreadSheet, _nameDatabase);
-                            var createsheet = toExcel(_nameDatabase + @"\" + _nameDatabase + ".csv", _nameDatabase, _nameDatabase);
+                            var createsheet = toExcel(_nameDatabase + @"\" + _nameDatabase + "_MASKED.csv", _nameDatabase, _nameDatabase);
                             if (createsheet == false)
                             {
                                 Console.WriteLine("cannot create excel file");
@@ -730,22 +731,13 @@ namespace DataMasker.Examples
                     catch (Exception ex)
                     {
                         //string path = Directory.GetCurrentDirectory() + $@"\Output\MaskedExceptions.txt";
-                        //File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
+                        File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
                         Console.WriteLine(ex.Message);
                     }
                 }
                 else
                 {
                     rows = dataSource.GetData(tableConfig);
-
-                    //source of prd copy
-                    //UpdateProgress(ProgressType.Masking, 0, rows.Count(), "Masking Progress");
-                    // UpdateProgress(ProgressType.Updating, 0, rows.Count(), "Update Progress");
-                    //int rowIndex = 0;
-                    //var col = rows.Select(n => n.Where(x=>x.Key.Equals("MOT_NUMBER")));
-                    //                Randomizer randomizer = new Randomizer();
-                    //randomizer.Shuffle(rows.Select(n => n.Where(x => x.Key.Equals("MOT_NUMBER"))));
-
                     foreach (IDictionary<string, object> row in rows)
                     {
                         if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
@@ -787,6 +779,14 @@ namespace DataMasker.Examples
 
             }
             //write mapped table and column with type in csv file
+            var o = OutputSheet(config, jsonpath, _nameDatabase);
+           
+
+        }
+        public static bool OutputSheet(
+            Config config, 
+            string json, string _appname)
+        {
             DataTable dt = new DataTable();
             dt.Columns.Add("TABLE_NAME");
             dt.Columns.Add("COLUMN_NAME");
@@ -796,7 +796,7 @@ namespace DataMasker.Examples
             dt.Columns.Add("IGNORE");
             dt.Columns.Add("Format Pattern");
             dt.Columns.Add("Min - Max");
-            var rootObj = JsonConvert.DeserializeObject<List<RootObject>>(File.ReadAllText(copyjsonPath));
+            var rootObj = JsonConvert.DeserializeObject<List<RootObject>>(File.ReadAllText(json));
             int h = 0;
             int k = 0;
             for (int i = 0; i < config.Tables.Count; i++)
@@ -816,29 +816,20 @@ namespace DataMasker.Examples
                 h = k;
 
             }
-            //foreach (var item in config.Tables)
-            //{
 
-            //    foreach (var colitems in item.Columns)
-            //    {
-
-            //        var minMax = Convert.ToString(colitems.Min) + " - " + Convert.ToString(colitems.Max);
-            //        dt.Rows.Add(item.Name, colitems.Name, query.Where(n=>n.Key == item.Name), colitems.Type, colitems.Ignore, colitems.StringFormatPattern, minMax);
-            //    }
-
-            //}
             if (dt.Rows != null)
             {
-                writeTofile(dt, _nameDatabase);
-                var createsheet = toExcel(_nameDatabase + @"\" + _nameDatabase + ".csv", _nameDatabase, _nameDatabase);
+                writeTofile(dt, _appname + "MAPPER");
+                var createsheet = toExcel(_appname + @"\" + _appname + "_MASKED.csv", _appname, _appname);
                 if (createsheet == false)
                 {
+                    
                     Console.WriteLine("cannot create excel file");
+                    return false;
                 }
             }
-
+            return true;
         }
-
         private static void writeTofile(DataTable textTable, string directory)
         {
             StringBuilder fileContent = new StringBuilder();
@@ -868,7 +859,7 @@ namespace DataMasker.Examples
                 fileContent.Replace(",", System.Environment.NewLine, fileContent.Length - 1, 1);
             }
 
-            System.IO.File.WriteAllText(directory + @"\" + directory + ".csv", fileContent.ToString());
+            System.IO.File.WriteAllText(directory + @"\" + directory + "_MASKED.csv", fileContent.ToString());
 
         }
 

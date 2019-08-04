@@ -16,6 +16,7 @@ using System.Data.SqlTypes;
 using System.Data.Entity.Spatial;
 using Dapper;
 using System.Configuration;
+using System.Data;
 
 namespace DataMasker
 {
@@ -457,7 +458,7 @@ namespace DataMasker
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
 
-        public object GetValueShuffle(ColumnConfig columnConfig , string table, string column,IDataSource dataSources, 
+        public object GetValueShuffle(ColumnConfig columnConfig , string table, string column,IDataSource dataSources, DataTable dataTable,
             object existingValue, Name.Gender? gender = null)
         {
             if (columnConfig.RetainNullValues &&
@@ -471,7 +472,7 @@ namespace DataMasker
                 {
                     case DataType.Shuffle:
                         var random = new Random();
-                        var shuffle = dataSources.shuffle(table, column, existingValue);
+                        var shuffle = dataSources.shuffle(table, column, existingValue,dataTable);
                         return shuffle;
                 }
             }

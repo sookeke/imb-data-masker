@@ -4,6 +4,7 @@ using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -134,9 +135,31 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public object shuffle(string table, string column, object existingValue)
+        public object shuffle(string table, string column, object existingValue, DataTable _dataTable)
         {
-            throw new NotImplementedException();
+            //ArrayList list = new ArrayList();
+            Random rnd = new Random();
+            
+                var result = new DataView(_dataTable).ToTable(false, new string[] { column}).AsEnumerable().Select(n => n[0]).ToList();
+                //Randomizer randomizer = new Randomizer();
+
+                var values = result.Where(n => n != null).Distinct().ToArray();
+                //var find = randomizer.Shuffle(values);
+                object value = values[rnd.Next(values.Count())];
+                if (values.Count() <= 1)
+                {
+                    Console.WriteLine("Cannot generate unique shuffle value" + " on table " + table + "for column " + column + Environment.NewLine + Environment.NewLine);
+                    return value;
+                }
+                while (value.Equals(existingValue))
+                {
+
+                    value = values[rnd.Next(0, values.Count())];
+                }
+
+                return value;
+
+            
         }
 
         public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents)

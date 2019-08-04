@@ -9,6 +9,7 @@ using DataMasker.Models;
 using System.Drawing;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Data;
 
 namespace DataMasker
 {
@@ -55,7 +56,7 @@ namespace DataMasker
         /// <returns></returns>
         public IDictionary<string, object> Mask(
             IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource)
+            TableConfig tableConfig, IDataSource dataSource, DataTable dataTable)
         {
 
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
@@ -79,7 +80,7 @@ namespace DataMasker
                 //}
                 if (columnConfig.Type == DataType.Shuffle)
                 {
-                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, gender);
+                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Name, columnConfig.Name, dataSource,dataTable, existingValue, gender);
                 }          
                 else if (columnConfig.Type == DataType.File)
                 {
