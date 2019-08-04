@@ -164,6 +164,7 @@
     <Compile Include="Models\DataSourceConfig.cs" />
     <Compile Include="Models\DataSourceType.cs" />
     <Compile Include="Models\ExcelToJson.cs" />
+    <Compile Include="Models\JsonnullEmptyString.cs" />
     <Compile Include="Models\SpreadsheetObject.cs" />
     <Compile Include="OracleArrayTypeFactoryBase.cs" />
     <Compile Include="OracleCustomTypeBase.cs" />

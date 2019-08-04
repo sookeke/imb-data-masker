@@ -1,5 +1,6 @@
 ﻿using DataMasker.Interfaces;
 using DataMasker.Models;
+using ExcelDataReader;
 using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
@@ -50,78 +51,112 @@ namespace DataMasker.DataSources
 
         public DataTable DataTableFromCsv(string csvPath)
         {
-            
-
-       
+            if (csvPath == null) { throw new ArgumentException("spreadsheet path cannot is be null"); }
             DataTable dataTable = new DataTable();
-            dataTable.Columns.Clear();
-            dataTable.Rows.Clear();
-            dataTable.Clear();
-
-            List<string> allEmails = new List<string>();
-
-
-            using (cvsReader = new TextFieldParser(csvPath))
+            if (Path.GetExtension(csvPath).ToUpper().Equals(".CSV"))
             {
-                cvsReader.SetDelimiters(new string[] { "," });
 
-                //cvsReader.HasFieldsEnclosedInQuotes = true;
-                //read column
-                string[] colfield = cvsReader.ReadFields();
-                //colfield
-                //specila chra string
-                string specialChar = @"\|!#$%&/()=?»«@£§€{}.-;'<>,";
-                string repclace = @"_";
-                repclace.ToCharArray();
-                foreach (string column in colfield)
+                dataTable.Columns.Clear();
+                dataTable.Rows.Clear();
+                dataTable.Clear();
+
+                List<string> allEmails = new List<string>();
+
+
+                using (cvsReader = new TextFieldParser(csvPath))
                 {
-                    foreach (var item in specialChar)
+                    cvsReader.SetDelimiters(new string[] { "," });
+
+                    //cvsReader.HasFieldsEnclosedInQuotes = true;
+                    //read column
+                    string[] colfield = cvsReader.ReadFields();
+                    //colfield
+                    //specila chra string
+                    string specialChar = @"\|!#$%&/()=?»«@£§€{}.-;'<>,";
+                    string repclace = @"_";
+                    repclace.ToCharArray();
+                    foreach (string column in colfield)
                     {
-                        if (column.Contains(item))
+                        foreach (var item in specialChar)
                         {
-                            column.Replace(item, repclace[0]);
-
-                        }
-                    }
-                    DataColumn datacolumn = new DataColumn(column);
-                    datacolumn.AllowDBNull = true;
-                    var dcol = Regex.Replace(datacolumn.ColumnName, @"[^a-zA-Z0-9_.]+", "_");
-                    dataTable.Columns.Add(dcol);
-
-
-                }
-
-                while (!cvsReader.EndOfData)
-                {
-
-                    try
-                    {
-                        string[] fieldData = cvsReader.ReadFields();
-                        for (int i = 0; i < fieldData.Length; i++)
-                        {
-                            if (fieldData[i] == "")
+                            if (column.Contains(item))
                             {
-                                fieldData[i] = null;
+                                column.Replace(item, repclace[0]);
+
                             }
+                        }
+                        DataColumn datacolumn = new DataColumn(column);
+                        datacolumn.AllowDBNull = true;
+                        var dcol = Regex.Replace(datacolumn.ColumnName, @"[^a-zA-Z0-9_.]+", "_");
+                        dataTable.Columns.Add(dcol);
 
 
+                    }
+
+                    while (!cvsReader.EndOfData)
+                    {
+
+                        try
+                        {
+                            string[] fieldData = cvsReader.ReadFields();
+                            for (int i = 0; i < fieldData.Length; i++)
+                            {
+                                if (fieldData[i] == "")
+                                {
+                                    fieldData[i] = null;
+                                }
+
+
+                            }
+                            dataTable.Rows.Add(fieldData);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                            return null;
                         }
 
-
-
-                        dataTable.Rows.Add(fieldData);
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        return null;
-                    }
-
-
-
-
                 }
             }
+            else if (Path.GetExtension(csvPath).ToUpper().Equals(".XLXS") || Path.GetExtension(csvPath).ToUpper().Equals(".XLS"))
+            {
+                dataTable.Columns.Clear();
+                dataTable.Rows.Clear();
+                dataTable.Clear();
+                using (FileStream fileStream = new FileStream(csvPath, FileMode.Open, FileAccess.Read))
+                {
+                    IExcelDataReader excelReader = null;
+                    if (Path.GetExtension(csvPath).ToUpper() == ".XLSX")
+                    {
+                        excelReader = ExcelReaderFactory.CreateOpenXmlReader(fileStream);
+                    }
+                    else if (Path.GetExtension(csvPath).ToUpper() == ".XLS")
+                    {
+                        //1. Reading from a binary Excel file ('97-2003 format; *.xls)
+                        excelReader = ExcelReaderFactory.CreateBinaryReader(fileStream);
+                    }
+                    else
+                        throw new ArgumentOutOfRangeException();
+                    if (excelReader != null)
+                    {
+                        System.Data.DataSet result = excelReader.AsDataSet(new ExcelDataSetConfiguration()
+                        {
+                            ConfigureDataTable = (_) => new ExcelDataTableConfiguration()
+                            {
+                                UseHeaderRow = true
+                            }
+                        });
+
+
+                        //Set to Table
+                        dataTable = result.Tables[0].AsDataView().ToTable();
+                    }
+                }
+            }
+            else
+                throw new ArgumentException("Sheet format not found", csvPath);
+            
             return dataTable;
         }
 

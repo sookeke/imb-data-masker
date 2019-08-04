@@ -19,6 +19,7 @@ using OfficeOpenXml;
 using Bogus;
 using Microsoft.VisualBasic.FileIO;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 
 /*
     Author: Stanley Okeke
@@ -82,6 +83,7 @@ namespace DataMasker.Examples
 
             #region Create root json objects
             var rootObj = JsonConvert.DeserializeObject<List<RootObject>>(File.ReadAllText(json));
+            var oo = ExcelToJson.FromJson(File.ReadAllText(json));
             var query = from root in rootObj
                             //where root.__invalid_name__Masking_Rule.Contains("No masking")
                         group root by root.TableName into newGroup
@@ -113,6 +115,7 @@ namespace DataMasker.Examples
                     {
                         name = col.ColumnName,
                         retainNullValues = true,
+                        StringFormatPattern = ""
 
 
                     };
@@ -420,8 +423,8 @@ namespace DataMasker.Examples
                             column.type = "Ignore";
                             //column.type = col.DATA_TYPE;
                             column.StringFormatPattern = "";
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
+                            column.max = col.Max.ToString(); 
+                            column.min = col.Min.ToString(); 
                             column.useGenderColumn = "";
                             column.ignore = true;
 
@@ -482,7 +485,7 @@ namespace DataMasker.Examples
 
             //jsonpath = @"example-configs\jsconfigTables.json";
             jsonpath = ConfigurationManager.AppSettings["jsonMapPath"];
-            string jsonresult = JsonConvert.SerializeObject(rootObject1);
+            string jsonresult = JsonConvert.SerializeObject(rootObject1,Formatting.Indented);
 
 
             #region compare original jsonconfig for datatype errors
@@ -546,8 +549,12 @@ namespace DataMasker.Examples
                         string option = Console.ReadLine();
                         if (option == "yes")
                         {
+                            JObject o1 = JObject.Parse(File.ReadAllText(jsonpath));
+                            Console.WriteLine(o1);
+                            
+                            
                             File.WriteAllText(@"output\ColumnNotMasked.txt", value);
-
+                            
                         }
                         else
                         {
@@ -582,6 +589,7 @@ namespace DataMasker.Examples
                 {
                     tw.WriteLine(jsonresult.ToString());
                     tw.Close();
+                    Console.WriteLine("{0}", jsonresult);
                 }
                 //check map failures and write to file then exit for correction
                 if (count != 0)
@@ -605,7 +613,7 @@ namespace DataMasker.Examples
                     }
                 }
 
-
+                
 
             }
             #endregion
@@ -613,7 +621,7 @@ namespace DataMasker.Examples
         public class RootObject
         {
             [DefaultValue("")]
-            [JsonProperty("TABLE_NAME", DefaultValueHandling = DefaultValueHandling.Populate))]
+            [JsonProperty("TABLE_NAME", DefaultValueHandling = DefaultValueHandling.Populate)]
 
             public string TableName { get; set; }
             [DefaultValue("")]
@@ -630,7 +638,7 @@ namespace DataMasker.Examples
             public string DataDefault { get; set; }
             [DefaultValue(0)]
             [JsonProperty("COLUMN_ID", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public long ColumnId { get; set; }
+            public long? ColumnId { get; set; } = 0;
 
             [DefaultValue("")]
             // [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
@@ -646,8 +654,8 @@ namespace DataMasker.Examples
             [JsonProperty("Personal")]
             public string Personal { get; set; }
             [DefaultValue("")]
-            [JsonProperty("PKconstraintName",DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string PKconstraintName { get; set; }
+            [JsonProperty("PKconstraintName", DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string PKconstraintName { get; set; } = "";
 
             [DefaultValue("")]
             [JsonProperty("Min", DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -683,17 +691,12 @@ namespace DataMasker.Examples
 
         public static void Example1()
         {
+            
             _nameDatabase = ConfigurationManager.AppSettings["DatabaseName"];
             _SpreadSheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
-            if (string.IsNullOrEmpty(_nameDatabase))
-            {
-                Console.WriteLine("Database name cannot be null, check app.config and specify the database name");
-                System.Environment.Exit(1);
-            }
+            if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }           
             copyjsonPath = ExcelToJson.toJson(_SpreadSheetPath);
             JsonConfig(copyjsonPath);
-            
-
             Config config = LoadConfig(1);
             IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
             IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
@@ -719,8 +722,8 @@ namespace DataMasker.Examples
                        var _maskSpreadSheet = dataSource.SpreadSheetTable(rows);
                         if (_maskSpreadSheet.Rows.Count != 0)
                         {
-                            writeTofile(_maskSpreadSheet, _nameDatabase);
-                            var createsheet = toExcel(_nameDatabase + @"\" + _nameDatabase + "_MASKED.csv", _nameDatabase, _nameDatabase);
+                            var csvFile = writeTofile(_maskSpreadSheet, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
+                            var createsheet = toExcel(csvFile, _nameDatabase, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
                             if (createsheet == false)
                             {
                                 Console.WriteLine("cannot create excel file");
@@ -779,7 +782,7 @@ namespace DataMasker.Examples
 
             }
             //write mapped table and column with type in csv file
-            var o = OutputSheet(config, jsonpath, _nameDatabase);
+            var o = OutputSheet(config, copyjsonPath, _nameDatabase);
            
 
         }
@@ -819,8 +822,8 @@ namespace DataMasker.Examples
 
             if (dt.Rows != null)
             {
-                writeTofile(dt, _appname + "MAPPER");
-                var createsheet = toExcel(_appname + @"\" + _appname + "_MASKED.csv", _appname, _appname);
+                var csv = writeTofile(dt, _appname, "_Mapped_" + Guid.NewGuid().ToString());
+                var createsheet = toExcel(csv, _appname, _appname, "_Mapped_"+ Guid.NewGuid().ToString());
                 if (createsheet == false)
                 {
                     
@@ -830,7 +833,7 @@ namespace DataMasker.Examples
             }
             return true;
         }
-        private static void writeTofile(DataTable textTable, string directory)
+        private static string writeTofile(DataTable textTable, string directory, string uniquekey)
         {
             StringBuilder fileContent = new StringBuilder();
             //int i = 0;
@@ -840,7 +843,7 @@ namespace DataMasker.Examples
             }
             if (textTable.Columns.Count == 0)
             {
-                return;
+                return "";
             }
             foreach (var col in textTable.Columns)
             {
@@ -859,14 +862,20 @@ namespace DataMasker.Examples
                 fileContent.Replace(",", System.Environment.NewLine, fileContent.Length - 1, 1);
             }
 
-            System.IO.File.WriteAllText(directory + @"\" + directory + "_MASKED.csv", fileContent.ToString());
-
+            System.IO.File.WriteAllText(directory + @"\" + directory + uniquekey + ".csv", fileContent.ToString());
+            if (File.Exists(directory + @"\" + directory + uniquekey + ".csv"))
+            {
+                return directory + @"\" + directory + uniquekey + ".csv";
+            }
+            else
+                return "";
+            
         }
 
-        private static bool toExcel(string csvFileName, string _appName, string directory)
+        private static bool toExcel(string csvFileName, string _appName, string directory, string uniqueKey)
         {
             string worksheetsName = _appName;
-            string excelFileName = directory + @"\" + directory + ".xlsx";
+            string excelFileName = directory + @"\" + _appName + uniqueKey + ".xlsx";
             bool firstRowIsHeader = true;
             try
             {
