@@ -155,7 +155,7 @@ namespace DataMasker.DataSources
                 }
             }
             else
-                throw new ArgumentException("Sheet format not found", csvPath);
+                throw new ArgumentException("Invalid sheet extension", csvPath);
             
             return dataTable;
         }
@@ -172,7 +172,7 @@ namespace DataMasker.DataSources
 
         public object shuffle(string table, string column, object existingValue, DataTable _dataTable)
         {
-            //ArrayList list = new ArrayList();
+            
             Random rnd = new Random();
             
                 var result = new DataView(_dataTable).ToTable(false, new string[] { column}).AsEnumerable().Select(n => n[0]).ToList();

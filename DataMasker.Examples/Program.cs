@@ -108,9 +108,6 @@ namespace DataMasker.Examples
                 {
 
                     table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
-
-                    //col.Comments = "";
-                    //col.MaskingRule = "";
                     Column column = new Column
                     {
                         name = col.ColumnName,
@@ -173,7 +170,7 @@ namespace DataMasker.Examples
                         column.StringFormatPattern = "{{ADDRESS.COUNTRY}}";
                         column.useGenderColumn = "";
                     }
-                    else if (col.DataType.Contains("Geometry") || col.DataType.Contains("GEOMETRY"))
+                    else if (col.DataType.Equals("SDO_GEOMETRY") || col.DataType.ToUpper().Contains("GEOMETRY"))
                     {
                         column.type = "Geometry";
                         column.max = col.Max.ToString(); ;
@@ -589,14 +586,14 @@ namespace DataMasker.Examples
                 {
                     tw.WriteLine(jsonresult.ToString());
                     tw.Close();
-                    Console.WriteLine("{0}", jsonresult);
+                    Console.WriteLine("{0}{1}","Maped Json".ToUpper() + Environment.NewLine, jsonresult);
                 }
                 //check map failures and write to file then exit for correction
                 if (count != 0)
                 {
                     string colfailed = count + " columns cannot be mapped to a masking datatype and so will be ignored. See file jsconfigTables.json in the example_configs folder and provide mask datatype for these columns " + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, collist.Select(x => x.Key + " ON TABLE " + x.Value).ToArray());
                     //Console.WriteLine(colfailed);
-                    Console.WriteLine(count + " columns cannot be mapped to a masking datatype and so will be ignored \n + {0}", string.Join(Environment.NewLine, collist.Select(n => n.Key + "ON TABLE " + n.Value).ToArray()));
+                    Console.WriteLine(count + " columns cannot be mapped to a masking datatype and so will be ignored" + Environment.NewLine +"{0}", string.Join(Environment.NewLine, collist.Select(n => n.Key + " ON TABLE " + n.Value).ToArray()));
                     Console.WriteLine("Do you wish to continue and ignore masking these columns? [yes/no]");
                     string option = Console.ReadLine();
                     if (option == "yes")
@@ -691,7 +688,13 @@ namespace DataMasker.Examples
 
         public static void Example1()
         {
-            
+            if (!CheckAppConfig())
+            {
+                Console.WriteLine("Program will exit: Press ENTER to exist..");
+                Console.ReadLine();
+                System.Environment.Exit(1);
+            }
+            //{ throw new NullReferenceException("Referencing a null app key value"); }
             _nameDatabase = ConfigurationManager.AppSettings["DatabaseName"];
             _SpreadSheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
             if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }           
@@ -706,7 +709,7 @@ namespace DataMasker.Examples
                 var isblob = tableConfig.Columns.Where(x => !x.Ignore && x.Type == DataType.Blob);
                 object extension = null;
                 IEnumerable<IDictionary<string, object>> rows = null;
-               File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
+                File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
                 if (config.DataSource.Type == DataSourceType.SpreadSheet)
                 {
                     //load spreadsheet to dataTable
@@ -926,6 +929,65 @@ namespace DataMasker.Examples
             fileWriter.WriteLine(new string('-', schema.Title.Length));
             fileWriter.WriteLine(prettyString);
             fileWriter.Close();
+        }
+
+        public  static bool CheckAppConfig()
+        {
+            Dictionary<string, string> allkey = new Dictionary<string, string>();
+            bool flag = false;
+            List<string> allKeys = new List<string>();
+            foreach (string key in ConfigurationManager.AppSettings.AllKeys)
+            {
+                switch (key)
+                {
+                    case nameof(AppConfig.APP_NAME):
+                        allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
+                        break;
+                    case nameof(AppConfig.ConnectionString):
+                        allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
+                        break;
+                    case nameof(AppConfig.ConnectionStringPrd):
+                        allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
+                        break;
+                    case nameof(AppConfig.DatabaseName):
+                        allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
+                        break;
+                    case nameof(AppConfig.DataSourceType):
+                        allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
+                        break;
+                    case nameof(AppConfig.ExcelSheetPath):
+                        allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
+                        break;
+                    case nameof(AppConfig.jsonMapPath):
+                        allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
+                        break;
+                    
+                    default:
+                        break;
+                }
+
+                
+            }
+
+            if (allkey.Values.Contains(string.Empty))
+            {
+                Console.WriteLine(new NullReferenceException("Referencing a null app key value: Mandatory app key value is not set in the App.config" + Environment.NewLine));
+                Console.WriteLine(string.Join(Environment.NewLine, allkey.Where(n => n.Value == string.Empty).Select(n => n.Key + " : " + n.Value + "Null").ToArray()));
+                flag = false;
+            }
+            else
+                flag = true;
+            return flag;
+        }
+        public enum AppConfig
+        {
+            ExcelSheetPath,
+            jsonMapPath,
+            DatabaseName,
+            DataSourceType,
+            APP_NAME,
+            ConnectionString,
+            ConnectionStringPrd
         }
         private static void UpdateProgress(
             ProgressType progressType,

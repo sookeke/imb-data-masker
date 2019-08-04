@@ -26,50 +26,69 @@ namespace DataMasker.Models
             if (szFilePath == null) { throw new ArgumentNullException("input excel sheet"); }
             var settings = new JsonSerializerSettings { ContractResolver = new SpecialContractResolver() };
             string jsonPath = Path.GetDirectoryName(szFilePath) + "\\" + Path.GetFileNameWithoutExtension(szFilePath) + ".json";
-            using (FileStream fileStream = new FileStream(szFilePath, FileMode.Open, FileAccess.Read))
+            try
             {
-                IExcelDataReader excelReader = null;
-                if (Path.GetExtension(szFilePath).ToUpper() == ".XLSX")
+                using (FileStream fileStream = new FileStream(szFilePath, FileMode.Open, FileAccess.Read))
                 {
-                    excelReader = ExcelReaderFactory.CreateOpenXmlReader(fileStream);
-                }
-                else if (Path.GetExtension(szFilePath).ToUpper() == ".XLS")
-                {
-                    //1. Reading from a binary Excel file ('97-2003 format; *.xls)
-                    excelReader = ExcelReaderFactory.CreateBinaryReader(fileStream);
-                }
-                else
-                    throw new ArgumentOutOfRangeException();
-                if (excelReader != null)
-                {
-                    System.Data.DataSet result = excelReader.AsDataSet(new ExcelDataSetConfiguration()
+                    IExcelDataReader excelReader = null;
+                    if (Path.GetExtension(szFilePath).ToUpper() == ".XLSX")
                     {
-                        ConfigureDataTable = (_) => new ExcelDataTableConfiguration()
-                        {
-                            UseHeaderRow = true
-                        }
-                    });
-
-
-                    //Set to Table
-                    var dataTable = result.Tables[0].AsDataView().ToTable();
-                    var json = JsonConvert.SerializeObject(dataTable, Formatting.Indented, new JsonSerializerSettings { ContractResolver = new SpecialContractResolver() });
-                    var o = json.Replace("null", "\"\"");
-                    using (var tw = new StreamWriter(jsonPath, false))
-                    {
-                        tw.WriteLine(o.ToString());
-                        tw.Close();
+                        excelReader = ExcelReaderFactory.CreateOpenXmlReader(fileStream);
                     }
-                   var oo = JsonObject(o);
-                    Console.WriteLine("{0}", o);
+                    else if (Path.GetExtension(szFilePath).ToUpper() == ".XLS")
+                    {
+                        //1. Reading from a binary Excel file ('97-2003 format; *.xls)
+                        excelReader = ExcelReaderFactory.CreateBinaryReader(fileStream);
+                    }
+                    else
+                        Console.WriteLine(new ArgumentException("Invalid sheet type",Path.GetFileName(szFilePath)));
+                    if (excelReader != null)
+                    {
+                        System.Data.DataSet result = excelReader.AsDataSet(new ExcelDataSetConfiguration()
+                        {
+                            ConfigureDataTable = (_) => new ExcelDataTableConfiguration()
+                            {
+                                UseHeaderRow = true
+                            }
+                        });
+
+
+                        //Set to Table
+                        var dataTable = result.Tables[0].AsDataView().ToTable();
+                        var json = JsonConvert.SerializeObject(dataTable, Formatting.Indented, new JsonSerializerSettings { ContractResolver = new SpecialContractResolver() });
+                        var o = json.Replace("null", "\"\"");
+                        using (var tw = new StreamWriter(jsonPath, false))
+                        {
+                            tw.WriteLine(o.ToString());
+                            tw.Close();
+                        }
+                        var oo = JsonObject(o);
+                        Console.WriteLine("{0}{1}", "converted output: ".ToUpper() + Environment.NewLine,o);
+                    }
+                  
                 }
-                if (File.Exists(jsonPath))
-                {
-                    return jsonPath;
-                }
-                else
-                    throw new ArgumentOutOfRangeException();
             }
+            catch (IOException ex)
+            {
+
+                Console.WriteLine("Exception caught: {0}", ex.Message);
+            }
+            finally
+            {
+                //Console.WriteLine("Result: {0}",);
+            }
+            if (File.Exists(jsonPath))
+            {
+                return jsonPath;
+            }
+            else
+            {
+                Console.WriteLine(new IOException("exception caught: could not find file: " + jsonPath));
+                Console.WriteLine("Program will exit: Press ENTER to exist..");
+                Console.ReadLine();
+                System.Environment.Exit(1);
+            }
+            return "";
         }
         public static object[] FromJson(string input)
         {
