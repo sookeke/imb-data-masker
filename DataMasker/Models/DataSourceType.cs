@@ -5,6 +5,7 @@
         InMemoryFake,
         SqlServer,
         OracleServer,
-        SpreadSheet
+        SpreadSheet,
+        PostgresSource
     }
 }

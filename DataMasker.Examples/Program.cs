@@ -5,20 +5,15 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using DataMasker.Interfaces;
 using DataMasker.Models;
 using DataMasker.Runner;
 using Newtonsoft.Json;
-using CommandLine;
 using Newtonsoft.Json.Schema;
 using Newtonsoft.Json.Schema.Generation;
 using Newtonsoft.Json.Serialization;
 using System.ComponentModel;
 using OfficeOpenXml;
-using Bogus;
-using Microsoft.VisualBasic.FileIO;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 
 /*
@@ -591,7 +586,7 @@ namespace DataMasker.Examples
                 //check map failures and write to file then exit for correction
                 if (count != 0)
                 {
-                    string colfailed = count + " columns cannot be mapped to a masking datatype and so will be ignored. See file jsconfigTables.json in the example_configs folder and provide mask datatype for these columns " + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, collist.Select(x => x.Key + " ON TABLE " + x.Value).ToArray());
+                    string colfailed = count + " columns cannot be mapped to a masking datatype and so will be ignored. Review the " + jsonpath +" and provide mask datatype for these columns " + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, collist.Select(x => x.Key + " ON TABLE " + x.Value).ToArray());
                     //Console.WriteLine(colfailed);
                     Console.WriteLine(count + " columns cannot be mapped to a masking datatype and so will be ignored" + Environment.NewLine +"{0}", string.Join(Environment.NewLine, collist.Select(n => n.Key + " ON TABLE " + n.Value).ToArray()));
                     Console.WriteLine("Do you wish to continue and ignore masking these columns? [yes/no]");
@@ -969,7 +964,7 @@ namespace DataMasker.Examples
                 
             }
 
-            if (allkey.Values.Contains(string.Empty))
+            if (allkey.Values.Where(n=>n.Equals(string.Empty)) != null)
             {
                 Console.WriteLine(new NullReferenceException("Referencing a null app key value: Mandatory app key value is not set in the App.config" + Environment.NewLine));
                 Console.WriteLine(string.Join(Environment.NewLine, allkey.Where(n => n.Value == string.Empty).Select(n => n.Key + " : " + n.Value + "Null").ToArray()));

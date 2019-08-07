@@ -24,6 +24,8 @@ namespace DataMasker
                     return new OracleDataSource(dataSourceConfig);
                 case DataSourceType.SpreadSheet:
                     return new SpreadSheet(dataSourceConfig);
+                case DataSourceType.PostgresSource:
+                    return new PostgresSource(dataSourceConfig);
 
             }
 

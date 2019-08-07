@@ -1,4 +1,4 @@
-﻿ using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -8,12 +8,7 @@ using DataMasker.Interfaces;
 using DataMasker.Models;
 using GeoAPI.Geometries;
 using NetTopologySuite.Geometries;
-using DataMasker.DataSources;
 using System.Linq;
-using NetTopologySuite.IO;
-using Microsoft.SqlServer.Types;
-using System.Data.SqlTypes;
-using System.Data.Entity.Spatial;
 using Dapper;
 using System.Configuration;
 using System.Data;
@@ -694,7 +689,7 @@ namespace DataMasker
 
                     return _faker.System.FileName(fileExtension);
             }
-                throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
+                throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type,"not implemented");
         }
 
         private enum MinMax

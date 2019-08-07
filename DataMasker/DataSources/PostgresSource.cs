@@ -1,28 +1,28 @@
-﻿using DataMasker.Interfaces;
+﻿using Dapper;
+using DataMasker.Interfaces;
 using DataMasker.Models;
-using Dapper;
-using Oracle.DataAccess.Client;
+using DataMasker.Utils;
+using Npgsql;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using DataMasker.Utils;
+using System.Configuration;
 using System.Data;
 using System.IO;
-using System.Configuration;
+using System.Linq;
 
 namespace DataMasker.DataSources
 {
-    public class OracleDataSource : IDataSource
+    class PostgresSource : IDataSource
     {
         private readonly DataSourceConfig _sourceConfig;
         //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
-        private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\"+ ConfigurationManager.AppSettings["APP_NAME"] + "_exception.txt";
-        private static string _successfulCommit = Directory.GetCurrentDirectory() + $@"\Output\"+ ConfigurationManager.AppSettings["APP_NAME"] +"_successfulCommit.txt";
+        private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\" + ConfigurationManager.AppSettings["APP_NAME"] + "_exception.txt";
+        private static string _successfulCommit = Directory.GetCurrentDirectory() + $@"\Output\" + ConfigurationManager.AppSettings["APP_NAME"] + "_successfulCommit.txt";
 
 
         private readonly string _connectionString;
 
-        public OracleDataSource(
+        public PostgresSource(
            DataSourceConfig sourceConfig)
         {
             _sourceConfig = sourceConfig;
@@ -40,7 +40,7 @@ namespace DataMasker.DataSources
         public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig)
         {
             string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
-            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringGet))
+            using (var connection = new NpgsqlConnection(_connectionStringGet))
             {
                 connection.Open();
                 //var retu = connection.Query(BuildSelectSql(tableConfig));
@@ -50,10 +50,10 @@ namespace DataMasker.DataSources
 
         public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig)
         {
-            using (var connection = new OracleConnection(_connectionString))
+            using (var connection = new NpgsqlConnection(_connectionString))
             {
                 connection.Open();
-                connection.Execute(BuildUpdateSql(tableConfig), row, null,commandType: System.Data.CommandType.Text);
+                connection.Execute(BuildUpdateSql(tableConfig), row, null, commandType: System.Data.CommandType.Text);
             }
         }
 
@@ -74,47 +74,47 @@ namespace DataMasker.DataSources
                     enumerable) => enumerable.Count() < batchSize);
 
             int totalUpdated = 0;
-          
+
             if (!(File.Exists(_successfulCommit) && File.Exists(_exceptionpath)))
             {
-                
-                    //write to the file
-                    File.Create(_successfulCommit).Close();
-               
-                    //write to the file
-                    File.Create(_exceptionpath).Close();
-               
-               
-               
+
+                //write to the file
+                File.Create(_successfulCommit).Close();
+
+                //write to the file
+                File.Create(_exceptionpath).Close();
+
+
+
             }
             using (System.IO.StreamWriter sw = System.IO.File.AppendText(_exceptionpath))
             {
                 if (new FileInfo(_exceptionpath).Length == 0)
                 {
                     sw.WriteLine("exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
-                  //  File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    //  File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
                 }
-               // sw.WriteLine(""); 
+                // sw.WriteLine(""); 
             }
             using (System.IO.StreamWriter sw = System.IO.File.AppendText(_successfulCommit))
             {
                 //write my text 
                 if (new FileInfo(_successfulCommit).Length == 0)
                 {
-                   // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
 
                     sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
                 }
             }
-            
-           
-            
-           
-           
-            using (OracleConnection connection = new OracleConnection(_connectionString))
+
+
+
+
+
+            using (NpgsqlConnection connection = new NpgsqlConnection(_connectionString))
             {
                 connection.Open();
-                
+
 
 
                 foreach (Batch<IDictionary<string, object>> batch in batches)
@@ -125,8 +125,8 @@ namespace DataMasker.DataSources
 
 
                         string sql = BuildUpdateSql(config);
-                       
-                        
+
+
                         try
                         {
                             //File.AppendAllText(_successfulCommit, "Successful Commit on table " + config.Name + Environment.NewLine + Environment.NewLine);
@@ -155,10 +155,10 @@ namespace DataMasker.DataSources
 
                             Console.WriteLine(ex.Message);
                             File.AppendAllText(_exceptionpath, ex.Message + " on table " + config.Name + Environment.NewLine + Environment.NewLine);
-                           
+
                         }
 
-                        
+
                     }
                 }
             }
@@ -198,20 +198,20 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object shuffle(string table, string column, object existingValue,DataTable dataTable = null)
+        public object shuffle(string table, string column, object existingValue, DataTable dataTable = null)
         {
             //ArrayList list = new ArrayList();
             Random rnd = new Random();
             string sql = "SELECT " + column + " FROM " + " " + table;
-            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionString))
+            using (var connection = new NpgsqlConnection(_connectionString))
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                 //Randomizer randomizer = new Randomizer();
-               
-                var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n =>  n != null).Distinct().ToArray();
+
+                var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
                 //var find = randomizer.Shuffle(values);
-                object value = values[rnd.Next(values.Count())];         
+                object value = values[rnd.Next(values.Count())];
                 if (values.Count() <= 1)
                 {
                     File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + "for column " + column + Environment.NewLine + Environment.NewLine);
@@ -220,7 +220,7 @@ namespace DataMasker.DataSources
                 while (value.Equals(existingValue))
                 {
 
-                    value = values[rnd.Next(0,values.Count())];
+                    value = values[rnd.Next(0, values.Count())];
                 }
 
                 return value;
@@ -229,7 +229,7 @@ namespace DataMasker.DataSources
 
             //return list;
         }
-      
+
 
         public object GetData(string column, string table)
         {
