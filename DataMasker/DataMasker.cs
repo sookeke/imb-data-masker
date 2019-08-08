@@ -61,7 +61,9 @@ namespace DataMasker
 
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
+                
                 object existingValue = obj[columnConfig.Name];
+                
 
                 Name.Gender? gender = null;
                 if (!string.IsNullOrEmpty(columnConfig.UseGenderColumn))

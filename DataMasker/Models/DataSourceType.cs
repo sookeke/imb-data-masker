@@ -6,6 +6,6 @@
         SqlServer,
         OracleServer,
         SpreadSheet,
-        PostgresSource
+        PostgresServer
     }
 }
