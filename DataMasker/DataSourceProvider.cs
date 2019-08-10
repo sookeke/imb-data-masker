@@ -29,7 +29,7 @@ namespace DataMasker
 
             }
 
-            throw new ArgumentOutOfRangeException(nameof(dataSourceType), dataSourceType, null);
+            throw new ArgumentOutOfRangeException(nameof(dataSourceType), dataSourceType, "is not implemented");
         }
     }
 }

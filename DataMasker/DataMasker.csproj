@@ -169,12 +169,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataLang\CreateDML.cs" />
     <Compile Include="DataSourceProvider.cs" />
     <Compile Include="DataSources\InMemoryFakeDataSource.cs" />
     <Compile Include="DataSources\OracleDataSource.cs" />
     <Compile Include="DataSources\PostgresSource.cs" />
     <Compile Include="DataSources\SpreadSheet.cs" />
-    <Compile Include="DML\CreateDML.cs" />
+    <Compile Include="DataLang\CreateDDL.cs" />
     <Compile Include="FileType.cs" />
     <Compile Include="GeographyMapper.cs" />
     <Compile Include="Interfaces\IFileType.cs" />

@@ -15,6 +15,7 @@ using Newtonsoft.Json.Serialization;
 using System.ComponentModel;
 using OfficeOpenXml;
 using Newtonsoft.Json.Linq;
+using DataMasker.DataLang;
 
 /*
     Author: Stanley Okeke
@@ -230,18 +231,6 @@ namespace DataMasker.Examples
                         column.StringFormatPattern = "";
                         column.useGenderColumn = "";
                     }
-
-                    else if (col.DataType.ToUpper().Contains("NUMBER"))
-                    {
-                        var size = col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ')[1].Split(',')[0].ToString();
-
-                        column.type = "RandomInt";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
-
-                    }
                     else if (col.ColumnName.ToUpper().Equals("YEAR"))
                     {
                         column.type = "RandomYear";
@@ -250,7 +239,7 @@ namespace DataMasker.Examples
                         column.StringFormatPattern = "";
                         column.useGenderColumn = "";
                     }
-                    else if (col.ColumnName.ToUpper().Contains("PHONE_NO") || col.ColumnName.ToUpper().Contains("FAX_NO") || col.ColumnName.ToUpper().Contains("CONTRACT_NO") || col.ColumnName.ToUpper().Contains("CELL") || col.ColumnName.ToUpper().Contains("_PHONE"))
+                    else if (col.ColumnName.ToUpper().Contains("PHONE_NO") || col.ColumnName.ToUpper().Contains("FAX_NO") || col.ColumnName.ToUpper().Contains("CONTRACT_NO") || col.ColumnName.ToUpper().Contains("CELL") || col.ColumnName.ToUpper().Contains("_PHONE") || col.ColumnName.ToUpper().Contains("PHONENUMBER"))
                     {
                         if (col.DataType.ToUpper().Contains("NUMBER"))
                         {
@@ -405,6 +394,17 @@ namespace DataMasker.Examples
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
                             column.useGenderColumn = "";
+                        }
+                        else if (col.DataType.ToUpper().Contains("NUMBER"))
+                        {
+                            //var size = col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ')[1].Split(',')[0].ToString();
+
+                            column.type = "RandomInt";
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+
                         }
                         else if (col.ColumnName.ToUpper().Equals("TOTAL_AREA")) //set company name
                         {
@@ -724,8 +724,9 @@ namespace DataMasker.Examples
                         dataMasker.Mask(row, tableConfig, dataSource, SheetTable);
                     }
                     try
-                    {
-                       var _maskSpreadSheet = dataSource.SpreadSheetTable(rows);
+                    { 
+                        //convert the object to DataTable
+                       var _maskSpreadSheet = dataSource.SpreadSheetTable(rows);                        
                         if (_maskSpreadSheet.Rows.Count != 0)
                         {
                             var csvFile = writeTofile(_maskSpreadSheet, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
@@ -734,6 +735,18 @@ namespace DataMasker.Examples
                             {
                                 Console.WriteLine("cannot create excel file");
                             }
+                            //convert to DML
+                            #region DML Script
+                            _maskSpreadSheet.TableName = tableConfig.Name;
+                            string createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
+                            if (!Directory.Exists(createDir))
+                            {
+                                Directory.CreateDirectory(createDir);
+                            }
+                            string writePath = createDir + @"\" + tableConfig.Name + ".sql";
+
+                            var insertSQL = SqlDML.GenerateInsert(_maskSpreadSheet, null, null, null, writePath, config);
+                            #endregion
 
                         }
                     }
@@ -759,7 +772,7 @@ namespace DataMasker.Examples
                             dataMasker.Mask(row, tableConfig, dataSource);
                         }
                         Console.WriteLine(extension);
-
+                       
 
                         //rowIndex++;
 
@@ -772,6 +785,18 @@ namespace DataMasker.Examples
                     Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
                     try
                     {
+                        #region Create DML Script
+                        var _dmlTable = dataSource.CreateTable(rows);
+                        _dmlTable.TableName = tableConfig.Name;
+                        string createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
+                        if (!Directory.Exists(createDir))
+                        {
+                            Directory.CreateDirectory(createDir);
+                        }
+                        string writePath = createDir + @"\" + tableConfig.Name + ".sql";
+
+                        var insertSQL = SqlDML.GenerateInsert(_dmlTable, null, null, null, writePath,config);
+                        #endregion
                         dataSource.UpdateRows(rows, tableConfig);
                     }
                     catch (Exception ex)
@@ -878,7 +903,11 @@ namespace DataMasker.Examples
             
         }
 
-        private static bool toExcel(string csvFileName, string _appName, string directory, string uniqueKey)
+        private static bool toExcel(
+            string csvFileName, 
+            string _appName, 
+            string directory, 
+            string uniqueKey)
         {
             string worksheetsName = _appName;
             string excelFileName = directory + @"\" + _appName + uniqueKey + ".xlsx";
@@ -974,7 +1003,7 @@ namespace DataMasker.Examples
 
             if (allkey.Values.Where(n=>n.Equals(string.Empty)).Count() != 0)
             {
-                var xxx = allkey.Values.Where(n => n.Equals(string.Empty));
+                //var xxx = allkey.Values.Where(n => n.Equals(string.Empty));
                 Console.WriteLine(new NullReferenceException("Referencing a null app key value: Mandatory app key value is not set in the App.config" + Environment.NewLine));
                 Console.WriteLine(string.Join(Environment.NewLine, allkey.Where(n => n.Value == string.Empty).Select(n => n.Key + " : " + n.Value + "Null").ToArray()));
                 flag = false;
