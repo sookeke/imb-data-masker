@@ -41,6 +41,8 @@ namespace DataMasker.Examples
         private static readonly Dictionary<ProgressType, ProgressbarUpdate> _progressBars = new Dictionary<ProgressType, ProgressbarUpdate>();
         private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
         private static string copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
+        private static readonly Dictionary<string, object> allkey = new Dictionary<string, object>();
+
 
         public static string jsonpath { get; private set; }
         #endregion
@@ -738,15 +740,19 @@ namespace DataMasker.Examples
                             }
                             //convert to DML
                             #region DML Script
-                            _maskSpreadSheet.TableName = tableConfig.Name;
-                            string createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
-                            if (!Directory.Exists(createDir))
-                            {
-                                Directory.CreateDirectory(createDir);
-                            }
-                            string writePath = createDir + @"\" + tableConfig.Name + ".sql";
 
-                            var insertSQL = SqlDML.GenerateInsert(_maskSpreadSheet, null, null, null, writePath, config);
+                            if (allkey.Where(n => n.Key.ToUpper().Equals("WRITEDML")).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+                            {
+                                _maskSpreadSheet.TableName = tableConfig.Name;
+                                string createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
+                                if (!Directory.Exists(createDir))
+                                {
+                                    Directory.CreateDirectory(createDir);
+                                }
+                                string writePath = createDir + @"\" + tableConfig.Name + ".sql";
+
+                                var insertSQL = SqlDML.GenerateInsert(_maskSpreadSheet, null, null, null, writePath, config);
+                            }
                             #endregion
 
                         }
@@ -787,16 +793,20 @@ namespace DataMasker.Examples
                     try
                     {
                         #region Create DML Script
-                        var _dmlTable = dataSource.SpreadSheetTable(rows);
-                        _dmlTable.TableName = tableConfig.Name;
-                        string createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
-                        if (!Directory.Exists(createDir))
-                        {
-                            Directory.CreateDirectory(createDir);
-                        }
-                        string writePath = createDir + @"\" + tableConfig.Name + ".sql";
 
-                        var insertSQL = SqlDML.GenerateInsert(_dmlTable, null, null, null, writePath,config);
+                        if (allkey.Where(n => n.Key.ToUpper().Equals("WRITEDML")).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+                        {
+                            var _dmlTable = dataSource.SpreadSheetTable(rows);
+                            _dmlTable.TableName = tableConfig.Name;
+                            string createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
+                            if (!Directory.Exists(createDir))
+                            {
+                                Directory.CreateDirectory(createDir);
+                            }
+                            string writePath = createDir + @"\" + tableConfig.Name + ".sql";
+
+                            var insertSQL = SqlDML.GenerateInsert(_dmlTable, null, null, null, writePath, config);
+                        }
                         #endregion
                         dataSource.UpdateRows(rows, tableConfig);
                     }
@@ -966,7 +976,6 @@ namespace DataMasker.Examples
 
         public  static bool CheckAppConfig()
         {
-            Dictionary<string, string> allkey = new Dictionary<string, string>();
             bool flag = false;
             List<string> allKeys = new List<string>();
             foreach (string key in ConfigurationManager.AppSettings.AllKeys)
@@ -994,7 +1003,11 @@ namespace DataMasker.Examples
                     case nameof(AppConfig.jsonMapPath):
                         allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
                         break;
-                    
+                    case nameof(AppConfig.WriteDML):
+                        bool b = ConfigurationManager.AppSettings[key].ToString().ToUpper().Equals("YES") ? true : false;
+                        allkey.Add(key, b);
+                        break;
+
                     default:
                         break;
                 }
@@ -1018,6 +1031,7 @@ namespace DataMasker.Examples
             ExcelSheetPath,
             jsonMapPath,
             DatabaseName,
+            WriteDML,
             DataSourceType,
             APP_NAME,
             ConnectionString,
