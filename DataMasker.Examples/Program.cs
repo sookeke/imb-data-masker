@@ -16,6 +16,7 @@ using System.ComponentModel;
 using OfficeOpenXml;
 using Newtonsoft.Json.Linq;
 using DataMasker.DataLang;
+using MoreLinq;
 
 /*
     Author: Stanley Okeke
@@ -759,7 +760,7 @@ namespace DataMasker.Examples
                 }
                 else
                 {
-                    rows = dataSource.GetData(tableConfig);
+                    rows = dataSource.GetData(tableConfig);                    
                     foreach (IDictionary<string, object> row in rows)
                     {
                         if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
@@ -786,7 +787,7 @@ namespace DataMasker.Examples
                     try
                     {
                         #region Create DML Script
-                        var _dmlTable = dataSource.CreateTable(rows);
+                        var _dmlTable = dataSource.SpreadSheetTable(rows);
                         _dmlTable.TableName = tableConfig.Name;
                         string createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
                         if (!Directory.Exists(createDir))
