@@ -92,6 +92,7 @@ namespace DataMasker.DataLang
            
 
             bool firstRow = true;
+            int i = 1;
             foreach (DataRow rw in table.Rows)
             {
                 
@@ -112,9 +113,18 @@ namespace DataMasker.DataLang
                 output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue,config));
 
                 output.Append(")");
+                i = i + 1;
+               // var xuux = string.Join("", config.Tables.Select(n => n.Columns.ToArray().Select(x => x.Type + " ,").ToArray()));
+                var _allmaskType = string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
+                var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0,"--").Replace("Bogus","Fake Data");
+                if ( i == table.Rows.Count + 1)
+                {
+                    output.Append(Environment.NewLine);
+                    output.Append(_commentOut);
+                }
 
             }
-            var xx = output.ToString();
+            
             using (var tw = new StreamWriter(writePath, false))
             {
                 tw.WriteLine(output.ToString());
@@ -165,6 +175,7 @@ namespace DataMasker.DataLang
                     else
                     {
                         output.Append(GetInsertColumnValue(row, col,config));
+                        //output.
                     }
                 }
             }
