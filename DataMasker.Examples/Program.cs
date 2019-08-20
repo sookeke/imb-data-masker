@@ -688,24 +688,24 @@ namespace DataMasker.Examples
         private static Config LoadConfig(
             int example)
         {
-            return Config.Load(jsonpath);
-            //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\SheetFolder\BIP1.json");
+            //return Config.Load(jsonpath);
+            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\SheetFolder\BIP1.json");
         }
 
         public static void Example1()
         {
-            if (!CheckAppConfig())
-            {
-                Console.WriteLine("Program will exit: Press ENTER to exist..");
-                Console.ReadLine();
-                System.Environment.Exit(1);
-            }
-            //{ throw new NullReferenceException("Referencing a null app key value"); }
+            //if (!CheckAppConfig())
+            //{
+            //    Console.WriteLine("Program will exit: Press ENTER to exist..");
+            //    Console.ReadLine();
+            //    System.Environment.Exit(1);
+            //}
+            ////{ throw new NullReferenceException("Referencing a null app key value"); }
             _nameDatabase = ConfigurationManager.AppSettings["DatabaseName"];
-            _SpreadSheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
-            if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }           
-            copyjsonPath = ExcelToJson.toJson(_SpreadSheetPath);
-            JsonConfig(copyjsonPath);
+            //_SpreadSheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
+            //if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }           
+            //copyjsonPath = ExcelToJson.toJson(_SpreadSheetPath);
+            //JsonConfig(copyjsonPath);
             Config config = LoadConfig(1);
             IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
             IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
@@ -729,7 +729,7 @@ namespace DataMasker.Examples
                     try
                     { 
                         //convert the object to DataTable
-                       var _maskSpreadSheet = dataSource.SpreadSheetTable(rows);                        
+                       var _maskSpreadSheet = dataSource.SpreadSheetTable(rows, tableConfig);                        
                         if (_maskSpreadSheet.Rows.Count != 0)
                         {
                             var csvFile = writeTofile(_maskSpreadSheet, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
@@ -794,9 +794,9 @@ namespace DataMasker.Examples
                     {
                         #region Create DML Script
 
-                        if (allkey.Where(n => n.Key.ToUpper().Equals("WRITEDML")).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+                       // if (allkey.Where(n => n.Key.ToUpper().Equals("WRITEDML")).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                         {
-                            var _dmlTable = dataSource.SpreadSheetTable(rows);
+                            var _dmlTable = dataSource.SpreadSheetTable(rows, tableConfig);
                             _dmlTable.TableName = tableConfig.Name;
                             string createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
                             if (!Directory.Exists(createDir))

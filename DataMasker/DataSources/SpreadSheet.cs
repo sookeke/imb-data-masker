@@ -261,7 +261,7 @@ namespace DataMasker.DataSources
             
         }
 
-        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents)
+        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig tableConfig)
         {
             var table = new DataTable();
 

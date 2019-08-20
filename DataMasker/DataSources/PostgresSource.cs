@@ -246,7 +246,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents)
+        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig config)
         {
             var table = new DataTable();
 

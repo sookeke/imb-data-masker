@@ -79,6 +79,8 @@ namespace DataMasker.DataLang
             if (config.DataSource.Type == DataSourceType.OracleServer)
             {
 
+                output.AppendFormat("REM INSERTING into {0}\n", table.TableName);
+                output.AppendFormat("SET DEFINE OFF\n\t");
             }
             else if (config.DataSource.Type == DataSourceType.PostgresServer)
             {
@@ -105,14 +107,34 @@ namespace DataMasker.DataLang
                 else
                 {
                     // there was a previous item, so add a comma
-                    output.AppendLine(",");
+                    if (config.DataSource.Type == DataSourceType.OracleServer)
+                    {
+                        output.AppendLine(";");
+                    }
+                    else
+                        output.AppendLine(",");
+
                 }
 
-                output.Append("\t(");
+              
 
-                output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue,config));
+                //oracle does not allow multi insert
+                if (config.DataSource.Type == DataSourceType.OracleServer)
+                {
+                    output.AppendFormat("INSERT INTO {0}({1}) VALUES ", table.TableName, string.Join(", ", names.ToArray()));
+                    output.Append("(");
+                    output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
 
-                output.Append(")");
+                    output.Append(")");
+                }
+                else
+                {
+                    output.Append("\t(");
+                    output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
+
+                    output.Append(")");
+                }
+               
                 i = i + 1;
                // var xuux = string.Join("", config.Tables.Select(n => n.Columns.ToArray().Select(x => x.Type + " ,").ToArray()));
                 if ( i == table.Rows.Count + 1)
@@ -206,8 +228,11 @@ namespace DataMasker.DataLang
                 else
                 {
                     bool addQuotes = false;
+                    bool hasGeometry = false;
                     addQuotes = addQuotes || (column.DataType == typeof(string));
                     addQuotes = addQuotes || (column.DataType == typeof(DateTime));
+                    addQuotes = addQuotes || (column.DataType == typeof(byte));
+                    hasGeometry = hasGeometry || (column.DataType == typeof(SdoGeometry));
 
                     if (addQuotes)
                     {
@@ -226,6 +251,18 @@ namespace DataMasker.DataLang
                         {
                             output = "'" + row[column.ColumnName].ToString() + "'";
                         }
+                    }
+                    else if (hasGeometry)
+                    {
+                        if (config.DataSource.Type == DataSourceType.OracleServer)
+                        {
+                            var value = (SdoGeometry)row[column.ColumnName];
+                            var arry_tostring = string.Join(", ", value.OrdinatesArray);
+                            var info = string.Join(",", value.ElemArray);
+                            var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",null,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
+                            output = sdo_geometry_command_text;
+                        }
+                      
                     }
                     else
                     {

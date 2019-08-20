@@ -15,6 +15,8 @@
         PostalCode,
         Shuffle,
         Ignore,
+        math,
+        Shufflegeometry,
         exception,
 
         /// <summary>

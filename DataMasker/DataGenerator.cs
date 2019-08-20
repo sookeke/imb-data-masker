@@ -311,7 +311,7 @@ namespace DataMasker
                     var pCoordinate = gf.CreateMultiPointFromCoords(coords);
                     //Geo = new SdoGeometry();
                    
-                    //.ToString().Replace(",", string.Empty).Replace(" ", ",").Split(new string[] { "LINESTRING," }, StringSplitOptions.None)[1];
+                    var xx = pCoordinate.ToString().Replace(",", string.Empty).Replace(" ", ",").Split(new string[] { "LINESTRING," }, StringSplitOptions.None)[1];
                     var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + SDO_GTYPE + "," + 5255 + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(1,2,1),MDSYS.SDO_ORDINATE_ARRAY" + pCoordinate + ")";
                     var values = "ST_GeomFromText(" + pCoordinate +")";
                     //GeographyMapper geographyMapper = new GeographyMapper();
@@ -337,7 +337,7 @@ namespace DataMasker
 
                     return _faker.PickRandom(_array);
                 case DataType.PostalCode:
-                    var xx = _xeger.Generate().ToUpper();
+                    //var xx = _xeger.Generate().ToUpper();
                     return _xeger.Generate().ToUpper().Replace(" ",string.Empty);
                 case DataType.Company:
                     var company = new Faker();
@@ -460,6 +460,31 @@ namespace DataMasker
                existingValue == null)
             {
                 return null;
+            }
+            else if (columnConfig.Type == DataType.Shufflegeometry)
+            {
+                var exist = (SdoGeometry)existingValue;
+                var obj = new HazSqlGeo
+                {
+
+                    Geo = new SdoGeometry()
+                    {
+                        ElemArray = exist.ElemArray,
+                        OrdinatesArray = _randomizer.Shuffle(exist.OrdinatesArray).ToArray(),
+                        Sdo_Gtype = exist.Sdo_Gtype,
+                        Sdo_Srid = exist.Sdo_Srid,
+                        Point = exist.Point
+                    }
+                };
+              
+                while (obj.Geo.Equals(existingValue))
+                {
+                    obj.Geo.OrdinatesArray = _randomizer.Shuffle(exist.OrdinatesArray).ToArray();
+                    
+                    
+                }
+                
+                return obj.Geo;
             }
             else
             {

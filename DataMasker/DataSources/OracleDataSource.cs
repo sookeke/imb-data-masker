@@ -246,9 +246,83 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents)
+        public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig config)
         {
-            throw new NotImplementedException();
+            var table = new DataTable();
+
+            foreach (var parent in parents)
+            {
+                var children = parent.Values
+                                     .OfType<IEnumerable<IDictionary<string, object>>>()
+                                     .ToArray();
+
+                var length = children.Any() ? children.Length : 1;
+                var vvvv = parent.GetType().GetGenericArguments();
+
+                var parentEntries = parent.Where(x => x.Value is object)
+                                          .Repeat(length)
+                                          .ToLookup(x => x.Key, x => x.Value);
+                var childEntries = children.SelectMany(x => x.First())
+                                           .ToLookup(x => x.Key, x => x.Value);
+
+                var allEntries = parentEntries.Concat(childEntries)
+                                              .ToDictionary(x => x.Key, x => x.ToArray());
+
+                var headers = allEntries.Select(x => x.Key)
+                                        .Except(table.Columns
+                                                     .Cast<DataColumn>()
+                                                     .Select(x => x.ColumnName))
+                                        .Select(x => new DataColumn(x))
+                                        .ToArray();
+                foreach (var header in headers)
+                {
+                    if (config.Columns.Where(n=>n.Name.Equals(header.ColumnName)).Count() != 0)
+                    {
+                        foreach (ColumnConfig columnConfig in config.Columns.Where(n => n.Name.Equals(header.ColumnName)))
+                        {
+                            if (columnConfig.Type == DataType.Geometry || columnConfig.Type == DataType.Shufflegeometry)
+                            {
+                                header.DataType = typeof(SdoGeometry);
+                            }
+                            else if (columnConfig.Type == DataType.Blob)
+                            {
+                                header.DataType = typeof(byte);
+                            }
+                        }
+                    }
+
+                    
+                  
+                    table.Columns.Add(header);
+                }
+                
+
+                var addedRows = new int[length];
+                //var xxx = table.Rows.Add();
+                for (int i = 0; i < length; i++)
+                    addedRows[i] = table.Rows.IndexOf(table.Rows.Add());
+
+                foreach (DataColumn col in table.Columns)
+                {
+                    object[] columnRows;
+                    if (!allEntries.TryGetValue(col.ColumnName, out columnRows))
+                        continue;
+
+                    for (int i = 0; i < addedRows.Length; i++)
+                    {
+                        if (columnRows[i] is SdoGeometry)
+                        {
+                            table.Rows[addedRows[i]][col] = (SdoGeometry)columnRows[i];
+                        }
+                        else
+                        {
+                            table.Rows[addedRows[i]][col] = columnRows[i];
+                        }
+                    }
+                }
+            }
+
+            return table;
         }
 
         public DataTable CreateTable(IEnumerable<IDictionary<string, object>> obj)

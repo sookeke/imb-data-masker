@@ -23,7 +23,7 @@ namespace DataMasker.Interfaces
         DataTable DataTableFromCsv(string csvPath);
         IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable);
         DataTable CreateTable(IEnumerable<IDictionary<string, object>> obj);
-        DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents);
+        DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig tableConfig);
 
 
         /// <summary>
