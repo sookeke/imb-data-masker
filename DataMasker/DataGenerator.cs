@@ -24,7 +24,6 @@ namespace DataMasker
         private static readonly DateTime DEFAULT_MIN_DATE = new DateTime(1900, 1, 1, 0, 0, 0, 0);
 
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
-        private readonly IDataSource dataSources1;
         private static List<string> shuffleList = new List<string>();
 
         private const int DEFAULT_LOREM_MIN = 5;
@@ -359,6 +358,14 @@ namespace DataMasker
                         return _shortnum;
                     }
                     return _number;
+                case DataType.StringConcat:
+                    var _string = _faker.Parse(columnConfig.StringFormatPattern);
+                    if (!string.IsNullOrEmpty(columnConfig.Max) && _string.Length > Convert.ToInt32(columnConfig.Max))
+                    {
+                        var _shortString = _string.Substring(0, Convert.ToInt32(columnConfig.Max));
+                        return _shortString;
+                    }
+                    return _string;
                 case DataType.exception:
                     var fileexception = _faker.System.FileName("");
                     return fileexception.Remove(fileexception.Length - 1);
@@ -367,7 +374,7 @@ namespace DataMasker
                     var numeric = "TONUMERIC(" + _phone + ")";
                     return _phone;
                 case DataType.RandomDec:
-                    var value = _faker.Random.Decimal(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));
+                    var value = _faker.Random.Decimal(Convert.ToDecimal(columnConfig.Min), Convert.ToDecimal(columnConfig.Max));
                     return value;
                 case DataType.PickRandom:
                     var stringarray = columnConfig.StringFormatPattern.Split(',');

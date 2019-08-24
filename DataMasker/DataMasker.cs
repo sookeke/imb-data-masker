@@ -100,10 +100,6 @@ namespace DataMasker
 
                     // existingValue = _dataGenerator.get(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
                 }
-                else if (columnConfig.Type == DataType.Ignore)
-                {
-                    obj[columnConfig.Name] = existingValue;
-                }
                 else if (columnConfig.Type == DataType.exception)
                 {
                     var cc = existingValue.ToString().Length;

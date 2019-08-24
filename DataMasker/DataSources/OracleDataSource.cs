@@ -21,6 +21,7 @@ namespace DataMasker.DataSources
 
 
         private readonly string _connectionString;
+        private readonly string _connectionStringPrd;
 
         public OracleDataSource(
            DataSourceConfig sourceConfig)
@@ -35,12 +36,16 @@ namespace DataMasker.DataSources
                 _connectionString =
                     $"User ID={sourceConfig.Config.userName};Password={sourceConfig.Config.password};Data Source={sourceConfig.Config.server};Initial Catalog={sourceConfig.Config.name};Persist Security Info=False;";
             }
+            if (sourceConfig.Config.connectionStringPrd != null && !string.IsNullOrWhiteSpace(sourceConfig.Config.connectionStringPrd.ToString()))
+            {
+                _connectionStringPrd = sourceConfig.Config.connectionStringPrd;
+            }
 
         }
         public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig)
         {
-            string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
-            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringGet))
+            //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
+            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd))
             {
                 connection.Open();
                 //var retu = connection.Query(BuildSelectSql(tableConfig));
@@ -201,6 +206,7 @@ namespace DataMasker.DataSources
         public object shuffle(string table, string column, object existingValue,DataTable dataTable = null)
         {
             //ArrayList list = new ArrayList();
+            //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
             Random rnd = new Random();
             string sql = "SELECT " + column + " FROM " + " " + table;
             using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionString))
@@ -210,11 +216,11 @@ namespace DataMasker.DataSources
                 //Randomizer randomizer = new Randomizer();
                
                 var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n =>  n != null).Distinct().ToArray();
-                //var find = randomizer.Shuffle(values);
+                var find = values.Count();
                 object value = values[rnd.Next(values.Count())];         
                 if (values.Count() <= 1)
                 {
-                    File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + "for column " + column + Environment.NewLine + Environment.NewLine);
+                    File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
                     return value;
                 }
                 while (value.Equals(existingValue))
@@ -250,6 +256,33 @@ namespace DataMasker.DataSources
         {
             var table = new DataTable();
 
+
+
+            var c = parents.FirstOrDefault(x => x.Values
+                                           .OfType<IEnumerable<IDictionary<string, object>>>()
+                                           .Any());
+            var p = c ?? parents.FirstOrDefault();
+            if (p == null)
+                return table;
+
+            //var ccc = p.Where(x => x.Value is object)
+            //               .Select(x => x.Key);
+
+
+
+            //var headers1 = p.Where(x => x.Value is object)
+            //               .Select(x => x.Key)
+            //               .Concat(c == null ?
+            //                       Enumerable.Empty<object>() :
+            //                       c.Values
+            //                        .OfType<IEnumerable<IDictionary<string, object>>>()
+            //                        .First()
+            //                        .SelectMany(x => x.Keys)).ToArray();
+
+
+
+
+
             foreach (var parent in parents)
             {
                 var children = parent.Values
@@ -257,14 +290,17 @@ namespace DataMasker.DataSources
                                      .ToArray();
 
                 var length = children.Any() ? children.Length : 1;
-                var vvvv = parent.GetType().GetGenericArguments();
+                var parentEntries1 = parent.Where(x => x.Value is object).ToLookup(x => x.Key, x => x.Value);
 
-                var parentEntries = parent.Where(x => x.Value is object)
+
+                var parentEntries = parent
                                           .Repeat(length)
                                           .ToLookup(x => x.Key, x => x.Value);
+
                 var childEntries = children.SelectMany(x => x.First())
                                            .ToLookup(x => x.Key, x => x.Value);
 
+               
                 var allEntries = parentEntries.Concat(childEntries)
                                               .ToDictionary(x => x.Key, x => x.ToArray());
 
@@ -286,7 +322,7 @@ namespace DataMasker.DataSources
                             }
                             else if (columnConfig.Type == DataType.Blob)
                             {
-                                header.DataType = typeof(byte);
+                                header.DataType = typeof(byte[]);
                             }
                         }
                     }
@@ -313,6 +349,10 @@ namespace DataMasker.DataSources
                         if (columnRows[i] is SdoGeometry)
                         {
                             table.Rows[addedRows[i]][col] = (SdoGeometry)columnRows[i];
+                        }
+                        else if (columnRows[i] is byte[])
+                        {
+                            table.Rows[addedRows[i]][col] = (byte[])columnRows[i];
                         }
                         else
                         {

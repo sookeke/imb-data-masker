@@ -12,8 +12,9 @@ namespace DataMasker.Examples
     public class Config1
     {
         public string connectionString { get; set; }
-        //public string connectionString2 { get; set; }
+        public string connectionStringPrd { get; set; }
         public string Databasename { get; set; }
+        public string Hostname { get; set; }
     }
 
     public class DataSource

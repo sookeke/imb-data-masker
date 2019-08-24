@@ -1,4 +1,5 @@
 ﻿using DataMasker.Models;
+using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -6,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace DataMasker.DataLang
 {
@@ -20,7 +22,7 @@ namespace DataMasker.DataLang
         /// <param name="table">The table.</param>
         /// <param name="removeFields">a list of fields to be left out of the insert statement</param>
         /// <returns></returns>
-        public static string GenerateInsert(DataTable table, string[] removeFields, string fieldToReplace, string replacementValue, string writePath, Config config)
+        public static string GenerateInsert(DataTable table, string[] removeFields, string fieldToReplace, string replacementValue, string writePath, Config config, TableConfig tableConfig)
         {
             if (table == null)
             {
@@ -139,7 +141,8 @@ namespace DataMasker.DataLang
                // var xuux = string.Join("", config.Tables.Select(n => n.Columns.ToArray().Select(x => x.Type + " ,").ToArray()));
                 if ( i == table.Rows.Count + 1)
                 {
-                    var _allmaskType = string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
+                    var _allmaskType = string.Join("", tableConfig.Columns.Where(n=>n.Type != DataType.Blob).Select(n => n.Type + " ,").ToArray());
+                        //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
                     var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "--").Replace("Bogus", "Fake Data");
                     output.Append(Environment.NewLine);
                     output.Append(_commentOut);
@@ -229,9 +232,10 @@ namespace DataMasker.DataLang
                 {
                     bool addQuotes = false;
                     bool hasGeometry = false;
+                    bool hasByte = false;
                     addQuotes = addQuotes || (column.DataType == typeof(string));
                     addQuotes = addQuotes || (column.DataType == typeof(DateTime));
-                    addQuotes = addQuotes || (column.DataType == typeof(byte));
+                    hasByte = hasByte || (column.DataType == typeof(byte[]));
                     hasGeometry = hasGeometry || (column.DataType == typeof(SdoGeometry));
 
                     if (addQuotes)
@@ -254,15 +258,37 @@ namespace DataMasker.DataLang
                     }
                     else if (hasGeometry)
                     {
-                        if (config.DataSource.Type == DataSourceType.OracleServer)
+                        switch (config.DataSource.Type)
                         {
-                            var value = (SdoGeometry)row[column.ColumnName];
-                            var arry_tostring = string.Join(", ", value.OrdinatesArray);
-                            var info = string.Join(",", value.ElemArray);
-                            var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",null,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
-                            output = sdo_geometry_command_text;
+                            case DataSourceType.InMemoryFake:
+                                break;
+                            case DataSourceType.SqlServer:
+                                break;
+                            case DataSourceType.OracleServer:
+                                var value = (SdoGeometry)row[column.ColumnName];
+                                var arry_tostring = string.Join(", ", value.OrdinatesArray);
+                                var info = string.Join(",", value.ElemArray);
+                                var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",null,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
+                                output = sdo_geometry_command_text;
+                                break;
+                            case DataSourceType.SpreadSheet:
+                                break;
+                            case DataSourceType.PostgresServer:
+                                break;
+                            //default:
+                            //    throw new NotImplementedException(nameof(config.DataSource.Type), config.DataSource.Type, "Unrecongnized Implemetation type");
+                            //    break;
+
+
                         }
-                      
+                        //throw new ArgumentOutOfRangeException(nameof(config.DataSource.Type), config.DataSource.Type, null);
+
+
+                    }
+                    else if (hasByte)
+                    {
+                        var o = (byte[])row[column.ColumnName];
+                        output = Encoding.UTF8.GetString(o, 0, o.Length);
                     }
                     else
                     {
@@ -272,6 +298,74 @@ namespace DataMasker.DataLang
             }
 
             return output;
+        }
+        public static void DataTableToExcelSheet(DataTable dataTable, string path, TableConfig tableConfig)
+        {
+            //HttpContext.Current.Response.Clear();
+            if (dataTable.Columns.Count == 0 && tableConfig.Columns.Count() != 0)
+            {
+                foreach (var col in tableConfig.Columns)
+                {
+                    dataTable.Columns.Add(col.Name);
+                }
+            }
+            var format = new ExcelTextFormat();
+            format.EOL = "\r\n";
+            for (int i = 0; i < dataTable.Columns.Count; i++)
+            {
+
+
+
+                if (dataTable.Columns[i].DataType == typeof(SdoGeometry))
+                {
+                    DataColumn dcolColumn = new DataColumn("GeometryToString".ToUpper(), typeof(string));
+                    dataTable.Columns.Add(dcolColumn);
+                    //dataTable.AcceptChanges();
+                    //dataTable.Columns["GeometryToString"].DataType = typeof(SdoGeometry);
+                }
+            }
+            foreach (DataColumn dataColumn in dataTable.Columns)
+            {
+
+
+                foreach (DataRow dataRow in dataTable.Rows)
+                {
+                    if (dataColumn.DataType == typeof(SdoGeometry))
+                    {
+                        //dataColumn.DataType = typeof(string);
+                        var value = (SdoGeometry)dataRow[dataColumn.ColumnName];
+                        var arry_tostring = string.Join(", ", value.OrdinatesArray);
+                        var info = string.Join(",", value.ElemArray);
+                        var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",null,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
+                        string output = sdo_geometry_command_text;
+                        dataRow["GeometryToString".ToUpper()] = output;
+                    }
+                }
+            }
+
+            using (ExcelPackage pack = new ExcelPackage())
+            {
+                ExcelWorksheet ws = pack.Workbook.Worksheets.Add(dataTable.TableName);
+                ws.Cells["A1"].LoadFromDataTable(dataTable,true,OfficeOpenXml.Table.TableStyles.Medium28);
+                var ms = new System.IO.MemoryStream();
+                pack.SaveAs(new FileInfo(path));
+                
+            }
+
+           
+        }
+        public static DataTable removeBlob(DataTable dataTable)
+        {
+            foreach (DataColumn dataColumn in dataTable.Columns)
+            {
+                if (dataColumn.DataType == typeof(byte[]))
+                {
+                    dataTable.Columns.Remove(dataColumn);
+                }
+            }
+
+            return dataTable;
+       
         }
     }
 
