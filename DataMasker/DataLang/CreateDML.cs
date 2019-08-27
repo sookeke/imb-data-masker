@@ -266,10 +266,35 @@ namespace DataMasker.DataLang
                                 break;
                             case DataSourceType.OracleServer:
                                 var value = (SdoGeometry)row[column.ColumnName];
-                                var arry_tostring = string.Join(", ", value.OrdinatesArray);
-                                var info = string.Join(",", value.ElemArray);
-                                var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",null,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
+                                var Z = "NULL"; var Y = "NULL"; var X = "NULL";
+                                string arry_tostring = "NULL";
+                                string info = "NULL";
+                                string SDO_POINT = "NULL";
+                                string INFO_ARRAY = "NULL";
+                                string ORDINATE_ARRAY = "NULL";
+                                if (value.OrdinatesArray != null)
+                                {
+                                    arry_tostring = string.Join(", ", value.OrdinatesArray);
+                                    ORDINATE_ARRAY = string.Format("MDSYS.SDO_ORDINATE_ARRAY({0})", arry_tostring);
+                                }
+                               if(value.ElemArray != null)
+                                {
+                                    info = string.Join(",", value.ElemArray);
+                                    INFO_ARRAY = string.Format("MDSYS.SDO_ELEM_INFO_ARRAY({0})", info);
+                                }
+                                if (value.Point != null)
+                                {
+                                    X = value.Point.X.ToString(); if (string.IsNullOrEmpty(X)) { X = "NULL"; };
+                                    Y = value.Point.Y.ToString(); if (string.IsNullOrEmpty(Y)) { Y = "NULL"; };
+                                    Z = value.Point.Z.ToString();if (string.IsNullOrEmpty(Z)) { Z = "NULL"; }; 
+                                    SDO_POINT = string.Format("MDSYS.SDO_POINT_TYPE({0}, {1}, {2})", X, Y, Z);
+                                }
+                                
+
+                                //var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
+                                var sdo_geometry_command_text = string.Format("MDSYS.SDO_GEOMETRY({0},{1},{2},{3},{4})", value.Sdo_Gtype, value.Sdo_Srid, SDO_POINT, INFO_ARRAY, ORDINATE_ARRAY);
                                 output = sdo_geometry_command_text;
+                               
                                 break;
                             case DataSourceType.SpreadSheet:
                                 break;
@@ -334,9 +359,33 @@ namespace DataMasker.DataLang
                     {
                         //dataColumn.DataType = typeof(string);
                         var value = (SdoGeometry)dataRow[dataColumn.ColumnName];
-                        var arry_tostring = string.Join(", ", value.OrdinatesArray);
-                        var info = string.Join(",", value.ElemArray);
-                        var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",null,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
+                        var Z = "NULL"; var Y = "NULL"; var X = "NULL";
+                        string arry_tostring = "NULL";
+                        string info = "NULL";
+                        string SDO_POINT = "NULL";
+                        string INFO_ARRAY = "NULL";
+                        string ORDINATE_ARRAY = "NULL";
+                        if (value.OrdinatesArray != null)
+                        {
+                            arry_tostring = string.Join(", ", value.OrdinatesArray);
+                            ORDINATE_ARRAY = string.Format("MDSYS.SDO_ORDINATE_ARRAY({0})", arry_tostring);
+                        }
+                        if (value.ElemArray != null)
+                        {
+                            info = string.Join(",", value.ElemArray);
+                            INFO_ARRAY = string.Format("MDSYS.SDO_ELEM_INFO_ARRAY({0})", info);
+                        }
+                        if (value.Point != null)
+                        {
+                            X = value.Point.X.ToString(); if (string.IsNullOrEmpty(X)) { X = "NULL"; };
+                            Y = value.Point.Y.ToString(); if (string.IsNullOrEmpty(Y)) { Y = "NULL"; };
+                            Z = value.Point.Z.ToString(); if (string.IsNullOrEmpty(Z)) { Z = "NULL"; };
+                            SDO_POINT = string.Format("MDSYS.SDO_POINT_TYPE({0}, {1}, {2})", X, Y, Z);
+                        }
+
+
+                        //var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
+                        var sdo_geometry_command_text = string.Format("MDSYS.SDO_GEOMETRY({0},{1},{2},{3},{4})", value.Sdo_Gtype, value.Sdo_Srid, SDO_POINT, INFO_ARRAY, ORDINATE_ARRAY);
                         string output = sdo_geometry_command_text;
                         dataRow["GeometryToString".ToUpper()] = output;
                     }

@@ -234,6 +234,11 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
+        public IEnumerable<IDictionary<string, object>> RawData(IEnumerable<IDictionary<string, object>> PrdData)
+        {
+            throw new NotImplementedException();
+        }
+
         public object shuffle(string table, string column, object existingValue, DataTable _dataTable)
         {
             

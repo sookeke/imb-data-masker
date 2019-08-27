@@ -281,7 +281,7 @@ namespace DataMasker.MaskingValidation
             var result = "";
             var failure = "";
             DataTable report = new DataTable();
-            report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Failure Reason");
+            report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
 
             foreach (TableConfig _tables in config.Tables)
             {
@@ -444,6 +444,15 @@ namespace DataMasker.MaskingValidation
             {
                 //add dml files to zip
                 zipName = Directory.GetCurrentDirectory() + "/" + database + "/" + database + "_MASKED_DML.zip";
+                if (File.Exists(zipName))
+                {
+                    Console.WriteLine(Path.GetFileName(zipName)  + " already exist. Do you want to replace it? [yes/no]");
+                    var key = Console.ReadLine();
+                    if (key.ToUpper() == "YES")
+                    {
+                        File.Delete(zipName);
+                    }
+                }
                 ZipFile.CreateFromDirectory(_dmlPath, zipName, CompressionLevel.Optimal,true);
             }
             var tablecount = new DataView(report).ToTable(true, new string[] { "Table" }).AsEnumerable().Select(n => n[0]).ToList().Count;

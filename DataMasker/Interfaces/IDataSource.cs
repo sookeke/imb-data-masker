@@ -18,6 +18,8 @@ namespace DataMasker.Interfaces
         /// <returns></returns>
         IEnumerable<IDictionary<string, object>> GetData(
             TableConfig tableConfig);
+        IEnumerable<IDictionary<string, object>> RawData(
+           IEnumerable<IDictionary<string, object>> PrdData);
 
         //For spreadshet
         DataTable DataTableFromCsv(string csvPath);

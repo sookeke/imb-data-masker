@@ -19,6 +19,9 @@ namespace DataMasker.DataSources
         private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\"+ ConfigurationManager.AppSettings["APP_NAME"] + "_exception.txt";
         private static string _successfulCommit = Directory.GetCurrentDirectory() + $@"\Output\"+ ConfigurationManager.AppSettings["APP_NAME"] +"_successfulCommit.txt";
 
+        private IEnumerable<IDictionary<string, object>> getData { get;  set; }
+
+        private static IEnumerable<IDictionary<string, object>> rawData = null;
 
         private readonly string _connectionString;
         private readonly string _connectionStringPrd;
@@ -48,11 +51,69 @@ namespace DataMasker.DataSources
             using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd))
             {
                 connection.Open();
-                //var retu = connection.Query(BuildSelectSql(tableConfig));
-                return (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig));
+                string query = BuildSelectSql(tableConfig);
+                IDictionary<string, object> idict = new Dictionary<string, object>();
+                IEnumerable<IDictionary<string, object>> row = new List<IDictionary<string, object>>();
+                List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
+                //rows.Add(null);
+                var rowCount = ((IEnumerable<IDictionary<string, object>>)connection.Query("SELECT COUNT(*) FROM " + tableConfig.Name)).Select(n => n.Values).FirstOrDefault().ToArray();
+                //var sss =  rowCount.Select(n=>n.Values).FirstOrDefault().ToArray();
+               
+                if (rowCount != null && Convert.ToInt64(rowCount[0]) > 1500 && tableConfig.Columns.Where(n=>n.Type == DataType.Blob) != null)
+                {
+                    using (OracleCommand cmd = new OracleCommand(query, connection))
+                    {
+                        cmd.InitialLOBFetchSize = -1;
+                        
+                        
+                        using (OracleDataReader reader = cmd.ExecuteReader())
+                        {
+                            reader.FetchSize = cmd.RowSize * 1000;
+                            var start_time = DateTime.Now;
+                            if (reader.HasRows)
+                            {
+                               
+
+                                while (reader.Read())
+                                {
+                                    var o = Enumerable.Range(0, reader.FieldCount)
+                                                    .ToDictionary(reader.GetName, reader.GetValue);
+                                    //var u = (byte[])reader["DIGITAL_REPRESENTATION"];
+                                    //ByteArrayToString(u);
+                                    rows.Add(o);
+                                    //Console.WriteLine(it);
+                                }
+                           
+                            }
+                            var end_time = DateTime.Now;
+                            var ts = end_time - start_time;
+                            var ts2 = Math.Round(ts.TotalSeconds, 3);
+                            Console.WriteLine("Fetch Size = 100: " + ts2 + " seconds");
+                            Console.WriteLine();
+                            row = rows;
+                        }
+                    }
+                    return row;
+                }
+                else
+                {
+                    //var retu = connection.Query(BuildSelectSql(tableConfig));
+
+
+
+
+
+                    return (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig), buffered: true);
+                }
+                
+                
             }
         }
-
+        public static string ByteArrayToString(byte[] ba)
+        {
+           var uu= BitConverter.ToString(ba).Replace("-", "");
+            return uu;
+        }
         public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig)
         {
             using (var connection = new OracleConnection(_connectionString))
@@ -427,6 +488,12 @@ namespace DataMasker.DataSources
             }
 
             return table;
+        }
+
+        public IEnumerable<IDictionary<string, object>> RawData(IEnumerable<IDictionary<string, object>> PrdData)
+        {
+            rawData = getData;
+            return rawData;
         }
     }
 }

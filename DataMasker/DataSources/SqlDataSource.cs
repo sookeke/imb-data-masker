@@ -258,5 +258,10 @@ namespace DataMasker.DataSources
 
             return table;
         }
+
+        public IEnumerable<IDictionary<string, object>> RawData(IEnumerable<IDictionary<string, object>> PrdData)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

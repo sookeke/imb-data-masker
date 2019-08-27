@@ -19,6 +19,7 @@ using DataMasker.DataLang;
 using MoreLinq;
 using DataMasker.MaskingValidation;
 using ChoETL;
+using DataMasker.DataSources;
 
 /*
     Author: Stanley Okeke
@@ -55,7 +56,7 @@ namespace DataMasker.Examples
         private static void Main(
             string[] args)
         {
-            report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Failure Reason");
+            report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
             Example1();
         }
         private static void JsonConfig(string json)
@@ -702,7 +703,7 @@ namespace DataMasker.Examples
             int example)
         {
             return Config.Load(jsonpath);
-            //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking CSV\SheetFolder\BIP1.json");
+            //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_GWP_config.json");
         }
 
         public static void Example1()
@@ -791,7 +792,9 @@ namespace DataMasker.Examples
                 else
                 {
                     rows = dataSource.GetData(tableConfig);
-                    rawData = dataSource.GetData(tableConfig);
+
+                    rawData = dataSource.RawData(null);
+                    //rawData = dataSource.GetData(tableConfig);
                     foreach (IDictionary<string, object> row in rows)
                     {
                         
@@ -920,7 +923,9 @@ namespace DataMasker.Examples
             dt.Columns.Add("IGNORE");
             dt.Columns.Add("Format Pattern");
             dt.Columns.Add("Min - Max");
+            RootObject rootObject = new RootObject();
             var rootObj = JsonConvert.DeserializeObject<List<RootObject>>(File.ReadAllText(json));
+            rootObj.RemoveAll(n=>n.ColumnName == n.PKconstraintName.Split(',')[0]);
             int h = 0;
             int k = 0;
             for (int i = 0; i < config.Tables.Count; i++)
@@ -943,8 +948,8 @@ namespace DataMasker.Examples
 
             if (dt.Rows != null)
             {
-                var csv = writeTofile(dt, _appname, "_Mapped_" + Guid.NewGuid().ToString());
-                var createsheet = toExcel(csv, _appname, _appname, "_Mapped_"+ Guid.NewGuid().ToString());
+                var csv = writeTofile(dt, _appname, "_MASKING_APPLIED");
+                var createsheet = toExcel(csv, _appname, _appname, "_MASKING_APPLIED");
                 if (createsheet == false)
                 {
                     
@@ -1003,6 +1008,10 @@ namespace DataMasker.Examples
         {
             string worksheetsName = _appName;
             string excelFileName = directory + @"\" + _appName + uniqueKey + ".xlsx";
+            if (File.Exists(excelFileName))
+            {
+                File.Delete(excelFileName);
+            }
             bool firstRowIsHeader = true;
             try
             {
@@ -1258,19 +1267,20 @@ namespace DataMasker.Examples
                  
                     if (dataColumn.Ignore == true)
                     {
-                        failure = "<b><font color='red'>Ignore = " + dataColumn.Ignore.ToString() + " (No Masking Applied)</ font ></b>";
-                        result = "<b><font color='blue'>PASS</font></b>";
+                        failure = "Masking not required";
+                        result = "<font color='green'>PASS</font>";
                     }
                     else if (dataColumn.Type == DataType.Shuffle && _columndatamask.Count() == 1)
                     {
-                        result = "<b><font color='RED'>FAIL</font></b>";
+                        result = "<b><font color='red'>FAIL</font></b>";
                         failure = "row count must be > 1 for " + DataType.Shuffle.ToString();
                         //result = "<font color='red'>FAIL</font>";
                     }
                     else if (dataColumn.Type == DataType.NoMasking)
                     {
-                        result = "<b><font color='blue'>PASS</font></b>";
-                        failure = DataType.NoMasking.ToString() + " applied";
+                        result = "<font color='green'>PASS</font>";
+                        //result = "<b><font color='blue'>PASS</font></b>";
+                        failure = "Masking not required";
                         //result = "<font color='red'>FAIL</font>";
                     }
                     else if (dataColumn.Type == DataType.Shuffle)
