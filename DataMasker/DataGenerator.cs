@@ -499,7 +499,7 @@ namespace DataMasker
                 {
                     case DataType.Shuffle:
                         var random = new Random();
-                        var shuffle = dataSources.shuffle(table, column, existingValue,dataTable);
+                        var shuffle = dataSources.shuffle(table, column, existingValue,columnConfig.RetainNullValues, dataTable);
                         return shuffle;
                 }
             }

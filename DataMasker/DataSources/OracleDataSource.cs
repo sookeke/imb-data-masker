@@ -9,6 +9,8 @@ using DataMasker.Utils;
 using System.Data;
 using System.IO;
 using System.Configuration;
+//using ChoETL;
+using DataMasker.DataLang;
 
 namespace DataMasker.DataSources
 {
@@ -16,12 +18,15 @@ namespace DataMasker.DataSources
     {
         private readonly DataSourceConfig _sourceConfig;
         //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
-        private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\"+ ConfigurationManager.AppSettings["APP_NAME"] + "_exception.txt";
-        private static string _successfulCommit = Directory.GetCurrentDirectory() + $@"\Output\"+ ConfigurationManager.AppSettings["APP_NAME"] +"_successfulCommit.txt";
-
+        private static string _exceptionpath = Directory.GetCurrentDirectory() +  ConfigurationManager.AppSettings["_exceptionpath"];
+        private static string _successfulCommit = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_successfulCommit"];
+       
         private IEnumerable<IDictionary<string, object>> getData { get;  set; }
+        public object[] values { get; private set; }
+        public int o = 0;
 
-        private static IEnumerable<IDictionary<string, object>> rawData = null;
+        private static List<IDictionary<string, object>> rawData = new List<IDictionary<string, object>>();
+        private static Dictionary<string, string> exceptionBuilder = new Dictionary<string, string>();
 
         private readonly string _connectionString;
         private readonly string _connectionStringPrd;
@@ -55,42 +60,52 @@ namespace DataMasker.DataSources
                 IDictionary<string, object> idict = new Dictionary<string, object>();
                 IEnumerable<IDictionary<string, object>> row = new List<IDictionary<string, object>>();
                 List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
-                //rows.Add(null);
+                rawData = new List<IDictionary<string, object>>();
                 var rowCount = ((IEnumerable<IDictionary<string, object>>)connection.Query("SELECT COUNT(*) FROM " + tableConfig.Name)).Select(n => n.Values).FirstOrDefault().ToArray();
-                //var sss =  rowCount.Select(n=>n.Values).FirstOrDefault().ToArray();
                
-                if (rowCount != null && Convert.ToInt64(rowCount[0]) > 1500 && tableConfig.Columns.Where(n=>n.Type == DataType.Blob) != null)
+                
+                if (rowCount != null && Convert.ToInt64(rowCount[0]) > 1500 && tableConfig.Columns.Where(n => n.Type == DataType.Blob).Count() > 0)
                 {
                     using (OracleCommand cmd = new OracleCommand(query, connection))
                     {
-                        cmd.InitialLOBFetchSize = -1;
-                        
-                        
+                        cmd.InitialLOBFetchSize = 1;
+
+
                         using (OracleDataReader reader = cmd.ExecuteReader())
                         {
                             reader.FetchSize = cmd.RowSize * 1000;
                             var start_time = DateTime.Now;
                             if (reader.HasRows)
                             {
-                               
+
 
                                 while (reader.Read())
                                 {
-                                    var o = Enumerable.Range(0, reader.FieldCount)
-                                                    .ToDictionary(reader.GetName, reader.GetValue);
-                                    //var u = (byte[])reader["DIGITAL_REPRESENTATION"];
-                                    //ByteArrayToString(u);
+                                   
+                                    
+                                   
+                                    var o = Enumerable.Range(0, reader.FieldCount).ToDictionary(reader.GetName, reader.GetValue);
+
+                                    
+
+
                                     rows.Add(o);
+
+                                    
+                                    rawData.Add(new Dictionary<string,object>(o));
                                     //Console.WriteLine(it);
+                                    // }
+
                                 }
-                           
+                                var end_time = DateTime.Now;
+                                var ts = end_time - start_time;
+                                var ts2 = Math.Round(ts.TotalSeconds, 3);
+                                Console.WriteLine("Fetch Size = 100: " + ts2 + " seconds");
+                                Console.WriteLine();
+                                row = rows;
+                                GC.Collect();
+                                GC.WaitForPendingFinalizers();
                             }
-                            var end_time = DateTime.Now;
-                            var ts = end_time - start_time;
-                            var ts2 = Math.Round(ts.TotalSeconds, 3);
-                            Console.WriteLine("Fetch Size = 100: " + ts2 + " seconds");
-                            Console.WriteLine();
-                            row = rows;
                         }
                     }
                     return row;
@@ -98,12 +113,16 @@ namespace DataMasker.DataSources
                 else
                 {
                     //var retu = connection.Query(BuildSelectSql(tableConfig));
+                    rawData = new List<IDictionary<string, object>>();
+                    var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig), buffered: true);
+                    foreach (IDictionary<string, object> prd in _prdData)
+                    {
+                       
+                        rawData.Add(new Dictionary<string, object>(prd));
+                    }
+                   
 
-
-
-
-
-                    return (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig), buffered: true);
+                    return _prdData;
                 }
                 
                 
@@ -264,7 +283,7 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object shuffle(string table, string column, object existingValue,DataTable dataTable = null)
+        public object shuffle(string table, string column, object existingValue, bool retainNull,DataTable dataTable = null)
         {
             //ArrayList list = new ArrayList();
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
@@ -274,14 +293,33 @@ namespace DataMasker.DataSources
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
+                //var values = Array();
                 //Randomizer randomizer = new Randomizer();
-               
-                var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n =>  n != null).Distinct().ToArray();
-                var find = values.Count();
+                if (retainNull)
+                {
+                    values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
+                }
+                else
+                    values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+
+
+                //var find = values.Count();
                 object value = values[rnd.Next(values.Count())];         
                 if (values.Count() <= 1)
                 {
-                    File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                    o = o + 1;
+                    if (o == 1)
+                    {
+                        File.WriteAllText(_exceptionpath, "");
+                    }
+                   
+                    if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                    {
+                        exceptionBuilder.Add(table, column);
+                        File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                    }
+                    //o = o + 1;
+                    //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
                     return value;
                 }
                 while (value.Equals(existingValue))
@@ -492,7 +530,7 @@ namespace DataMasker.DataSources
 
         public IEnumerable<IDictionary<string, object>> RawData(IEnumerable<IDictionary<string, object>> PrdData)
         {
-            rawData = getData;
+            //rawData = getData; 
             return rawData;
         }
     }

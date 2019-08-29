@@ -188,6 +188,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataLang\CreateDML.cs" />
+    <Compile Include="DataLang\RawDataPrd.cs" />
     <Compile Include="DataSourceProvider.cs" />
     <Compile Include="DataSources\InMemoryFakeDataSource.cs" />
     <Compile Include="DataSources\OracleDataSource.cs" />

@@ -33,7 +33,7 @@ namespace DataMasker
         /// A dictionary key'd by {tableName}.{columnName} containing a <see cref="HashSet{T}"/> of values which have been previously used for this table/column
         /// </summary>
         private readonly ConcurrentDictionary<string, HashSet<object>> _uniqueValues = new ConcurrentDictionary<string, HashSet<object>>();
-        private readonly IDataSource _dataSource;
+        //private readonly IDataSource _dataSource;
        
 
 

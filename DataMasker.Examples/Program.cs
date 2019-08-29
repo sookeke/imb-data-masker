@@ -47,6 +47,8 @@ namespace DataMasker.Examples
         private static readonly Dictionary<ProgressType, ProgressbarUpdate> _progressBars = new Dictionary<ProgressType, ProgressbarUpdate>();
         private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
         private static string copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
+        private static readonly string sheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
+        private static readonly string exceptionPath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly Dictionary<string, object> allkey = new Dictionary<string, object>();
 
 
@@ -115,11 +117,13 @@ namespace DataMasker.Examples
                 {
 
                     table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
+                    bool o = col.RetainNull.ToUpper().Equals("TRUE") ? true : false;
                     Column column = new Column
                     {
                         name = col.ColumnName,
-                        retainNullValues = true,
-                        StringFormatPattern = ""
+                        retainNullValues = o,
+                        StringFormatPattern = "",
+
 
 
                     };
@@ -127,12 +131,16 @@ namespace DataMasker.Examples
 
                     if (col.MaskingRule.Contains("No masking"))
                     {
-                        column.type = "NoMasking";
+                        column.type = DataType.NoMasking.ToString();
+                        if (col.DataType.ToUpper().Equals("SDO_GEOMETRY") || col.DataType.ToUpper().ToUpper().Contains("GEOMETRY"))
+                        {
+                            column.type = DataType.Geometry.ToString();
+                        }
                         column.ignore = true;
                     }
                     else if (col.MaskingRule.Contains("Shuffle"))
                     {
-                        column.type = "Shuffle";
+                        column.type = DataType.Shuffle.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
@@ -140,23 +148,29 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("FIRST_NAME") || col.ColumnName.ToUpper().Contains("MIDDLE_NAME"))
                     {
-                        column.type = "Bogus";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.type = DataType.Bogus.ToString();
+                        column.max = col.Max.ToString(); 
+                        column.min = col.Min.ToString(); 
                         column.StringFormatPattern = "{{NAME.FIRSTNAME}}";
                         column.useGenderColumn = "Gender";
                     }
                     else if (col.DataType.ToUpper().Equals("BLOB") || col.DataType.ToUpper().Equals("IMAGE"))
                     {
-                        column.type = "Blob";
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        var filename = nameGroup.Where(n => n.ColumnName.Equals("FILE_NAME") || n.ColumnName.Equals("FILENAME")).Select(n=>n).FirstOrDefault().ColumnName;
+                        column.type = DataType.Blob.ToString();
+                        column.max = col.Max.ToString(); 
+                        column.min = col.Min.ToString();
+                       
                         column.StringFormatPattern = "";
-                        column.useGenderColumn = "Gender";
+                        if (!string.IsNullOrEmpty(filename))
+                        {
+                            column.StringFormatPattern = filename;
+                        }
+                        column.useGenderColumn = "";
                     }
                     else if (col.DataType.ToUpper().Equals("CLOB"))
                     {
-                        column.type = "Clob";
+                        column.type = DataType.Clob.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
@@ -164,7 +178,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("CITY"))
                     {
-                        column.type = "Bogus";
+                        column.type = DataType.Bogus.ToString(); 
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{ADDRESS.CITY}}";
@@ -172,7 +186,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("COUNTRY"))
                     {
-                        column.type = "Bogus";
+                        column.type = DataType.Bogus.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{ADDRESS.COUNTRY}}";
@@ -180,7 +194,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.DataType.ToUpper().Equals("SDO_GEOMETRY") || col.DataType.ToUpper().ToUpper().Contains("GEOMETRY"))
                     {
-                        column.type = "Geometry";
+                        column.type = DataType.Geometry.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
@@ -188,7 +202,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("SURNAME") || col.ColumnName.ToUpper().Contains("LASTNAME") || col.ColumnName.ToUpper().Contains("LAST_NAME"))
                     {
-                        column.type = "Bogus";
+                        column.type = DataType.Bogus.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{NAME.LASTNAME}}";
@@ -196,7 +210,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("COMPANY_NAME") || col.ColumnName.ToUpper().Contains("ORGANIZATION_NAME"))
                     {
-                        column.type = "Company";
+                        column.type = DataType.Company.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{name.lastname}} {{company.companysuffix}}";
@@ -210,7 +224,7 @@ namespace DataMasker.Examples
                             var sizze = size[1].ToString();
                             if (!string.IsNullOrEmpty(sizze))
                             {
-                                column.type = "Rant";
+                                column.type = DataType.Rant.ToString();
                                 column.max = Convert.ToInt32(sizze);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "DESCRIPTION";
@@ -218,7 +232,7 @@ namespace DataMasker.Examples
                             }
                             else
                             {
-                                column.type = "Rant";
+                                column.type = DataType.Rant.ToString();
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "DESCRIPTION";
@@ -227,7 +241,7 @@ namespace DataMasker.Examples
                         }
                         else
                         {
-                            column.type = "Rant";
+                            column.type = DataType.Rant.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
                             column.StringFormatPattern = "DESCRIPTION";
@@ -237,7 +251,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.DataType.ToUpper().Contains("DATE"))
                     {
-                        column.type = "DateOfBirth";
+                        column.type = DataType.DateOfBirth.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min;
                         column.StringFormatPattern = "";
@@ -245,7 +259,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Equals("YEAR"))
                     {
-                        column.type = "RandomYear";
+                        column.type = DataType.RandomYear.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
@@ -255,7 +269,7 @@ namespace DataMasker.Examples
                     {
                         if (col.DataType.ToUpper().Contains("NUMBER"))
                         {
-                            column.type = "PhoneNumberInt";
+                            column.type = DataType.PhoneNumberInt.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
                             column.StringFormatPattern = "##########";
@@ -263,7 +277,7 @@ namespace DataMasker.Examples
                         }
                         else
                         {
-                            column.type = "PhoneNumber";
+                            column.type = DataType.PhoneNumber.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
                             column.StringFormatPattern = "(###)-###-####";
@@ -272,7 +286,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("EMAIL_ADDRESS"))
                     {
-                        column.type = "Bogus";
+                        column.type = DataType.Bogus.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{INTERNET.EMAIL}}";
@@ -280,7 +294,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.DataType.ToUpper().Contains("MONEY"))
                     {
-                        column.type = "Bogus";
+                        column.type = DataType.Bogus.ToString();
                         column.max = col.Max.ToString();
                         column.min = col.Min.ToString();
                         column.StringFormatPattern = "{{FINANCE.AMOUNT}}";
@@ -288,7 +302,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("POSTAL_CODE"))
                     {
-                        column.type = "PostalCode";
+                        column.type = DataType.PostalCode.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
@@ -302,7 +316,7 @@ namespace DataMasker.Examples
                             var charSize = chr[1].ToString();
                             if (!string.IsNullOrEmpty(charSize))
                             {
-                                column.type = "PickRandom";
+                                column.type = DataType.PickRandom.ToString();
                                 column.max = Convert.ToInt32(charSize);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "";
@@ -310,7 +324,7 @@ namespace DataMasker.Examples
                             }
                             else
                             {
-                                column.type = "Ignore";
+                                column.type = DataType.Ignore.ToString();
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
                                 column.ignore = true;
@@ -320,7 +334,7 @@ namespace DataMasker.Examples
                         }
                         else
                         {
-                            column.type = "Ignore";
+                            column.type = DataType.Ignore.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
                             column.ignore = true;
@@ -336,7 +350,7 @@ namespace DataMasker.Examples
                             var sizze = size[1].ToString();
                             if (!string.IsNullOrEmpty(sizze))
                             {
-                                column.type = "Bogus";
+                                column.type = DataType.Bogus.ToString();
                                 column.max = Convert.ToInt32(sizze);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
@@ -344,7 +358,7 @@ namespace DataMasker.Examples
                             }
                             else
                             {
-                                column.type = "Bogus";
+                                column.type = DataType.Bogus.ToString();
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
@@ -353,7 +367,7 @@ namespace DataMasker.Examples
                         }
                         else
                         {
-                            column.type = "Bogus";
+                            column.type = DataType.Bogus.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
                             //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
@@ -363,7 +377,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("USERID"))
                     {
-                        column.type = "RandomUsername";
+                        column.type = DataType.RandomUsername.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
@@ -372,7 +386,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("FILE_NAME"))
                     {
-                        column.type = "Bogus";
+                        column.type = DataType.Bogus.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
@@ -381,7 +395,7 @@ namespace DataMasker.Examples
                     }
                     else if (_fullName.Any(n => col.ColumnName.ToUpper().Contains(n)) || _fullName.Any(x => col.Comments.Contains(x)))
                     {
-                        column.type = "Bogus";
+                        column.type = DataType.Bogus.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
@@ -390,7 +404,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("AMOUNT") || col.ColumnName.ToUpper().Contains("AMT") || col.Comments.Contains("Amount"))
                     {
-                        column.type = "RandomDec";
+                        column.type = DataType.RandomDec.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min;
                         column.StringFormatPattern = "";
@@ -400,7 +414,7 @@ namespace DataMasker.Examples
                     {
                         if (col.ColumnName.ToUpper().Equals("NAME")) //set company name
                         {
-                            column.type = "Bogus";
+                            column.type = DataType.Bogus.ToString();
                             //column.type = col.DATA_TYPE;
                             column.StringFormatPattern = "{{COMPANY.COMPANYNAME}}";
                             column.max = col.Max.ToString(); ;
@@ -411,7 +425,7 @@ namespace DataMasker.Examples
                         {
                             //var size = col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ')[1].Split(',')[0].ToString();
 
-                            column.type = "RandomInt";
+                            column.type = DataType.RandomInt.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min;
                             column.StringFormatPattern = "";
@@ -420,7 +434,7 @@ namespace DataMasker.Examples
                         }
                         else if (col.ColumnName.ToUpper().Equals("TOTAL_AREA")) //set company name
                         {
-                            column.type = "Bogus";
+                            column.type = DataType.Bogus.ToString();
                             //column.type = col.DATA_TYPE;
                             column.StringFormatPattern = "";
                             column.max = col.Max.ToString(); ;
@@ -432,7 +446,7 @@ namespace DataMasker.Examples
                             count++;
                             collist.Add(new KeyValuePair<string, string>(col.ColumnName, col.TableName));
                             //collist.Add(col.ColumnName.ToUpper(), col.TableName);
-                            column.type = "Ignore";
+                            column.type = DataType.Ignore.ToString();
                             //column.type = col.DATA_TYPE;
                             column.StringFormatPattern = "";
                             column.max = col.Max.ToString();
@@ -674,6 +688,10 @@ namespace DataMasker.Examples
             [JsonProperty("PKconstraintName", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string PKconstraintName { get; set; } = "";
 
+            [DefaultValue("TRUE")]
+            [JsonProperty("Retain NULL", DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string RetainNull { get; set; } = "TRUE";
+
             [DefaultValue("")]
             [JsonProperty("Min", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string Min { get; set; }
@@ -791,8 +809,9 @@ namespace DataMasker.Examples
                 }
                 else
                 {
+                    
                     rows = dataSource.GetData(tableConfig);
-
+                    
                     rawData = dataSource.RawData(null);
                     //rawData = dataSource.GetData(tableConfig);
                     foreach (IDictionary<string, object> row in rows)
@@ -837,10 +856,10 @@ namespace DataMasker.Examples
                             }
                             string writePath = createDir + @"\" + tableConfig.Name + ".sql";
                             var multimedia = tableConfig.Columns.Where(n => n.Type == DataType.Blob).Select(n => n.Name);
-                            if (multimedia.Count() != 0)
-                            {
-                                extcolumn = new string[] { string.Join("", multimedia.ToArray()[0].ToArray()) };
-                            }
+                            //if (multimedia.Count() != 0)
+                            //{
+                            //    extcolumn = new string[] { string.Join("", multimedia.ToArray()[0].ToArray()) };
+                            //}
 
 
                             var insertSQL = SqlDML.GenerateInsert(_dmlTable, extcolumn, null, null, writePath, config, tableConfig);
@@ -888,18 +907,23 @@ namespace DataMasker.Examples
             }
             //write mapped table and column with type in csv file
             var o = OutputSheet(config, copyjsonPath, _nameDatabase);
-            string sheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
-            if (report.Rows.Count != 0)
+           
+            //sheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
+            //exceptionPath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
+            if (report.Rows.Count != 0
+                && allkey.Where(n => n.Key.ToUpper().Equals("EmailValidation".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
             {
                 
-                MaskValidationCheck.Analysis(report, config.DataSource, sheetPath, _nameDatabase, createDir);
+                MaskValidationCheck.Analysis(report, config.DataSource, sheetPath, _nameDatabase, createDir,exceptionPath);
             }
 
             #region validate masking 
-            if (allkey.Where(n => n.Key.ToUpper().Equals("RunValidation".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true) && allkey.Where(n => n.Key.ToUpper().Equals("MaskedCopyDatabase".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+            if (allkey.Where(n => n.Key.ToUpper().Equals("RunValidation".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
+                && allkey.Where(n => n.Key.ToUpper().Equals("MaskedCopyDatabase".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
+                && allkey.Where(n => n.Key.ToUpper().Equals("EmailValidation".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
             {
                 Console.WriteLine("Data Masking Validation started......................................");
-                MaskValidationCheck.verification(config.DataSource, config, sheetPath,createDir, _nameDatabase);
+                MaskValidationCheck.verification(config.DataSource, config, sheetPath,createDir, _nameDatabase,exceptionPath);
             }
 
                 
@@ -1112,6 +1136,10 @@ namespace DataMasker.Examples
                         bool m = ConfigurationManager.AppSettings[key].ToString().ToUpper().Equals("YES") ? true : false;
                         allkey.Add(key, m);
                         break;
+                    case nameof(AppConfig.EmailValidation):
+                        bool e = ConfigurationManager.AppSettings[key].ToString().ToUpper().Equals("YES") ? true : false;
+                        allkey.Add(key, e);
+                        break;
                     default:
                         break;
                 }
@@ -1143,7 +1171,8 @@ namespace DataMasker.Examples
             ConnectionStringPrd,
             MaskedCopyDatabase,
             RunValidation,
-            Hostname
+            Hostname,
+            EmailValidation
         }
         private static void UpdateProgress(
             ProgressType progressType,
@@ -1199,6 +1228,7 @@ namespace DataMasker.Examples
             }
             foreach (ColumnConfig dataColumn in tableConfig.Columns)
             {
+               
                 _columndatamask = new DataView(_maskedTable).ToTable(false, new string[] { dataColumn.Name }).AsEnumerable().Select(n => n[0]).ToList();
                 _columndataUnmask = new DataView(_prdTable).ToTable(false, new string[] { dataColumn.Name }).AsEnumerable().Select(n => n[0]).ToList();
 
@@ -1214,21 +1244,19 @@ namespace DataMasker.Examples
                 for (int i = 0; i < _columndatamask.Count; i++)
                 {
                     rownumber = i;
+                    
                     if (!_columndatamask[i].IsNullOrDbNull())
                     {
                         try
                         {
+                          
+
                             if (_columndatamask[i].Equals(_columndataUnmask[i]))
                             {
-                                if (dataColumn.Type == DataType.Shuffle)
-                                {
-                                    var mask = _columndatamask[i];
-                                    var prd = _columndataUnmask[i];
-                                }
-                                //else
-                                //{
+                               
+                              
                                 check.Add("FAIL");
-                                //}
+                                
 
 
                                 //match

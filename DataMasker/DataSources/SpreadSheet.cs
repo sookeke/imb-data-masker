@@ -239,7 +239,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public object shuffle(string table, string column, object existingValue, DataTable _dataTable)
+        public object shuffle(string table, string column, object existingValue, bool retainnull, DataTable _dataTable)
         {
             
             Random rnd = new Random();

@@ -38,7 +38,7 @@ namespace DataMasker.Interfaces
             TableConfig tableConfig);
         object shuffle(
             string table, string column,
-            object existingValue,
+            object existingValue, bool retainnull,
             DataTable dataTable);
 
         /// <summary>

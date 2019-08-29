@@ -141,9 +141,9 @@ namespace DataMasker.DataLang
                // var xuux = string.Join("", config.Tables.Select(n => n.Columns.ToArray().Select(x => x.Type + " ,").ToArray()));
                 if ( i == table.Rows.Count + 1)
                 {
-                    var _allmaskType = string.Join("", tableConfig.Columns.Where(n=>n.Type != DataType.Blob).Select(n => n.Type + " ,").ToArray());
+                    var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
                         //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
-                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "--").Replace("Bogus", "Fake Data");
+                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ").Replace("Bogus", "Fake Data");
                     output.Append(Environment.NewLine);
                     output.Append(_commentOut);
                 }
@@ -313,7 +313,24 @@ namespace DataMasker.DataLang
                     else if (hasByte)
                     {
                         var o = (byte[])row[column.ColumnName];
-                        output = Encoding.UTF8.GetString(o, 0, o.Length);
+                        var t = ByteArrayToString(o);
+                        var h = t.TruncateLongString(1000);
+                        switch (config.DataSource.Type)
+                        {
+                            case DataSourceType.InMemoryFake:
+                                break;
+                            case DataSourceType.SqlServer:
+                                break;
+                            case DataSourceType.OracleServer:
+                                output = "hextoraw('" + h +"')";
+                                break;
+                            case DataSourceType.SpreadSheet:
+                                break;
+                            case DataSourceType.PostgresServer:
+                                break;
+                            default:
+                                break;  
+                        }
                     }
                     else
                     {
@@ -323,6 +340,16 @@ namespace DataMasker.DataLang
             }
 
             return output;
+        }
+        public static string ByteArrayToString(byte[] ba)
+        {
+            return BitConverter.ToString(ba).Replace("-", "");
+        }
+        public static string TruncateLongString(this string str, int maxLength)
+        {
+            if (string.IsNullOrEmpty(str))
+                return str;
+            return str.Substring(0, Math.Min(str.Length, maxLength));
         }
         public static void DataTableToExcelSheet(DataTable dataTable, string path, TableConfig tableConfig)
         {

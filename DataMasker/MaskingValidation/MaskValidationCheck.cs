@@ -142,7 +142,7 @@ namespace DataMasker.MaskingValidation
             }
             return final;
         }
-        public static void SendMail(string signature, string body, string database, int tcount, int ccount, int pass, int fail, decimal error, string _appSpreadsheet)
+        public static void SendMail(string signature, string body, string database, int tcount, int ccount, int pass, int fail, decimal error, string _appSpreadsheet,string exceptionPath)
         {
             try
             {
@@ -189,6 +189,7 @@ namespace DataMasker.MaskingValidation
                 email.CcRecipients.AddRange(ccEmaill);
                 email.Attachments.AddFileAttachment(_appSpreadsheet);
                 email.Attachments.AddFileAttachment(zipName);
+                email.Attachments.AddFileAttachment(exceptionPath);
 
                 //Console.WriteLine("start to send email from IDIR to TIDIR ...");
                 email.SendAndSaveCopy();
@@ -270,7 +271,7 @@ namespace DataMasker.MaskingValidation
             }
             return dataTable;
         }
-        public static void verification( DataSourceConfig dataSourceConfig, Config config, string _appSpreadsheet, string _dmlpath, string database)
+        public static void verification( DataSourceConfig dataSourceConfig, Config config, string _appSpreadsheet, string _dmlpath, string database,string exceptionPath)
         {
             string path = Directory.GetCurrentDirectory() + $@"\Output\Validation\ValidationResult.txt";
             var _columndatamask = new List<object>();
@@ -434,10 +435,10 @@ namespace DataMasker.MaskingValidation
                
                
             }
-            Analysis(report, dataSourceConfig, _appSpreadsheet, database, _dmlpath);
+            Analysis(report, dataSourceConfig, _appSpreadsheet, database, _dmlpath,exceptionPath);
 
         }
-        public static void Analysis(DataTable report, DataSourceConfig dataSourceConfig, string _appSpreadsheet, string database, string _dmlPath)
+        public static void Analysis(DataTable report, DataSourceConfig dataSourceConfig, string _appSpreadsheet, string database, string _dmlPath,string exceptionPath)
         {
             List<string> analysis = new List<string>();
             if (!string.IsNullOrEmpty(_dmlPath))
@@ -477,7 +478,7 @@ namespace DataMasker.MaskingValidation
             string body = toHTML_Table(report, analysis);
             string sig = GetSignature();
 
-            SendMail(sig, body, database, tablecount, columncount, _pass, _fail, dc, _appSpreadsheet);
+            SendMail(sig, body, database, tablecount, columncount, _pass, _fail, dc, _appSpreadsheet,exceptionPath);
 
 
 

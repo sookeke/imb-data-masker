@@ -102,7 +102,7 @@ namespace DataMasker.DataSources
             }
         }
 
-        public object shuffle(string table, string column, object existingValue, DataTable dataTable)
+        public object shuffle(string table, string column, object existingValue, bool retainnull, DataTable dataTable)
         {
             throw new NotImplementedException();
         }
