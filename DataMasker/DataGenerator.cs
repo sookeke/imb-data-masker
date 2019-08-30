@@ -12,6 +12,7 @@ using System.Linq;
 using Dapper;
 using System.Configuration;
 using System.Data;
+using System.Net.Http;
 
 namespace DataMasker
 {
@@ -31,15 +32,15 @@ namespace DataMasker
         private const int DEFAULT_LOREM_MAX = 30;
 
         private const int DEFAULT_RANT_MAX = 25;
-        
-       
+
+
 
         /// <summary>
         /// The data generation configuration
         /// </summary>
         private readonly DataGenerationConfig _dataGenerationConfig;
         //private static DataSourceProvider datasource;
-     
+
 
         /// <summary>
         /// The faker
@@ -70,8 +71,8 @@ namespace DataMasker
             _randomizer = new Randomizer();
             _globalValueMappings = new Dictionary<string, IDictionary<object, object>>();
         }
-       
-         
+
+
         /// <summary>
         /// Gets the value.
         /// </summary>
@@ -218,17 +219,17 @@ namespace DataMasker
                 case DataType.Rant:
                     var rant = _faker.Rant.Review(columnConfig.StringFormatPattern);
                     int lenght = rant.Length;
-                    
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && rant.Length> Convert.ToInt32(columnConfig.Max))
+
+                    if (!string.IsNullOrEmpty(columnConfig.Max) && rant.Length > Convert.ToInt32(columnConfig.Max))
                     {
-                       var rantSub = rant.Substring(0, Convert.ToInt32(columnConfig.Max));
-                       return rantSub;
+                        var rantSub = rant.Substring(0, Convert.ToInt32(columnConfig.Max));
+                        return rantSub;
                     }
                     //var rant = _faker.Rant.Reviews(lines: ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_RANT_MAX))[0];
 
                     return rant; // return _faker.Rant.Review(columnConfig.StringFormatPattern);
                 case DataType.Lorem:
-                    return _faker.Lorem.Sentence(Convert.ToInt32(columnConfig.Min),Convert.ToInt32(columnConfig.Max))
+                    return _faker.Lorem.Sentence(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max))
                         ;
                 case DataType.StringFormat:
                     return _randomizer.Replace(columnConfig.StringFormatPattern);
@@ -240,7 +241,7 @@ namespace DataMasker
                     var file = _faker.System.FileName("");
                     return file.Remove(file.Length - 1);
                 case DataType.Blob:
-                   
+
                     var fileUrl = _faker.Image.LoremPixelUrl();
                     //_faker.System.
                     //FileStream stream = new FileStream(fileUrl, FileMode.Open, FileAccess.Read);
@@ -277,7 +278,7 @@ namespace DataMasker
                     //generate 20 SIZE LINESTRING random polygon coordinate with same precision model using GEOAPI and NETOPOLOGY SUITE
                     Random random = new Random();
                     SdoGeometry sdoGeometry = new SdoGeometry();
-                    
+
                     var SDO_GTYPElist = new List<string> { "2003", "2006", "2002" };
                     int index = random.Next(SDO_GTYPElist.Count);
                     string SDO_GTYPE = SDO_GTYPElist[index];
@@ -309,10 +310,10 @@ namespace DataMasker
 
                     var pCoordinate = gf.CreateMultiPointFromCoords(coords);
                     //Geo = new SdoGeometry();
-                   
+
                     var xx = pCoordinate.ToString().Replace(",", string.Empty).Replace(" ", ",").Split(new string[] { "LINESTRING," }, StringSplitOptions.None)[1];
                     var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + SDO_GTYPE + "," + 5255 + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(1,2,1),MDSYS.SDO_ORDINATE_ARRAY" + pCoordinate + ")";
-                    var values = "ST_GeomFromText(" + pCoordinate +")";
+                    var values = "ST_GeomFromText(" + pCoordinate + ")";
                     //GeographyMapper geographyMapper = new GeographyMapper();
                     SqlMapper.AddTypeHandler(new GeographyMapper());
                     //geographyMapper.SetValue("@GEO", obj.Geo);
@@ -327,17 +328,17 @@ namespace DataMasker
                         //return decimal
                         return Math.Round(_faker.Random.Decimal(Convert.ToDecimal(min), Convert.ToDecimal(max)), 2);
                     }
-                    return _faker.Random.Int(Convert.ToInt32(min),Convert.ToInt32(max));
+                    return _faker.Random.Int(Convert.ToInt32(min), Convert.ToInt32(max));
                 //return _faker.Random.Int(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));
                 case DataType.CompanyPersonName:
                     var _compName = new Faker().Company.CompanyName();
                     var _personName = _faker.Person.FullName;
-                    string[] _array = new string[] { _compName,_personName};
+                    string[] _array = new string[] { _compName, _personName };
 
                     return _faker.PickRandom(_array);
                 case DataType.PostalCode:
                     //var xx = _xeger.Generate().ToUpper();
-                    return _xeger.Generate().ToUpper().Replace(" ",string.Empty);
+                    return _xeger.Generate().ToUpper().Replace(" ", string.Empty);
                 case DataType.Company:
                     var company = new Faker();
                     var _genCompany = company.Company.CompanyName(columnConfig.StringFormatPattern); ;
@@ -393,7 +394,7 @@ namespace DataMasker
                     var ussername = new Faker();
                     return ussername.Person.UserName;
                 case DataType.Computed:
-                  return null;
+                    return null;
             }
 
 
@@ -434,7 +435,7 @@ namespace DataMasker
             //public int Id { get; set; }
             public SdoGeometry Geo { get; set; }
         }
-        
+
 
         private dynamic ParseMinMaxValue(
             ColumnConfig columnConfig,
@@ -460,7 +461,7 @@ namespace DataMasker
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
 
-        public object GetValueShuffle(ColumnConfig columnConfig , string table, string column,IDataSource dataSources, DataTable dataTable,
+        public object GetValueShuffle(ColumnConfig columnConfig, string table, string column, IDataSource dataSources, DataTable dataTable,
             object existingValue, Name.Gender? gender = null)
         {
             if (columnConfig.RetainNullValues &&
@@ -483,14 +484,14 @@ namespace DataMasker
                         Point = exist.Point
                     }
                 };
-              
+
                 while (obj.Geo.Equals(existingValue))
                 {
                     obj.Geo.OrdinatesArray = _randomizer.Shuffle(exist.OrdinatesArray).ToArray();
-                    
-                    
+
+
                 }
-                
+
                 return obj.Geo;
             }
             else
@@ -499,7 +500,7 @@ namespace DataMasker
                 {
                     case DataType.Shuffle:
                         var random = new Random();
-                        var shuffle = dataSources.shuffle(table, column, existingValue,columnConfig.RetainNullValues, dataTable);
+                        var shuffle = dataSources.shuffle(table, column, existingValue, columnConfig.RetainNullValues, dataTable);
                         return shuffle;
                 }
             }
@@ -507,7 +508,7 @@ namespace DataMasker
         }
 
         public object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,
-            string fileName, string fileExtension, Name.Gender? gender = null )
+            string fileName, string fileExtension, Name.Gender? gender = null)
         {
             if (columnConfig.RetainNullValues &&
                existingValue == null)
@@ -517,13 +518,13 @@ namespace DataMasker
             switch (columnConfig.Type)
             {
                 case DataType.Blob:
-                    IFileType fileType =  new FileType();
+                    IFileType fileType = new FileType();
                     //fileType.GenerateDOCX("", "");
                     switch (fileExtension.ToUpper())
                     {
-                        case "PDF":
+                        case nameof(FileTypes.PDF):
                             //generate pdf
-                           fileName =  fileType.GeneratePDF(@"\output\"+ fileName, "").ToString();
+                            fileName = fileType.GeneratePDF(@"\output\" + fileName, "").ToString();
                             byte[] byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -537,7 +538,7 @@ namespace DataMasker
                             //delete the file from location
                             File.Delete(fileName);
                             return byteArray;
-                        case "TXT":
+                        case nameof(FileTypes.TXT):
                             fileName = fileType.GenerateTXT(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
                             byteArray = null;
 
@@ -551,8 +552,8 @@ namespace DataMasker
                             }
                             File.Delete(fileName);
                             return byteArray;
-                          
-                        case "DOCX":
+
+                        case nameof(FileTypes.DOCX):
                             fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
                             byteArray = null;
 
@@ -567,7 +568,7 @@ namespace DataMasker
                             File.Delete(fileName);
                             return byteArray;
                         // return fileType.GenerateDOCX(@"\", "");
-                        case "DOC":
+                        case nameof(FileTypes.DOC):
                             fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
                             byteArray = null;
 
@@ -581,7 +582,7 @@ namespace DataMasker
                             }
                             File.Delete(fileName);
                             return byteArray;
-                        case "RTF":
+                        case nameof(FileTypes.RTF):
                             fileName = fileType.GenerateRTF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
                             byteArray = null;
 
@@ -595,17 +596,40 @@ namespace DataMasker
                             }
                             File.Delete(fileName);
                             return byteArray;
-                            //return fileType.GenerateRTF(@"\", "");
-                        case "JPG":
+                        //return fileType.GenerateRTF(@"\", "");
+                        case nameof(FileTypes.JPG):
                             var fileUrl = _faker.Image.LoremPixelUrl();
                             string someUrl = fileUrl;
-                            using (var WebClient = new WebClient())
+                            //check if URL is valid
+                            var _validUrl = IsValidUri(new Uri(someUrl));
+                            if (_validUrl)
                             {
+                                using (var WebClient = new WebClient())
+                                {
 
-                                byte[] imageBytes = WebClient.DownloadData(someUrl);
-                                return imageBytes;
+                                    byte[] imageBytes = WebClient.DownloadData(someUrl);
+                                    return imageBytes;
+                                    
+                                }
                             }
-                        case "MSG":
+                            else
+                            {
+                                fileName = fileType.GenerateJPEG(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                                byteArray = null;
+
+                                using (FileStream fs = new FileStream
+                                    (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+
+                                    byteArray = new byte[fs.Length];
+
+                                    int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                                }
+                                File.Delete(fileName);
+                                return byteArray;
+                            }
+
+                        case nameof(FileTypes.MSG):
                             //generate pdf
                             fileName = fileType.GenerateMSG(@"\output\" + fileName, "").ToString();
                             byteArray = null;
@@ -620,8 +644,8 @@ namespace DataMasker
                             }
                             File.Delete(fileName);
                             return byteArray;
-                            //return fileType.GenerateMSG(@"\", "");
-                        case "HTM":
+                        //return fileType.GenerateMSG(@"\", "");
+                        case nameof(FileTypes.HTM):
                             fileName = fileType.GenerateHTML(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
                             byteArray = null;
 
@@ -635,8 +659,8 @@ namespace DataMasker
                             }
                             File.Delete(fileName);
                             return byteArray;
-                           // return fileType.GenerateHTML(@"\", "");
-                        case "TIF":
+                        // return fileType.GenerateHTML(@"\", "");
+                        case nameof(FileTypes.TIF):
                             fileName = fileType.GenerateTIF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
                             byteArray = null;
 
@@ -650,7 +674,7 @@ namespace DataMasker
                             }
                             File.Delete(fileName);
                             return byteArray;
-                        case "HTML":
+                        case nameof(FileTypes.HTML):
                             fileName = fileType.GenerateHTML(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
                             byteArray = null;
 
@@ -664,7 +688,7 @@ namespace DataMasker
                             }
                             File.Delete(fileName);
                             return byteArray;
-                        case "TIFF":
+                        case nameof(FileTypes.TIIF):
                             fileName = fileType.GenerateTIF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
                             byteArray = null;
 
@@ -678,8 +702,8 @@ namespace DataMasker
                             }
                             File.Delete(fileName);
                             return byteArray;
-                        case "XLSX":
-                            
+                        case nameof(FileTypes.XLSX):
+
                             fileName = fileType.GenerateXLSX(Environment.CurrentDirectory + @"\output\" + fileName, string.Join(" ", _faker.Rant.Reviews(" ", 10).ToArray())).ToString();
                             byteArray = null;
 
@@ -712,16 +736,16 @@ namespace DataMasker
                                 //break;
                             }
                     }
-                    
 
-                    //return fileType.GenerateRandom(@"\");
+
+                //return fileType.GenerateRandom(@"\");
                 case DataType.Filename:
                     //var filename3 = _faker.System.FileName(fileExtension);
-                   
+
 
                     return _faker.System.FileName(fileExtension);
             }
-                throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type,"not implemented");
+            throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, "not implemented");
         }
 
         private enum MinMax
@@ -730,7 +754,52 @@ namespace DataMasker
 
             Max = 1
         }
-        
+        private enum FileTypes{
+            PDF,
+            XLSX,
+            DOC,
+            DOCX,
+            TIIF,
+            TIF,
+            HTML,
+            HTM,
+            JPG,
+            JPEG,
+            TXT,
+            MSG,
+                RTF
+        }
+
+        public bool IsValidUri(Uri uri)
+        {
+
+            using (HttpClient Client = new HttpClient())
+            {
+                try
+                {
+                    HttpResponseMessage result = Client.GetAsync(uri).Result;
+                    HttpStatusCode StatusCode = result.StatusCode;
+
+                    switch (StatusCode)
+                    {
+
+                        case HttpStatusCode.Accepted:
+                            return true;
+                        case HttpStatusCode.OK:
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+                catch (Exception)
+                {
+
+                    return false;
+                }
+               
+            }
+        }
+
 
     }
     public static class RandomExtensions

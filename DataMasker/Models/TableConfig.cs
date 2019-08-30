@@ -25,6 +25,7 @@ namespace DataMasker.Models
         /// </value>
         [JsonRequired]
         public string PrimaryKeyColumn { get; set; }
+        public string RowCount { get; set; }
 
         /// <summary>
         /// List of <see cref="ColumnConfig"/>

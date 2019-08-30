@@ -44,6 +44,7 @@ namespace DataMasker.Examples
     {
         public string name { get; set; }
         public string primaryKeyColumn { get; set; }
+        public string RowCount { get; set; }
         public List<Column> columns { get; set; }
     }
 

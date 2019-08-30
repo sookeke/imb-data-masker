@@ -56,7 +56,7 @@ namespace DataMasker.DataSources
             using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd))
             {
                 connection.Open();
-                string query = BuildSelectSql(tableConfig);
+                string query = "";
                 IDictionary<string, object> idict = new Dictionary<string, object>();
                 IEnumerable<IDictionary<string, object>> row = new List<IDictionary<string, object>>();
                 List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
@@ -66,6 +66,7 @@ namespace DataMasker.DataSources
                 
                 if (rowCount != null && Convert.ToInt64(rowCount[0]) > 1500 && tableConfig.Columns.Where(n => n.Type == DataType.Blob).Count() > 0)
                 {
+                    query = BuildSelectSql(tableConfig);
                     using (OracleCommand cmd = new OracleCommand(query, connection))
                     {
                         cmd.InitialLOBFetchSize = 1;
@@ -112,9 +113,10 @@ namespace DataMasker.DataSources
                 }
                 else
                 {
+                    query = BuildSelectSql(tableConfig);
                     //var retu = connection.Query(BuildSelectSql(tableConfig));
                     rawData = new List<IDictionary<string, object>>();
-                    var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig), buffered: true);
+                    var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: true);
                     foreach (IDictionary<string, object> prd in _prdData)
                     {
                        
@@ -272,7 +274,14 @@ namespace DataMasker.DataSources
            TableConfig tableConfig)
         {
             //var clumns = tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)
-            string sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name}";
+            string sql = "";
+            if (int.TryParse(tableConfig.RowCount, out int n))
+            {
+                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name} WHERE rownum <=" + n;
+            }
+            else
+                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name}";
+
             if (sql.Contains("[") || sql.Contains("]"))
             {
                 var charsToRemove = new string[] { "[", "]" };
@@ -321,6 +330,11 @@ namespace DataMasker.DataSources
                     //o = o + 1;
                     //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
                     return value;
+                }
+                if (value == null)
+                {
+                    //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
+                    return values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
                 }
                 while (value.Equals(existingValue))
                 {

@@ -111,12 +111,14 @@ namespace DataMasker.Examples
                 Table table = new Table();
                 List<Column> colList = new List<Column>();
                 table.name = nameGroup.Key;
+               
 
                 //table.primaryKeyColumn = nameGroup.Select
                 foreach (var col in nameGroup)
                 {
 
                     table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
+                    table.RowCount = col.RowCount;
                     bool o = col.RetainNull.ToUpper().Equals("TRUE") ? true : false;
                     Column column = new Column
                     {
@@ -658,6 +660,10 @@ namespace DataMasker.Examples
             [DefaultValue("")]
             [JsonProperty("COLUMN_NAME", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string ColumnName { get; set; }
+           
+            [DefaultValue("max")]
+            [JsonProperty("ROW_COUNT", DefaultValueHandling = DefaultValueHandling.Populate)]
+            public string RowCount { get; set; }
             [DefaultValue("")]
             [JsonProperty("DATA_TYPE", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string DataType { get; set; }

@@ -20,6 +20,7 @@ using Color1 = System.Drawing.Color;
 using System.Windows.Media.Imaging;
 using System.Drawing;
 using Color = SautinSoft.Document.Color;
+using System.Drawing.Imaging;
 
 namespace DataMasker
 {
@@ -118,10 +119,66 @@ namespace DataMasker
             return null;
 
         }
+        private static ImageCodecInfo GetEncoderInfo(String mimeType)
+        {
+            int j;
+            ImageCodecInfo[] encoders;
+            encoders = ImageCodecInfo.GetImageEncoders();
+            for (j = 0; j < encoders.Length; ++j)
+            {
+                if (encoders[j].MimeType == mimeType)
+                    return encoders[j];
+            }
+            return null;
+        }
 
         public object GenerateJPEG(string path, string table)
         {
-            throw new NotImplementedException();
+            Bitmap myBitmap;
+            ImageCodecInfo myImageCodecInfo;
+            System.Drawing.Imaging.Encoder myEncoder;
+            EncoderParameter myEncoderParameter;
+            EncoderParameters myEncoderParameters;
+
+            // Create a Bitmap object based on a BMP file.
+            myBitmap = new Bitmap(100,400);
+
+            // Get an ImageCodecInfo object that represents the JPEG codec.
+            myImageCodecInfo = GetEncoderInfo("image/jpeg");
+
+            // Create an Encoder object based on the GUID
+
+            // for the Quality parameter category.
+            myEncoder = System.Drawing.Imaging.Encoder.Quality;
+
+            // Create an EncoderParameters object.
+
+            // An EncoderParameters object has an array of EncoderParameter
+
+            // objects. In this case, there is only one
+
+            // EncoderParameter object in the array.
+            myEncoderParameters = new EncoderParameters(1);
+
+            // Save the bitmap as a JPEG file with quality level 25.
+            myEncoderParameter = new EncoderParameter(myEncoder, 25L);
+            myEncoderParameters.Param[0] = myEncoderParameter;
+            myBitmap.Save("Shapes025.jpg", myImageCodecInfo, myEncoderParameters);
+
+            // Save the bitmap as a JPEG file with quality level 50.
+            myEncoderParameter = new EncoderParameter(myEncoder, 50L);
+            myEncoderParameters.Param[0] = myEncoderParameter;
+            myBitmap.Save(path, myImageCodecInfo, myEncoderParameters);
+
+            // Save the bitmap as a JPEG file with quality level 75.
+            myEncoderParameter = new EncoderParameter(myEncoder, 75L);
+            myEncoderParameters.Param[0] = myEncoderParameter;
+            myBitmap.Save(path, myImageCodecInfo, myEncoderParameters);
+            if (File.Exists(path))
+            {
+                return path;
+            }
+            return null;
         }
 
         public object GenerateMSG(string path, string table)
