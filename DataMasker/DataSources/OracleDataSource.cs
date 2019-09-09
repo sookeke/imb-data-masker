@@ -11,6 +11,7 @@ using System.IO;
 using System.Configuration;
 //using ChoETL;
 using DataMasker.DataLang;
+using KellermanSoftware.CompareNetObjects;
 
 namespace DataMasker.DataSources
 {
@@ -132,8 +133,8 @@ namespace DataMasker.DataSources
         }
         public static string ByteArrayToString(byte[] ba)
         {
-           var uu= BitConverter.ToString(ba).Replace("-", "");
-            return uu;
+
+            return BitConverter.ToString(ba).Replace("-", "");
         }
         public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig)
         {
@@ -294,11 +295,11 @@ namespace DataMasker.DataSources
         }
         public object shuffle(string table, string column, object existingValue, bool retainNull,DataTable dataTable = null)
         {
-            //ArrayList list = new ArrayList();
+            CompareLogic compareLogic = new CompareLogic();
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
             Random rnd = new Random();
             string sql = "SELECT " + column + " FROM " + " " + table;
-            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionString))
+            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd))
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
@@ -331,12 +332,12 @@ namespace DataMasker.DataSources
                     //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
                     return value;
                 }
-                if (value == null)
+                if (compareLogic.Compare(value, null).AreEqual && retainNull)
                 {
                     //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
                     return values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
                 }
-                while (value.Equals(existingValue))
+                while (compareLogic.Compare(value, existingValue).AreEqual)
                 {
 
                     value = values[rnd.Next(0,values.Count())];
@@ -437,6 +438,7 @@ namespace DataMasker.DataSources
                             {
                                 header.DataType = typeof(byte[]);
                             }
+                            
                         }
                     }
 

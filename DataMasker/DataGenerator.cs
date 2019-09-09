@@ -85,6 +85,7 @@ namespace DataMasker
             object existingValue,
             Name.Gender? gender)
         {
+            object getValue = null;
             if (columnConfig.ValueMappings == null)
             {
                 columnConfig.ValueMappings = new Dictionary<object, object>();
@@ -104,16 +105,76 @@ namespace DataMasker
 
             if (existingValue == null)
             {
-                return GetValue(columnConfig, gender);
+                getValue = GetValue(columnConfig, gender);
+                while (Convert.ToString(getValue).Equals(Convert.ToString(existingValue)))
+                {
+                    getValue = GetValue(columnConfig, gender);
+                }
+                return getValue;
             }
 
             if (HasValueMapping(columnConfig, existingValue))
             {
                 return GetValueMapping(columnConfig, existingValue);
             }
+            if (columnConfig.Type == DataType.Geometry)
+            {
+               
+                Random random = new Random();
+                
+                
+                //Identify the centre of the polygon
+                
+                
+               
+                var exist = (SdoGeometry)existingValue;
+                var obj = new HazSqlGeo {
+                Geo = new SdoGeometry()
+                {
+                    Sdo_Gtype = exist.Sdo_Gtype,
+                    Sdo_Srid = exist.Sdo_Srid
+                }
+                };
+
+                if (exist.Point != null)
+                {
+                    obj.Geo.Point.X = exist.Point.Y; obj.Geo.Point.Y = exist.Point.Z; obj.Geo.Point.Z = exist.Point.X;
+                }
+                else {
+                    
+                    obj.Geo.Point = exist.Point;
+                }
 
 
-            object newValue = GetValue(columnConfig, gender);
+                if (exist.OrdinatesArray != null)
+                {
+                    decimal[] cood = new decimal[exist.OrdinatesArray.Count()];
+                    for (int i = 0; i < exist.OrdinatesArray.Count(); i++)
+                    {
+                        //coords[i] = new Coordinate(center.X + random.NextDouble(-4291402.04717672, 16144349.4032217), center.Y + random.NextDouble(-4291402.04717672, 16144349.4032217));
+                        cood[i] = new decimal(random.NextDouble(-4291402.04717672, 16144349.4032217));
+                    }
+                    obj.Geo.OrdinatesArray = cood;
+                }
+                else { obj.Geo.OrdinatesArray = exist.OrdinatesArray; }
+
+                if (exist.ElemArray != null)
+                {
+                    obj.Geo.ElemArray = _randomizer.Shuffle(exist.ElemArray).ToArray();
+                }
+                else { obj.Geo.ElemArray = exist.ElemArray; }
+
+
+                return obj.Geo;
+            }
+
+            object newValue = GetValue(columnConfig,gender);
+          
+            while (Convert.ToString(newValue).Equals(Convert.ToString(existingValue)))
+            {
+                newValue = GetValue(columnConfig,gender);
+            }
+           
             if (columnConfig.UseGlobalValueMappings ||
                 columnConfig.UseLocalValueMappings)
             {
@@ -266,6 +327,7 @@ namespace DataMasker
                     Random gen = new Random();
                     int range = ((TimeSpan)(DateTime.Today - start)).Days;
                     var randomYear = start.AddDays(gen.Next(range)).ToString("yyyy");
+                    //object vv = Convert.ToInt32(randomYear);
                     return randomYear;
                 case DataType.RandomSeason:
                     DateTime _start = new DateTime(1995, 1, 1);
@@ -308,12 +370,12 @@ namespace DataMasker
                         }
                     };
 
-                    var pCoordinate = gf.CreateMultiPointFromCoords(coords);
+                    //var pCoordinate = gf.CreateMultiPointFromCoords(coords);
                     //Geo = new SdoGeometry();
 
-                    var xx = pCoordinate.ToString().Replace(",", string.Empty).Replace(" ", ",").Split(new string[] { "LINESTRING," }, StringSplitOptions.None)[1];
-                    var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + SDO_GTYPE + "," + 5255 + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(1,2,1),MDSYS.SDO_ORDINATE_ARRAY" + pCoordinate + ")";
-                    var values = "ST_GeomFromText(" + pCoordinate + ")";
+                    //var xx = pCoordinate.ToString().Replace(",", string.Empty).Replace(" ", ",").Split(new string[] { "LINESTRING," }, StringSplitOptions.None);
+                    //var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + SDO_GTYPE + "," + 5255 + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(1,2,1),MDSYS.SDO_ORDINATE_ARRAY" + pCoordinate + ")";
+                    //var values = "ST_GeomFromText(" + pCoordinate + ")";
                     //GeographyMapper geographyMapper = new GeographyMapper();
                     SqlMapper.AddTypeHandler(new GeographyMapper());
                     //geographyMapper.SetValue("@GEO", obj.Geo);
@@ -384,10 +446,21 @@ namespace DataMasker
                     return _faker.Random.Hexadecimal(Convert.ToInt32(columnConfig.StringFormatPattern));
                 case DataType.Bogus:
                     var _gen = _faker.Parse(columnConfig.StringFormatPattern);
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > Convert.ToInt32(columnConfig.Max))
+                    if (columnConfig.Min.Contains(".") || columnConfig.Max.Contains("."))
                     {
-                        var _short = _gen.Substring(0, Convert.ToInt32(columnConfig.Max));
-                        return _short;
+                        if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > Convert.ToDecimal(columnConfig.Max))
+                        {
+                            var _short = _gen.Substring(0, Convert.ToInt32(columnConfig.Max));
+                            return _short;
+                        }
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > Convert.ToInt32(columnConfig.Max))
+                        {
+                            var _short = _gen.Substring(0, Convert.ToInt32(columnConfig.Max));
+                            return _short;
+                        }
                     }
                     return _gen;
                 case DataType.RandomUsername:
@@ -434,6 +507,7 @@ namespace DataMasker
         {
             //public int Id { get; set; }
             public SdoGeometry Geo { get; set; }
+            public int[] Point { get; set; }
         }
 
 
@@ -472,19 +546,26 @@ namespace DataMasker
             else if (columnConfig.Type == DataType.Shufflegeometry)
             {
                 var exist = (SdoGeometry)existingValue;
-                var obj = new HazSqlGeo
+                var obj = new HazSqlGeo();
+
+                if (obj.Geo.Point != null)
                 {
+                    obj.Geo.Point.X = exist.Point.Y; obj.Geo.Point.Y = exist.Point.Z; obj.Geo.Point.Z = exist.Point.X;
+                }
+                else { obj.Geo.Point = exist.Point; }
 
-                    Geo = new SdoGeometry()
-                    {
-                        ElemArray = exist.ElemArray,
-                        OrdinatesArray = _randomizer.Shuffle(exist.OrdinatesArray).ToArray(),
-                        Sdo_Gtype = exist.Sdo_Gtype,
-                        Sdo_Srid = exist.Sdo_Srid,
-                        Point = exist.Point
-                    }
-                };
 
+                if (obj.Geo.OrdinatesArray != null)
+                {
+                    obj.Geo.OrdinatesArray = _randomizer.Shuffle(exist.OrdinatesArray).ToArray();
+                }
+                else { obj.Geo.OrdinatesArray = exist.OrdinatesArray; }
+
+                if (obj.Geo.ElemArray != null)
+                {
+                    obj.Geo.ElemArray = _randomizer.Shuffle(exist.ElemArray).ToArray();
+                }
+                else { obj.Geo.ElemArray = exist.ElemArray; }
                 while (obj.Geo.Equals(existingValue))
                 {
                     obj.Geo.OrdinatesArray = _randomizer.Shuffle(exist.OrdinatesArray).ToArray();

@@ -10,6 +10,9 @@ using System.Drawing;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Data;
+using KellermanSoftware.CompareNetObjects;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace DataMasker
 {
@@ -61,7 +64,7 @@ namespace DataMasker
 
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
-                
+                //CompareLogic compareLogic = new CompareLogic();
                 object existingValue = obj[columnConfig.Name];
                 
 
@@ -116,7 +119,44 @@ namespace DataMasker
                 }
                 else
                 {
-                  existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+                    //object o = null;
+                    //Console.WriteLine("{0}. existing is {1} ", 2, existingValue);
+                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+
+                   
+                    
+
+                        //if(existingValue == o || compareLogic.Compare(o,existingValue).AreEqual )
+                        //{
+
+
+                        //    do
+                        //    {
+                        //        o = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+                        //        if (columnConfig.RetainNullValues && compareLogic.Compare(existingValue, null).AreEqual)
+                        //        {
+                        //            break;
+                        //        }
+                        //    } while (compareLogic.Compare(o, existingValue).AreEqual || o == existingValue);
+
+
+                        //}
+                        
+
+
+                        //    if (o == existingValue || compareLogic.Compare(o, existingValue).AreEqual)
+                        //    {
+                        //        Console.WriteLine("THESE ARE EQUAL");
+                        //    }
+                        
+                        //Console.WriteLine("{0}. existing is {1} before  ", 3, existingValue);
+                      
+                        //existingValue = o;
+                        //Console.WriteLine("{0}. existing is {1} new  ", 3, existingValue);
+                       
+                  
+                 
+                 
                 }
                 //replace the original value
                 obj[columnConfig.Name] = existingValue;
@@ -148,6 +188,8 @@ namespace DataMasker
           }
           return obj;
         }
+
+
         public IDictionary<string, object> MaskBLOB(IDictionary<string, object> obj,
             TableConfig tableConfig, IDataSource dataSource,string filename, string fileExtension)
         {
@@ -234,7 +276,29 @@ namespace DataMasker
             uniqueValues.Add(existingValue);
             return existingValue;
         }
-
-
+        private string Serialize<T>(T value)
+        {
+            if (value == null)
+            {
+                return string.Empty;
+            }
+            try
+            {
+                System.Xml.Serialization.XmlSerializer xmlserializer = new XmlSerializer(typeof(T));
+                StringWriter stringWriter = new StringWriter();
+                XmlWriter writer = XmlWriter.Create(stringWriter);
+                xmlserializer.Serialize(writer, value);
+                string serializeXml = stringWriter.ToString();
+                writer.Close();
+                return serializeXml;
+            }
+            catch (Exception ex)
+            {
+                return string.Empty;
+            }
+        }
     }
+
+
 }
+

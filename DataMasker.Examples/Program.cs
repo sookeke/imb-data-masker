@@ -20,6 +20,7 @@ using MoreLinq;
 using DataMasker.MaskingValidation;
 using ChoETL;
 using DataMasker.DataSources;
+using KellermanSoftware.CompareNetObjects;
 
 /*
     Author: Stanley Okeke
@@ -36,6 +37,7 @@ namespace DataMasker.Examples
         private static string _nameDatabase;
         private static string _SpreadSheetPath;
         private static DataTable PrdTable = null;
+        private static DataTable _dmlTable = null;
         private static DataTable MaskTable = null;
         private static int count;
         private static DataTable report = new DataTable();  
@@ -215,7 +217,7 @@ namespace DataMasker.Examples
                         column.type = DataType.Company.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "{{name.lastname}} {{company.companysuffix}}";
+                        column.StringFormatPattern = "{{COMPANY.COMPANYNAME}} {{COMPANY.COMPANYSUFFIX}}";
                         column.useGenderColumn = "";
                     }
                     else if (_comment.Any(n => col.ColumnName.ToUpper().Contains(n)) || (col.DataType.ToUpper().Contains("CHAR") && Convert.ToInt32(col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ')[1]) > 1000) || _comment.Any(x => col.Comments.Contains(x)))
@@ -571,7 +573,7 @@ namespace DataMasker.Examples
                         {
                             //_colError.Add("")
                             //Console.WriteLine(string.Join("", _allNull[i].Key.ToArray()) + " contains column with ignore datatype/columns" + " " + string.Join(Environment.NewLine, _allNull[i].Value.Select(n => n.Key + " :" + n.Value).ToArray()));
-                            _colError.Add(notmasked++.ToString() + ". " + string.Join(" ", _allNull[i].Key.ToArray()) + " contains column with ignore datatype/columns" + " " + string.Join(Environment.NewLine, _allNull[i].Value.Select(n => n.Key + " :" + n.Value).ToArray()) + Environment.NewLine);
+                            _colError.Add(notmasked++.ToString() + ". " + string.Join("", _allNull[i].Key.ToArray()) + " contains column with ignore datatype/columns" + " " + string.Join("", _allNull[i].Value.Select(n => n.Key + " :" + n.Value).ToArray()) + Environment.NewLine);
                         }
                         string value = string.Join("", _colError.ToArray());
                         Console.Write(Environment.NewLine + "These columns have ignore datatype so will not be masked" + Environment.NewLine);
@@ -727,7 +729,7 @@ namespace DataMasker.Examples
             int example)
         {
             return Config.Load(jsonpath);
-            //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_GWP_config.json");
+           // return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\LIS_PRD_config.json");
         }
 
         public static void Example1()
@@ -817,7 +819,7 @@ namespace DataMasker.Examples
                 {
                     
                     rows = dataSource.GetData(tableConfig);
-                    
+                    //var outDataR = rows.Select(r => r.ToDictionary(d => d.Key, d => d.Value)).AsEnumerable();
                     rawData = dataSource.RawData(null);
                     //rawData = dataSource.GetData(tableConfig);
                     foreach (IDictionary<string, object> row in rows)
@@ -830,9 +832,11 @@ namespace DataMasker.Examples
                         }
                         else
                         {
-                            dataMasker.Mask(row, tableConfig, dataSource);
+                           
+                                dataMasker.Mask(row, tableConfig, dataSource);
+ 
                         }
-                        Console.WriteLine(extension);
+                        //Console.WriteLine(extension);
                        
 
                         //rowIndex++;
@@ -847,9 +851,21 @@ namespace DataMasker.Examples
                     try
                     {
                         #region Create DML Script
-                        var _dmlTable = dataSource.SpreadSheetTable(rows, tableConfig);
+                       //var outData = rows.Select(r => r.ToDictionary(d => d.Key, d => d.Value)).AsEnumerable();
+                        _dmlTable = dataSource.SpreadSheetTable(rows, tableConfig);
                         MaskTable = _dmlTable;
                         PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig);
+
+                       
+
+
+                       // var diff = differences.Any() ? differences.CopyToDataTable() : new DataTable();
+
+
+                        //var differences =
+//MaskTable.AsEnumerable().Intersect(PrdTable.AsEnumerable(), DataRowComparer.Default);
+                        
+
 
                         if (allkey.Where(n => n.Key.ToUpper().Equals("WRITEDML")).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                         {
@@ -879,15 +895,17 @@ namespace DataMasker.Examples
                                 //}
                                 //write masked Table to SpreadSheet
                                 SqlDML.DataTableToExcelSheet(_dmlTable, createDir + @"\" + tableConfig.Name + ".xlsx", tableConfig);
-
-
+                           
+                                
                             }
                         }
                         if (allkey.Where(n => n.Key.ToUpper().Equals("RunValidation".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
                             && PrdTable.Rows != null && MaskTable.Rows != null
                             && allkey.Where(n => n.Key.ToUpper().Equals("MaskedCopyDatabase".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(false))
                         {
-                            reportvalidation(PrdTable, MaskTable, config.DataSource, tableConfig);
+                           
+
+                            reportvalidation(PrdTable, _dmlTable, config.DataSource, tableConfig);
                             
 
                         }
@@ -1207,6 +1225,7 @@ namespace DataMasker.Examples
         }
         private static void reportvalidation(DataTable _prdTable, DataTable _maskedTable, DataSourceConfig dataSourceConfig, TableConfig tableConfig)
         {
+            CompareLogic compareLogic = new CompareLogic();
             string path = Directory.GetCurrentDirectory() + $@"\Output\Validation\ValidationResult.txt";
             var _columndatamask = new List<object>();
             var _columndataUnmask = new List<object>();
@@ -1234,7 +1253,7 @@ namespace DataMasker.Examples
             }
             foreach (ColumnConfig dataColumn in tableConfig.Columns)
             {
-               
+              
                 _columndatamask = new DataView(_maskedTable).ToTable(false, new string[] { dataColumn.Name }).AsEnumerable().Select(n => n[0]).ToList();
                 _columndataUnmask = new DataView(_prdTable).ToTable(false, new string[] { dataColumn.Name }).AsEnumerable().Select(n => n[0]).ToList();
 
@@ -1250,43 +1269,49 @@ namespace DataMasker.Examples
                 for (int i = 0; i < _columndatamask.Count; i++)
                 {
                     rownumber = i;
-                    
-                    if (!_columndatamask[i].IsNullOrDbNull())
-                    {
-                        try
-                        {
-                          
 
-                            if (_columndatamask[i].Equals(_columndataUnmask[i]))
+                   
+                        if (!_columndatamask[i].IsNullOrDbNull())
+                        {
+                            try
                             {
+
+
+                                if (compareLogic.Compare(_columndatamask[i],_columndataUnmask[i]).AreEqual && dataColumn.Ignore != true)
+                                {
+
+
+                                    check.Add("FAIL");
                                
-                              
-                                check.Add("FAIL");
-                                
 
 
-                                //match
+
+                                    //match
                             }
-                            else
+                                else
+                                {
+
+                                    check.Add("PASS");
+
+                                }
+                            }
+                            catch (IndexOutOfRangeException es)
+                            {
+                                Console.WriteLine(es.Message);
+                            }
+                            catch (Exception ex)
                             {
 
-                                check.Add("PASS");
-
+                                Console.WriteLine(ex.Message);
                             }
+
+
+
                         }
-                        catch (IndexOutOfRangeException es)
-                        {
-                            Console.WriteLine(es.Message);
-                        }
-                        catch (Exception ex)
-                        {
-
-                            Console.WriteLine(ex.Message);
-                        }
-
-
-
-                    }
+                    
+                    
+                    
+                    
 
 
 
@@ -1352,8 +1377,13 @@ namespace DataMasker.Examples
                     {
                         failure = "No record found";
                     }
+                   else if (dataColumn.Ignore == true || dataColumn.Type == DataType.NoMasking)
+                    {
+                        failure = "Masking not required";
+                        result = "<font color='green'>PASS</font>";
+                    }
                     else
-                        failure = "null";
+                        failure = "NULL";
                     result = "<font color='green'>PASS</font>";
                     Console.WriteLine(tableConfig.Name + " Pass Validation test on column " + dataColumn.Name);
                     File.AppendAllText(path, tableConfig.Name + " Pass Validation test on column " + dataColumn.Name + Environment.NewLine);
@@ -1365,6 +1395,132 @@ namespace DataMasker.Examples
             }
             
             //return report.datar
+        }
+        private static DataTable DictionariesToDataTable<T>(
+        IEnumerable<IDictionary<string, T>> source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            var result = new DataTable();
+            using (var e = source.GetEnumerator())
+            {
+                if (!e.MoveNext())
+                {
+                    return result;
+                }
+
+                if (e.Current.Keys.Count == 0)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                var length = e.Current.Keys.Count;
+
+                result.Columns.AddRange(
+                    e.Current.Keys.Select(k => new DataColumn(k, typeof(T))).ToArray());
+
+                do
+                {
+                    if (e.Current.Values.Count != length)
+                    {
+                        throw new InvalidOperationException();
+                    }
+
+                    result.Rows.Add(e.Current.Values);
+                }
+                while (e.MoveNext());
+
+                return result;
+            }
+        }
+        private static DataTable ConvertToDataTable(IEnumerable<IDictionary<string, object>> dict)
+        {
+            DataTable dt = new DataTable();
+
+            // Add columns first
+            dt.Columns.AddRange(dict.First()
+                                       .Select(kvp => new DataColumn() { ColumnName = kvp.Key, DataType = System.Type.GetType("System.String") })
+                                       .AsEnumerable()
+                                       .ToArray()
+                                       );
+
+            // Now add the rows
+            dict.SelectMany(Dict => Dict.Select(kvp => new {
+                Row = dt.NewRow(),
+                Kvp = kvp
+            }))
+                  .ToList()
+                  .ForEach(rowItem => {
+                      rowItem.Row[rowItem.Kvp.Key] = rowItem.Kvp.Value;
+                      dt.Rows.Add(rowItem.Row);
+                  }
+                         );
+            dt.Dump();
+            return dt;
+        }
+        private static DataTable ToDictionary(IEnumerable<IDictionary<string, object>> list)
+        {
+            DataTable result = new DataTable();
+            if (list.Count() == 0)
+                return result;
+
+           
+
+            foreach (IDictionary<string, object> row in list)
+            {
+                foreach (KeyValuePair<string, object> entry in row)
+                {
+                    if (!result.Columns.Contains(entry.Key.ToString()))
+                    {
+                        result.Columns.Add(entry.Key);
+                    }
+                }
+                result.Rows.Add(row.Values.ToArray());
+            }
+
+            return result;
+        }
+    }
+    public class DictComparer : IEqualityComparer<Dictionary<string, object>>
+    {
+        public bool Equals(Dictionary<string, object> x, Dictionary<string, object> y)
+        {
+            return (x == y) || (x.Count == y.Count && !x.Except(y).Any());
+        }
+
+        public int GetHashCode(Dictionary<string, object> x)
+        {
+            return x.GetHashCode();
+        }
+    }
+    public class OutputCapture : TextWriter, IDisposable
+    {
+        private TextWriter stdOutWriter;
+        public TextWriter Captured { get; private set; }
+        public override Encoding Encoding { get { return Encoding.ASCII; } }
+
+        public OutputCapture()
+        {
+            this.stdOutWriter = Console.Out;
+            Console.SetOut(this);
+            Captured = new StringWriter();
+        }
+
+        override public void Write(string output)
+        {
+            // Capture the output and also send it to StdOut
+            Captured.Write(output);
+            stdOutWriter.Write(output);
+        }
+
+        override public void WriteLine(string output)
+        {
+            // Capture the output and also send it to StdOut
+            Captured.WriteLine(output);
+            stdOutWriter.WriteLine(output);
         }
     }
 }

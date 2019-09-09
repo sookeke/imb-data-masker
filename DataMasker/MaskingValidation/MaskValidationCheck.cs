@@ -149,7 +149,7 @@ namespace DataMasker.MaskingValidation
                 string fromEmail = ConfigurationManager.AppSettings["fromEmail"];
                 var toEmail = ConfigurationManager.AppSettings["RecipientEmail"].Split(';').ToList();
                 var ccEmaill = ConfigurationManager.AppSettings["cCEmail"].Split(';').ToList();
-
+                var jsonPath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["jsonMapPath"];
                 ExchangeService service = new ExchangeService();
                 service.UseDefaultCredentials = true;
                 //service.Credentials = new NetworkCredential(user, decryptPassword);
@@ -168,28 +168,14 @@ namespace DataMasker.MaskingValidation
                 email.From = new EmailAddress(fromEmail);
                 //email.From = "mcs@gov.bc.ca";
 
-                List<string> emailddre = new List<string>()
-                {
-
-                    "stanley.okeke@gov.bc.ca"
-                  // "Andrew.X.Cripps@gov.bc.ca",
-                  // "Robert.Volkwyn@gov.bc.ca"
-
-                };
-                List<string> emailddreCC = new List<string>()
-                {
-
-                    "Julian.Barabas@gov.bc.ca",
-                    "Shannon.Karner@gov.bc.ca",
-                    "Abisoye.Ojikutu@gov.bc.ca"
-
-
-                };
+             
                 email.ToRecipients.AddRange(toEmail);
                 email.CcRecipients.AddRange(ccEmaill);
-                email.Attachments.AddFileAttachment(_appSpreadsheet);
-                email.Attachments.AddFileAttachment(zipName);
-                email.Attachments.AddFileAttachment(exceptionPath);
+                if (File.Exists(_appSpreadsheet)) { email.Attachments.AddFileAttachment(_appSpreadsheet); }  
+                if (File.Exists(zipName)) { email.Attachments.AddFileAttachment(zipName); }
+                if (File.Exists(exceptionPath)) { email.Attachments.AddFileAttachment(exceptionPath); }
+                if (File.Exists(jsonPath)){ email.Attachments.AddFileAttachment(jsonPath); }
+                    
 
                 //Console.WriteLine("start to send email from IDIR to TIDIR ...");
                 email.SendAndSaveCopy();
@@ -208,6 +194,8 @@ namespace DataMasker.MaskingValidation
 
             catch (Exception ep)
             {
+                File.AppendAllText(exceptionPath, "failed to send email with the following error: "+ Environment.NewLine);
+                File.AppendAllText(exceptionPath, ep.Message + Environment.NewLine);
                 Console.WriteLine("failed to send email with the following error:");
                 Console.WriteLine(ep.Message);
 

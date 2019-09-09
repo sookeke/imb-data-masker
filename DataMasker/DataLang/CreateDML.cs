@@ -3,6 +3,7 @@ using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -43,38 +44,57 @@ namespace DataMasker.DataLang
             }
 
             var names = new List<string>();
-            foreach (DataColumn col in table.Columns)
+            if (table.Rows.Count == 0 && table.Columns.Count == 0 && config.DataSource.Type != DataSourceType.OracleServer)
             {
-                if (config.DataSource.Type == DataSourceType.SqlServer)
+                names.Add("[" + tableConfig.Name + "]");
+                foreach (ColumnConfig col in tableConfig.Columns)
                 {
-                    if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
+                   
+                    if (config.DataSource.Type == DataSourceType.SqlServer)
                     {
-                        names.Add("[" + col.ColumnName + "]");
+                        if (!excludeNames.ContainsKey(col.Name.ToUpper()))
+                        {
+                            names.Add("[" + col.Name + "]");
+                        }
                     }
                 }
-                else if (config.DataSource.Type == DataSourceType.OracleServer)
-                {
-                    if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
-                    {
-                        names.Add(col.ColumnName);
-                    }
-                }
-                else if (config.DataSource.Type == DataSourceType.PostgresServer)
-                {
-                    if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
-                    {
-                        names.Add("\"" + col.ColumnName + "\"");
-                    }
-                }
-                else
-                {
-                    if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
-                    {
-                        names.Add("[" + col.ColumnName + "]");
-                    }
-                }
-               
             }
+            else
+            {
+                foreach (DataColumn col in table.Columns)
+                {
+                    if (config.DataSource.Type == DataSourceType.SqlServer)
+                    {
+                        if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
+                        {
+                            names.Add("[" + col.ColumnName + "]");
+                        }
+                    }
+                    else if (config.DataSource.Type == DataSourceType.OracleServer)
+                    {
+                        if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
+                        {
+                            names.Add(col.ColumnName);
+                        }
+                    }
+                    else if (config.DataSource.Type == DataSourceType.PostgresServer)
+                    {
+                        if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
+                        {
+                            names.Add("\"" + col.ColumnName + "\"");
+                        }
+                    }
+                    else
+                    {
+                        if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
+                        {
+                            names.Add("[" + col.ColumnName + "]");
+                        }
+                    }
+
+                }
+            }
+          
 
             var output = new StringBuilder();
 
@@ -86,7 +106,18 @@ namespace DataMasker.DataLang
             }
             else if (config.DataSource.Type == DataSourceType.PostgresServer)
             {
-                output.AppendFormat("INSERT INTO "+ "\"{0}\""+"\n\t({1})\nVALUES ", table.TableName, string.Join(", ", names.ToArray()));
+               
+                    output.AppendFormat("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", table.TableName, string.Join(", ", names.ToArray()));
+
+            }
+            else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
+            {
+                
+                    output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
+                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
+
+
+              
             }
             else
             {
@@ -113,6 +144,10 @@ namespace DataMasker.DataLang
                     {
                         output.AppendLine(";");
                     }
+                    else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
+                    {
+                        output.AppendLine(";");
+                    }
                     else
                         output.AppendLine(",");
 
@@ -127,6 +162,13 @@ namespace DataMasker.DataLang
                     output.Append("(");
                     output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
 
+                    output.Append(")");
+                }
+                else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
+                {
+                    output.AppendFormat("INSERT INTO [{0}]({1}) VALUES ", table.TableName, string.Join(", ", names.ToArray()));
+                    output.Append("(");
+                    output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
                     output.Append(")");
                 }
                 else
@@ -207,6 +249,18 @@ namespace DataMasker.DataLang
 
             return output.ToString();
         }
+        private static bool CheckDate(string date)
+        {
+            try
+            {
+                DateTime dt = DateTime.Parse(date);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         /// <summary>
         /// Gets the insert column value, adding quotes and handling special formats
@@ -214,6 +268,7 @@ namespace DataMasker.DataLang
         /// <param name="row">The row.</param>
         /// <param name="column">The column</param>
         /// <returns></returns>
+        /// 
         public static string GetInsertColumnValue(DataRow row, DataColumn column, Config config)
         {
             string output = "";
@@ -251,9 +306,24 @@ namespace DataMasker.DataLang
                                 output = "'" + row[column.ColumnName].ToString() + "'";
                             }
                         }
+                        else if (config.DataSource.Type == DataSourceType.OracleServer)
+                        {
+                            if (column.DataType == typeof(DateTime))
+                            {
+                                var data = DateTime.ParseExact(row[column.ColumnName].ToString(), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                                output = "To_DATE(" + "'" + data.ToString() + "," + "'YYYY-MM-DD HH:MI:SS'";
+                            }
+                            else if(CheckDate(row[column.ColumnName].ToString()))
+                            {
+                                DateTime dt = DateTime.Parse(row[column.ColumnName].ToString());
+                                output = "TO_DATE(" + "'" + dt.ToString("yyyy-MM-dd HH:mm:ss") + "'" + ", " + "'YYYY-MM-DD HH24:MI:SS')";
+                            }
+                            else
+                                output = "'" + row[column.ColumnName].ToString().Replace("'", "''") + "'";
+                        }
                         else
                         {
-                            output = "'" + row[column.ColumnName].ToString() + "'";
+                            output = "'" + row[column.ColumnName].ToString().Replace("'", "''") + "'";
                         }
                     }
                     else if (hasGeometry)
