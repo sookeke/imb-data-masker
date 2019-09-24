@@ -22,11 +22,11 @@ namespace DataMasker.DataSources
     {
         private readonly DataSourceConfig _sourceConfig;
         //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
-        private static string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
-        private static string _successfulCommit = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_successfulCommit"];
+        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
+        private static readonly string _successfulCommit = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_successfulCommit"];
 
         private IEnumerable<IDictionary<string, object>> getData { get; set; }
-        public object[] values { get; private set; }
+        public object[] Values { get; private set; }
         public int o = 0;
 
         private static List<IDictionary<string, object>> rawData = new List<IDictionary<string, object>>();
@@ -220,15 +220,15 @@ namespace DataMasker.DataSources
                 //Randomizer randomizer = new Randomizer();
                 if (retainNull)
                 {
-                    values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
+                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
                 }
                 else
-                    values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
 
 
                 //var find = values.Count();
-                object value = values[rnd.Next(values.Count())];
-                if (values.Count() <= 1)
+                object value = Values[rnd.Next(Values.Count())];
+                if (Values.Count() <= 1)
                 {
                     o = o + 1;
                     if (o == 1)
@@ -251,7 +251,7 @@ namespace DataMasker.DataSources
                     
                     //var tt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
                     //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
-                    return values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
+                    return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
                 }
                 else
                 {
@@ -263,7 +263,7 @@ namespace DataMasker.DataSources
                         while (compareLogic.Compare(value,existingValue).AreEqual)
                         {
 
-                            value = values[rnd.Next(0, values.Count())];
+                            value = Values[rnd.Next(0, Values.Count())];
                         }
                         return value;
                     }
@@ -279,7 +279,7 @@ namespace DataMasker.DataSources
 
             }
         }
-        public static bool isonull(object T)
+        public static bool Isonull(object T)
         {
             return T == null ? true : false;
         }
@@ -387,8 +387,7 @@ namespace DataMasker.DataSources
 
                 foreach (DataColumn col in table.Columns)
                 {
-                    object[] columnRows;
-                    if (!allEntries.TryGetValue(col.ColumnName, out columnRows))
+                    if (!allEntries.TryGetValue(col.ColumnName, out object[] columnRows))
                         continue;
 
                     for (int i = 0; i < addedRows.Length; i++)
@@ -464,8 +463,7 @@ namespace DataMasker.DataSources
 
                 foreach (DataColumn col in table.Columns)
                 {
-                    object[] columnRows;
-                    if (!allEntries.TryGetValue(col.ColumnName, out columnRows))
+                    if (!allEntries.TryGetValue(col.ColumnName, out object[] columnRows))
                         continue;
 
                     foreach (var row in addedRows)

@@ -48,8 +48,10 @@ namespace DataMasker
             // Let's create a characterformat for text in the 1st paragraph.
             CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
 
-            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure");
-            text1.CharacterFormat = cf;
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure")
+            {
+                CharacterFormat = cf
+            };
             par1.Inlines.Add(text1);
 
             // Let's add a line break into our paragraph.
@@ -92,8 +94,10 @@ namespace DataMasker
             // Let's create a characterformat for text in the 1st paragraph.
             CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
 
-            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure");
-            text1.CharacterFormat = cf;
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure")
+            {
+                CharacterFormat = cf
+            };
             par1.Inlines.Add(text1);
 
             // Let's add a line break into our paragraph.
@@ -243,8 +247,10 @@ namespace DataMasker
             // Let's create a characterformat for text in the 1st paragraph.
             CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
 
-            Run text1 = new Run(dc, "Ministry of Transportation and Infrastruction!");
-            text1.CharacterFormat = cf;
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastruction!")
+            {
+                CharacterFormat = cf
+            };
             par1.Inlines.Add(text1);
 
             // Let's add a line break into our paragraph.
@@ -299,8 +305,10 @@ namespace DataMasker
             // Let's create a characterformat for text in the 1st paragraph.
             CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
 
-            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure");
-            text1.CharacterFormat = cf;
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure")
+            {
+                CharacterFormat = cf
+            };
             par1.Inlines.Add(text1);
 
             // Let's add a line break into our paragraph.

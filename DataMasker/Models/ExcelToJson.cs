@@ -21,7 +21,7 @@ namespace DataMasker.Models
     {
         public static string DateTimeFormat { get; set; }
 
-        public static string toJson(string szFilePath)
+        public static string ToJson(string szFilePath)
         {
             if (szFilePath == null) { throw new ArgumentNullException("input excel sheet"); }
             var settings = new JsonSerializerSettings { ContractResolver = new SpecialContractResolver() };

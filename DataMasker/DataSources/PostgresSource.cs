@@ -16,8 +16,8 @@ namespace DataMasker.DataSources
     {
         private readonly DataSourceConfig _sourceConfig;
         //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
-        private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\" + ConfigurationManager.AppSettings["APP_NAME"] + "_exception.txt";
-        private static string _successfulCommit = Directory.GetCurrentDirectory() + $@"\Output\" + ConfigurationManager.AppSettings["APP_NAME"] + "_successfulCommit.txt";
+        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\" + ConfigurationManager.AppSettings["APP_NAME"] + "_exception.txt";
+        private static readonly string _successfulCommit = Directory.GetCurrentDirectory() + $@"\Output\" + ConfigurationManager.AppSettings["APP_NAME"] + "_successfulCommit.txt";
 
 
         private readonly string _connectionString;
@@ -345,8 +345,7 @@ namespace DataMasker.DataSources
 
                 foreach (DataColumn col in table.Columns)
                 {
-                    object[] columnRows;
-                    if (!allEntries.TryGetValue(col.ColumnName, out columnRows))
+                    if (!allEntries.TryGetValue(col.ColumnName, out object[] columnRows))
                         continue;
 
                     foreach (var row in addedRows)

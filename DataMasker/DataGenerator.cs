@@ -25,7 +25,7 @@ namespace DataMasker
         private static readonly DateTime DEFAULT_MIN_DATE = new DateTime(1900, 1, 1, 0, 0, 0, 0);
 
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
-        private static List<string> shuffleList = new List<string>();
+        private static readonly List<string> shuffleList = new List<string>();
 
         private const int DEFAULT_LOREM_MIN = 5;
 
@@ -158,7 +158,12 @@ namespace DataMasker
                 }
                 else { obj.Geo.OrdinatesArray = exist.OrdinatesArray; }
 
-                if (exist.ElemArray != null)
+                if (exist.ElemArray != null && exist.OrdinatesArray != null)
+                {
+                    obj.Geo.ElemArray = exist.ElemArray;
+                    
+                }
+                else if (exist.ElemArray != null && exist.OrdinatesArray == null)
                 {
                     obj.Geo.ElemArray = _randomizer.Shuffle(exist.ElemArray).ToArray();
                 }
@@ -303,7 +308,7 @@ namespace DataMasker
                     return file.Remove(file.Length - 1);
                 case DataType.Blob:
 
-                    var fileUrl = _faker.Image.LoremPixelUrl();
+                    var fileUrl = _faker.Image.PicsumUrl();
                     //_faker.System.
                     //FileStream stream = new FileStream(fileUrl, FileMode.Open, FileAccess.Read);
                     ///BinaryReader reader = new BinaryReader(stream);
@@ -534,6 +539,10 @@ namespace DataMasker
 
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
+        public object MathFuction(ColumnConfig columnConfig, string columnA, string columnB, object operator1)
+        {
+            return null;
+        }
 
         public object GetValueShuffle(ColumnConfig columnConfig, string table, string column, IDataSource dataSources, DataTable dataTable,
             object existingValue, Name.Gender? gender = null)
@@ -679,7 +688,7 @@ namespace DataMasker
                             return byteArray;
                         //return fileType.GenerateRTF(@"\", "");
                         case nameof(FileTypes.JPG):
-                            var fileUrl = _faker.Image.LoremPixelUrl();
+                            var fileUrl = _faker.Image.PicsumUrl();
                             string someUrl = fileUrl;
                             //check if URL is valid
                             var _validUrl = IsValidUri(new Uri(someUrl));
@@ -881,7 +890,49 @@ namespace DataMasker
             }
         }
 
+        public object MathOperation(ColumnConfig columnConfig, object existingValue, object[] source, string operation, int factor)
+        {
+            double _value = 0;
+            if (columnConfig.RetainNullValues &&
+              existingValue == null)
+            {
+                return null;
+            }
+            switch (columnConfig.Type)
+            {
+                case DataType.math:
+                    switch (operation)
+                    {
+                        case nameof(Operation.addition):
+                            return source.Sum(n=>Convert.ToDouble(n));
+                        case nameof(Operation.substraction):
+                            for (int i = 0; i < columnConfig.StringFormatPattern.Split(',').Count(); i++)
+                            {
+                                _value -= Convert.ToDouble(source[i]);
+                            }
+                            return _value;
+                        case nameof(Operation.percentage):
+                            _value = factor / 100 * (Convert.ToDouble(source[0]));
+                            return _value;
+                        default:
+                            break;
+                    }
+                    
+                    return null;
+            }
+            throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
+        }
+        public enum Operation
+        {
+            addition,
+            substraction,
+            multiplication,
+            division,
+            percentage
 
+
+
+        }
     }
     public static class RandomExtensions
     {

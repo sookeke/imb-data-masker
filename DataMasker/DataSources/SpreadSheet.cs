@@ -101,8 +101,7 @@ namespace DataMasker.DataSources
 
                 foreach (DataColumn col in table.Columns)
                 {
-                    object[] columnRows;
-                    if (!allEntries.TryGetValue(col.ColumnName, out columnRows))
+                    if (!allEntries.TryGetValue(col.ColumnName, out object[] columnRows))
                         continue;
 
                     foreach (var row in addedRows)
@@ -149,8 +148,10 @@ namespace DataMasker.DataSources
 
                             }
                         }
-                        DataColumn datacolumn = new DataColumn(column);
-                        datacolumn.AllowDBNull = true;
+                        DataColumn datacolumn = new DataColumn(column)
+                        {
+                            AllowDBNull = true
+                        };
                         var dcol = Regex.Replace(datacolumn.ColumnName, @"[^a-zA-Z0-9_.]+", "_");
                         dataTable.Columns.Add(dcol);
 
@@ -301,8 +302,7 @@ namespace DataMasker.DataSources
 
                 foreach (DataColumn col in table.Columns)
                 {
-                    object[] columnRows;
-                    if (!allEntries.TryGetValue(col.ColumnName, out columnRows))
+                    if (!allEntries.TryGetValue(col.ColumnName, out object[] columnRows))
                         continue;
 
                     for (int i = 0; i < addedRows.Length; i++)

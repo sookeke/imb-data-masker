@@ -112,7 +112,10 @@ namespace DataMasker.Models
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
     public string UseValue { get; set; }
 
-
+    [DefaultValue(null)]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+    public string Operator { get; set; }
+    
     /// <summary>
     /// When true, if the data loaded from the source is null, then no new data will be generated.
     /// When false, if the data loaded from the source is null it will be replaced by new data

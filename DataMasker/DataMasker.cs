@@ -13,6 +13,7 @@ using System.Data;
 using KellermanSoftware.CompareNetObjects;
 using System.Xml;
 using System.Xml.Serialization;
+using System.Configuration;
 
 namespace DataMasker
 {
@@ -30,6 +31,7 @@ namespace DataMasker
         /// The data generator
         /// </summary>
         private readonly IDataGenerator _dataGenerator;
+        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         //private static readonly DataSourceProvider dataSourceProvider;
 
         /// <summary>
@@ -103,6 +105,47 @@ namespace DataMasker
 
                     // existingValue = _dataGenerator.get(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
                 }
+                else if (columnConfig.Type == DataType.math)
+                {
+                    try
+                    {
+                        List<object> source = new List<object>();
+                        if (string.IsNullOrEmpty(columnConfig.StringFormatPattern) && columnConfig.Max  == null)
+                        {
+                            throw new InvalidOperationException("StringFormatPattern and Max Cannot be empty");
+                        }
+                        //check position of stringformat pattern objects
+                        var columnPosition = tableConfig.Columns.Select(n=>n.Name).ToList();
+                        foreach (var item in columnConfig.StringFormatPattern.Split(','))
+                        {
+                            if (!(columnPosition.IndexOf(columnConfig.Name) > columnPosition.IndexOf(item)))
+                            {
+                                throw new InvalidOperationException(columnConfig.Name + " Index must be Greater than " + item);
+                            }
+                            else
+                            {
+                                if (IsNumeric(obj[item]))
+                                {
+                                    source.Add(obj[item]);
+                                }
+                                else
+                                    throw new InvalidOperationException(item + " must be Numeric for " + columnConfig.Operator);
+
+                            }
+                            
+                        }
+                        existingValue = _dataGenerator.MathOperation(columnConfig, existingValue, source.ToArray(), columnConfig.Operator, Convert.ToInt32(columnConfig.Max));
+                        
+                    }
+                    catch (Exception ex)
+                    {
+                        File.WriteAllText(_exceptionpath, "Masking Operation InvalidOperationException: " + ex.Message  + Environment.NewLine);
+                       // throw;
+                    }
+                    
+                    //check columns position in stringformat pattern
+                    //_dataGenerator.GetValue(colum);
+                }
                 else if (columnConfig.Type == DataType.exception)
                 {
                     var cc = existingValue.ToString().Length;
@@ -118,45 +161,8 @@ namespace DataMasker
                     }
                 }
                 else
-                {
-                    //object o = null;
-                    //Console.WriteLine("{0}. existing is {1} ", 2, existingValue);
-                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
-
-                   
-                    
-
-                        //if(existingValue == o || compareLogic.Compare(o,existingValue).AreEqual )
-                        //{
-
-
-                        //    do
-                        //    {
-                        //        o = _dataGenerator.GetValue(columnConfig, existingValue, gender);
-                        //        if (columnConfig.RetainNullValues && compareLogic.Compare(existingValue, null).AreEqual)
-                        //        {
-                        //            break;
-                        //        }
-                        //    } while (compareLogic.Compare(o, existingValue).AreEqual || o == existingValue);
-
-
-                        //}
-                        
-
-
-                        //    if (o == existingValue || compareLogic.Compare(o, existingValue).AreEqual)
-                        //    {
-                        //        Console.WriteLine("THESE ARE EQUAL");
-                        //    }
-                        
-                        //Console.WriteLine("{0}. existing is {1} before  ", 3, existingValue);
-                      
-                        //existingValue = o;
-                        //Console.WriteLine("{0}. existing is {1} new  ", 3, existingValue);
-                       
-                  
-                 
-                 
+                {               
+                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);               
                 }
                 //replace the original value
                 obj[columnConfig.Name] = existingValue;
@@ -189,7 +195,16 @@ namespace DataMasker
           return obj;
         }
 
-
+        public static bool IsNumeric(object Expression)
+        {
+            //double retNum;
+            if (Expression == null)
+            {
+                Expression = 0;
+            }
+            bool isNum = Double.TryParse(Convert.ToString(Expression), System.Globalization.NumberStyles.Any, System.Globalization.NumberFormatInfo.InvariantInfo, out double retNum);
+            return isNum;
+        }
         public IDictionary<string, object> MaskBLOB(IDictionary<string, object> obj,
             TableConfig tableConfig, IDataSource dataSource,string filename, string fileExtension)
         {
@@ -292,7 +307,7 @@ namespace DataMasker
                 writer.Close();
                 return serializeXml;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return string.Empty;
             }

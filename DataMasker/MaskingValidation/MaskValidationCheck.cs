@@ -18,10 +18,10 @@ namespace DataMasker.MaskingValidation
 {
     public static class MaskValidationCheck
     {
-        public static string jsonpath { get; private set; }
-        public static string zipName { get; private set; }
+        public static string Jsonpath { get; private set; }
+        public static string ZipName { get; private set; }
 
-        public static string toHTML_Table(DataTable dt, IList ts)
+        public static string ToHTML_Table(DataTable dt, IList ts)
         {
             if (dt.Rows.Count == 0) return ""; // enter code here
 
@@ -149,30 +149,34 @@ namespace DataMasker.MaskingValidation
                 string fromEmail = ConfigurationManager.AppSettings["fromEmail"];
                 var toEmail = ConfigurationManager.AppSettings["RecipientEmail"].Split(';').ToList();
                 var ccEmaill = ConfigurationManager.AppSettings["cCEmail"].Split(';').ToList();
-                var jsonPath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["jsonMapPath"];
-                ExchangeService service = new ExchangeService();
-                service.UseDefaultCredentials = true;
+                var jsonPath = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["jsonMapPath"];
+                ExchangeService service = new ExchangeService
+                {
+                    UseDefaultCredentials = true
+                };
                 //service.Credentials = new NetworkCredential(user, decryptPassword);
                 service.AutodiscoverUrl(fromEmail);
                 //service.UseDefaultCredentials = true;
                 //service.Credentials = new NetworkCredential(@"idir\sookek_o", "5D16Stod@");
-                EmailMessage email = new EmailMessage(service);
-                email.Subject = "Data Masking Validation Test Report Analysis for " + database;
+                EmailMessage email = new EmailMessage(service)
+                {
+                    Subject = "Data Masking Validation Test Report Analysis for " + database,
 
-                email.Body = new MessageBody(BodyType.HTML, "<p>This is an automated email for data masking verification and validation test report analysis for " + database + "<br />" + "</p> " +
+                    Body = new MessageBody(BodyType.HTML, "<p>This is an automated email for data masking verification and validation test report analysis for " + database + "<br />" + "</p> " +
                     body + "<br />" +
                 signature +
                 "<br />" +
                 "</body>" +
-              "</html>");
-                email.From = new EmailAddress(fromEmail);
+              "</html>"),
+                    From = new EmailAddress(fromEmail)
+                };
                 //email.From = "mcs@gov.bc.ca";
 
-             
+
                 email.ToRecipients.AddRange(toEmail);
                 email.CcRecipients.AddRange(ccEmaill);
                 if (File.Exists(_appSpreadsheet)) { email.Attachments.AddFileAttachment(_appSpreadsheet); }  
-                if (File.Exists(zipName)) { email.Attachments.AddFileAttachment(zipName); }
+                if (File.Exists(ZipName)) { email.Attachments.AddFileAttachment(ZipName); }
                 if (File.Exists(exceptionPath)) { email.Attachments.AddFileAttachment(exceptionPath); }
                 if (File.Exists(jsonPath)){ email.Attachments.AddFileAttachment(jsonPath); }
                     
@@ -259,7 +263,7 @@ namespace DataMasker.MaskingValidation
             }
             return dataTable;
         }
-        public static void verification( DataSourceConfig dataSourceConfig, Config config, string _appSpreadsheet, string _dmlpath, string database,string exceptionPath)
+        public static void Verification( DataSourceConfig dataSourceConfig, Config config, string _appSpreadsheet, string _dmlpath, string database,string exceptionPath)
         {
             string path = Directory.GetCurrentDirectory() + $@"\Output\Validation\ValidationResult.txt";
             var _columndatamask = new List<object>();
@@ -432,17 +436,17 @@ namespace DataMasker.MaskingValidation
             if (!string.IsNullOrEmpty(_dmlPath))
             {
                 //add dml files to zip
-                zipName = Directory.GetCurrentDirectory() + "/" + database + "/" + database + "_MASKED_DML.zip";
-                if (File.Exists(zipName))
+                ZipName = Directory.GetCurrentDirectory() + "/" + database + "/" + database + "_MASKED_DML.zip";
+                if (File.Exists(ZipName))
                 {
-                    Console.WriteLine(Path.GetFileName(zipName)  + " already exist. Do you want to replace it? [yes/no]");
+                    Console.WriteLine(Path.GetFileName(ZipName)  + " already exist. Do you want to replace it? [yes/no]");
                     var key = Console.ReadLine();
                     if (key.ToUpper() == "YES")
                     {
-                        File.Delete(zipName);
+                        File.Delete(ZipName);
                     }
                 }
-                ZipFile.CreateFromDirectory(_dmlPath, zipName, CompressionLevel.Optimal,true);
+                ZipFile.CreateFromDirectory(_dmlPath, ZipName, CompressionLevel.Optimal,true);
             }
             var tablecount = new DataView(report).ToTable(true, new string[] { "Table" }).AsEnumerable().Select(n => n[0]).ToList().Count;
             var columncount = new DataView(report).ToTable(false, new string[] { "Column" }).AsEnumerable().Select(r => r.Field<string>("Column")).ToList().Count;
@@ -463,7 +467,7 @@ namespace DataMasker.MaskingValidation
             analysis.Add("Total Pass = " + top);
             analysis.Add("Total Fail = " + _fail);
             analysis.Add("% Accuracy = " + dc);
-            string body = toHTML_Table(report, analysis);
+            string body = ToHTML_Table(report, analysis);
             string sig = GetSignature();
 
             SendMail(sig, body, database, tablecount, columncount, _pass, _fail, dc, _appSpreadsheet,exceptionPath);

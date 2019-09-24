@@ -47,20 +47,20 @@ namespace DataMasker.Examples
         private static List<KeyValuePair<string, Dictionary<string, string>>> copyJsTable = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static List<KeyValuePair<string, Dictionary<string, string>>> _allNull = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static readonly Dictionary<ProgressType, ProgressbarUpdate> _progressBars = new Dictionary<ProgressType, ProgressbarUpdate>();
-        private static string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
+        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
         private static string copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
         private static readonly string sheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
         private static readonly string exceptionPath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly Dictionary<string, object> allkey = new Dictionary<string, object>();
 
 
-        public static string jsonpath { get; private set; }
-        public static string createDir { get; private set; }
+        public static string Jsonpath { get; private set; }
+        public static string CreateDir { get; private set; }
         #endregion
         private static void Main(
             string[] args)
         {
-            report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
+            report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("DataSourceType") ; report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
             Example1();
         }
         private static void JsonConfig(string json)
@@ -519,14 +519,18 @@ namespace DataMasker.Examples
             #endregion
 
             //jsonpath = @"example-configs\jsconfigTables.json";
-            jsonpath = ConfigurationManager.AppSettings["jsonMapPath"];
+            if (!Directory.Exists(@"classification-configs"))
+            {
+                Directory.CreateDirectory(@"classification-configs");
+            }
+            Jsonpath = ConfigurationManager.AppSettings["jsonMapPath"];
             string jsonresult = JsonConvert.SerializeObject(rootObject1,Formatting.Indented);
 
 
             #region compare original jsonconfig for datatype errors
-            if (File.Exists(jsonpath) && new FileInfo(jsonpath).Length != 0)
+            if (File.Exists(Jsonpath) && new FileInfo(Jsonpath).Length != 0)
             {
-                var rootConfig = Config.Load(jsonpath);
+                var rootConfig = Config.Load(Jsonpath);
                 foreach (var tabitem in rootConfig.Tables)
                 {
                     foreach (var colitems in tabitem.Columns)
@@ -545,6 +549,8 @@ namespace DataMasker.Examples
                         copyJsTable.Add(new KeyValuePair<string, Dictionary<string, string>>(tabCol.name, new Dictionary<string, string> { { col.name, col.type } }));
                     }
                 }
+               // var diff = jsconfigTable.Where(x=> x.Key != copyJsTable.Select(n=>n.Key).ToString());
+
                 if (copyJsTable.Count == jsconfigTable.Count)
                 {
                     for (int i = 0; i < copyJsTable.Count; i++)
@@ -567,6 +573,10 @@ namespace DataMasker.Examples
                     }
                     if (_allNull.Count() != 0)
                     {
+                        if (!Directory.Exists(@"output"))
+                        {
+                            Directory.CreateDirectory(@"output");
+                        }
                         int notmasked = 1;
                         _colError.Add("These columns below will not be masked" + Environment.NewLine + Environment.NewLine);
                         for (int i = 0; i < _allNull.Count; i++)
@@ -584,7 +594,7 @@ namespace DataMasker.Examples
                         string option = Console.ReadLine();
                         if (option == "yes")
                         {
-                            JObject o1 = JObject.Parse(File.ReadAllText(jsonpath));
+                            JObject o1 = JObject.Parse(File.ReadAllText(Jsonpath));
                             Console.WriteLine(o1);
                             
                             
@@ -620,16 +630,21 @@ namespace DataMasker.Examples
             else
             {
                 //write json file to path
-                using (var tw = new StreamWriter(jsonpath, false))
+                if (!Directory.Exists(@"output"))
+                {
+                    Directory.CreateDirectory(@"output");
+                }
+
+                using (var tw = new StreamWriter(Jsonpath, false))
                 {
                     tw.WriteLine(jsonresult.ToString());
                     tw.Close();
-                    Console.WriteLine("{0}{1}","Maped Json".ToUpper() + Environment.NewLine, jsonresult);
+                    Console.WriteLine("{0}{1}", "Maped Json".ToUpper() + Environment.NewLine, jsonresult);
                 }
                 //check map failures and write to file then exit for correction
                 if (count != 0)
                 {
-                    string colfailed = count + " columns cannot be mapped to a masking datatype and so will be ignored during masking. Review the " + jsonpath +" and provide mask datatype for these columns " + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, collist.Select(x => x.Key + " ON TABLE " + x.Value).ToArray());
+                    string colfailed = count + " columns cannot be mapped to a masking datatype and so will be ignored during masking. Review the " + Jsonpath +" and provide mask datatype for these columns " + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, collist.Select(x => x.Key + " ON TABLE " + x.Value).ToArray());
                     //Console.WriteLine(colfailed);
                     Console.WriteLine(count + " columns cannot be mapped to a masking datatype and so will be ignored during masking" + Environment.NewLine +"{0}", string.Join(Environment.NewLine, collist.Select(n => n.Key + " ON TABLE " + n.Value).ToArray()));
                     Console.WriteLine("Do you wish to continue and ignore masking these columns? [yes/no]");
@@ -728,8 +743,8 @@ namespace DataMasker.Examples
         private static Config LoadConfig(
             int example)
         {
-            return Config.Load(jsonpath);
-           // return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\LIS_PRD_config.json");
+            //return Config.Load(Jsonpath);
+            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_TAP_config.json");
         }
 
         public static void Example1()
@@ -744,11 +759,12 @@ namespace DataMasker.Examples
             _nameDatabase = ConfigurationManager.AppSettings["DatabaseName"];
             _SpreadSheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
             if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }
-            copyjsonPath = ExcelToJson.toJson(_SpreadSheetPath);
-            JsonConfig(copyjsonPath);
+            copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
+            //JsonConfig(copyjsonPath);
             Config config = LoadConfig(1);
             IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
             IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
+            #region Masking operation and Data generation
             foreach (TableConfig tableConfig in config.Tables)
             {
                 //checked if table contains blob column datatype and get column that is blob
@@ -777,8 +793,8 @@ namespace DataMasker.Examples
                         PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig);
                         if (_maskSpreadSheet.Rows.Count != 0)
                         {
-                            var csvFile = writeTofile(_maskSpreadSheet, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
-                            var createsheet = toExcel(csvFile, _nameDatabase, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
+                            var csvFile = WriteTofile(_maskSpreadSheet, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
+                            var createsheet = ToExcel(csvFile, _nameDatabase, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
                             if (createsheet == false)
                             {
                                 Console.WriteLine("cannot create excel file");
@@ -789,12 +805,12 @@ namespace DataMasker.Examples
                             if (allkey.Where(n => n.Key.ToUpper().Equals("WRITEDML")).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                             {
                                 _maskSpreadSheet.TableName = tableConfig.Name;
-                                createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
-                                if (!Directory.Exists(createDir))
+                                CreateDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
+                                if (!Directory.Exists(CreateDir))
                                 {
-                                    Directory.CreateDirectory(createDir);
+                                    Directory.CreateDirectory(CreateDir);
                                 }
-                                string writePath = createDir + @"\" + tableConfig.Name + ".sql";
+                                string writePath = CreateDir + @"\" + tableConfig.Name + ".sql";
                                 var multimedia = tableConfig.Columns.Where(n => n.Type == DataType.Blob).Select(n => n.Name);
                                 if (multimedia.Count() != 0)
                                 {
@@ -816,15 +832,14 @@ namespace DataMasker.Examples
                     }
                 }
                 else
-                {
-                    
+                {                  
                     rows = dataSource.GetData(tableConfig);
                     //var outDataR = rows.Select(r => r.ToDictionary(d => d.Key, d => d.Value)).AsEnumerable();
                     rawData = dataSource.RawData(null);
                     //rawData = dataSource.GetData(tableConfig);
                     foreach (IDictionary<string, object> row in rows)
                     {
-                        
+
                         if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                         {
                             extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
@@ -832,18 +847,9 @@ namespace DataMasker.Examples
                         }
                         else
                         {
-                           
-                                dataMasker.Mask(row, tableConfig, dataSource);
- 
+                            dataMasker.Mask(row, tableConfig, dataSource);
                         }
                         //Console.WriteLine(extension);
-                       
-
-                        //rowIndex++;
-
-                        //update per row, or see below,
-                        //dataSource.UpdateRow(row, tableConfig);
-                        //UpdateProgress(ProgressType.Masking, rowIndex);
                     }
 
                     //update all rows
@@ -855,59 +861,31 @@ namespace DataMasker.Examples
                         _dmlTable = dataSource.SpreadSheetTable(rows, tableConfig);
                         MaskTable = _dmlTable;
                         PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig);
-
-                       
-
-
-                       // var diff = differences.Any() ? differences.CopyToDataTable() : new DataTable();
-
-
+                        // var diff = differences.Any() ? differences.CopyToDataTable() : new DataTable();
                         //var differences =
-//MaskTable.AsEnumerable().Intersect(PrdTable.AsEnumerable(), DataRowComparer.Default);
-                        
-
-
+                        //MaskTable.AsEnumerable().Intersect(PrdTable.AsEnumerable(), DataRowComparer.Default);
                         if (allkey.Where(n => n.Key.ToUpper().Equals("WRITEDML")).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                         {
-                           
+
                             _dmlTable.TableName = tableConfig.Name;
-                            createDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
-                            if (!Directory.Exists(createDir))
+                            CreateDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
+                            if (!Directory.Exists(CreateDir))
                             {
-                                Directory.CreateDirectory(createDir);
+                                Directory.CreateDirectory(CreateDir);
                             }
-                            string writePath = createDir + @"\" + tableConfig.Name + ".sql";
-                            var multimedia = tableConfig.Columns.Where(n => n.Type == DataType.Blob).Select(n => n.Name);
-                            //if (multimedia.Count() != 0)
-                            //{
-                            //    extcolumn = new string[] { string.Join("", multimedia.ToArray()[0].ToArray()) };
-                            //}
-
-
+                            string writePath = CreateDir + @"\" + tableConfig.Name + ".sql";
+                            //var multimedia = tableConfig.Columns.Where(n => n.Type == DataType.Blob).Select(n => n.Name);
                             var insertSQL = SqlDML.GenerateInsert(_dmlTable, extcolumn, null, null, writePath, config, tableConfig);
                             if (allkey.Where(n => n.Key.ToUpper().Equals("MaskTabletoSpreadsheet".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                             {
-                                //remove blob type
-                                //foreach (DataColumn dataColumn in _dmlTable.Columns)
-                                //{
-                                //    if (dataColumn.DataType == typeof(byte[])) { _dmlTable.Columns.Remove(dataColumn); }
-                                   
-                                //}
-                                //write masked Table to SpreadSheet
-                                SqlDML.DataTableToExcelSheet(_dmlTable, createDir + @"\" + tableConfig.Name + ".xlsx", tableConfig);
-                           
-                                
+                               SqlDML.DataTableToExcelSheet(_dmlTable, CreateDir + @"\" + tableConfig.Name + ".xlsx", tableConfig);
                             }
                         }
                         if (allkey.Where(n => n.Key.ToUpper().Equals("RunValidation".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
                             && PrdTable.Rows != null && MaskTable.Rows != null
                             && allkey.Where(n => n.Key.ToUpper().Equals("MaskedCopyDatabase".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(false))
-                        {
-                           
-
-                            reportvalidation(PrdTable, _dmlTable, config.DataSource, tableConfig);
-                            
-
+                        {  
+                            Reportvalidation(PrdTable, _dmlTable, config.DataSource, tableConfig);
                         }
                         #endregion
                         if (allkey.Where(n => n.Key.ToUpper().Equals("MaskedCopyDatabase".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
@@ -923,22 +901,14 @@ namespace DataMasker.Examples
                         Console.WriteLine(ex.Message);
                     }
                 }
-
-                // UpdateProgress(ProgressType.Overall, i + 1);
-                // i++;
-
-
             }
+            #endregion
             //write mapped table and column with type in csv file
             var o = OutputSheet(config, copyjsonPath, _nameDatabase);
-           
-            //sheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
-            //exceptionPath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
             if (report.Rows.Count != 0
                 && allkey.Where(n => n.Key.ToUpper().Equals("EmailValidation".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
-            {
-                
-                MaskValidationCheck.Analysis(report, config.DataSource, sheetPath, _nameDatabase, createDir,exceptionPath);
+            { 
+                MaskValidationCheck.Analysis(report, config.DataSource, sheetPath, _nameDatabase, CreateDir,exceptionPath);
             }
 
             #region validate masking 
@@ -946,14 +916,9 @@ namespace DataMasker.Examples
                 && allkey.Where(n => n.Key.ToUpper().Equals("MaskedCopyDatabase".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
                 && allkey.Where(n => n.Key.ToUpper().Equals("EmailValidation".ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
             {
-                Console.WriteLine("Data Masking Validation started......................................");
-                MaskValidationCheck.verification(config.DataSource, config, sheetPath,createDir, _nameDatabase,exceptionPath);
+                Console.WriteLine("Data Masking Validation has started......................................");
+                MaskValidationCheck.Verification(config.DataSource, config, sheetPath,CreateDir, _nameDatabase,exceptionPath);
             }
-
-                
-            
-
-
             #endregion
 
 
@@ -996,8 +961,8 @@ namespace DataMasker.Examples
 
             if (dt.Rows != null)
             {
-                var csv = writeTofile(dt, _appname, "_MASKING_APPLIED");
-                var createsheet = toExcel(csv, _appname, _appname, "_MASKING_APPLIED");
+                var csv = WriteTofile(dt, _appname, "_MASKING_APPLIED");
+                var createsheet = ToExcel(csv, _appname, _appname, "_MASKING_APPLIED");
                 if (createsheet == false)
                 {
                     
@@ -1007,7 +972,7 @@ namespace DataMasker.Examples
             }
             return true;
         }
-        private static string writeTofile(DataTable textTable, string directory, string uniquekey)
+        private static string WriteTofile(DataTable textTable, string directory, string uniquekey)
         {
             StringBuilder fileContent = new StringBuilder();
             //int i = 0;
@@ -1048,7 +1013,7 @@ namespace DataMasker.Examples
             
         }
 
-        private static bool toExcel(
+        private static bool ToExcel(
             string csvFileName, 
             string _appName, 
             string directory, 
@@ -1064,12 +1029,14 @@ namespace DataMasker.Examples
             try
             {
 
-                var format = new ExcelTextFormat();
-                format.Delimiter = ',';
-                format.EOL = "\r\n";
-                // DEFAULT IS "\r\n";
+                var format = new ExcelTextFormat
+                {
+                    Delimiter = ',',
+                    EOL = "\r\n",
+                    // DEFAULT IS "\r\n";
 
-                format.TextQualifier = '"';
+                    TextQualifier = '"'
+                };
 
                 using (ExcelPackage package = new ExcelPackage(new FileInfo(excelFileName)))
                 {
@@ -1094,9 +1061,10 @@ namespace DataMasker.Examples
 
         private static void GenerateSchema()
         {
-            JSchemaGenerator generator = new JSchemaGenerator();
-
-            generator.ContractResolver = new CamelCasePropertyNamesContractResolver();
+            JSchemaGenerator generator = new JSchemaGenerator
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
             JSchema schema = generator.Generate(typeof(Config));
             generator.GenerationProviders.Add(new StringEnumGenerationProvider());
             schema.Title = "DataMasker.Config";
@@ -1223,9 +1191,13 @@ namespace DataMasker.Examples
             _progressBars[progressType]
                .ProgressBar.Refresh(current, message);
         }
-        private static void reportvalidation(DataTable _prdTable, DataTable _maskedTable, DataSourceConfig dataSourceConfig, TableConfig tableConfig)
+        private static void Reportvalidation(DataTable _prdTable, DataTable _maskedTable, DataSourceConfig dataSourceConfig, TableConfig tableConfig)
         {
             CompareLogic compareLogic = new CompareLogic();
+            if (!Directory.Exists($@"Output\Validation"))
+            {
+                Directory.CreateDirectory($@"Output\Validation");
+            }
             string path = Directory.GetCurrentDirectory() + $@"\Output\Validation\ValidationResult.txt";
             var _columndatamask = new List<object>();
             var _columndataUnmask = new List<object>();
@@ -1323,7 +1295,7 @@ namespace DataMasker.Examples
                 if (check.Contains("FAIL"))
                 {
                     result = "<font color='red'>FAIL</font>";
-                 
+
                     if (dataColumn.Ignore == true)
                     {
                         failure = "Masking not required";
@@ -1356,20 +1328,20 @@ namespace DataMasker.Examples
                     else
                     {
                         result = "<font color='red'>FAIL</font>";
-                        failure = "<b><font color='red'>Found exact match "+dataColumn.Type.ToString() +" </font></b>";
+                        failure = "<b><font color='red'>Found exact match " + dataColumn.Type.ToString() + " </font></b>";
                     }
 
                     Console.WriteLine(tableConfig.Name + " Failed Validation test on column " + dataColumn.Name + Environment.NewLine);
                     File.AppendAllText(path, tableConfig.Name + " Failed Validation test on column " + dataColumn.Name + Environment.NewLine);
-                    
-                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+
+                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, ConfigurationManager.AppSettings["DataSourceType"], DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
                 }
                 else if (check.Contains("IGNORE"))
                 {
                     result = "No Validation";
                     failure = "Column not mask";
-                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, ConfigurationManager.AppSettings["DataSourceType"], DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
                 }
                 else
                 {
@@ -1387,7 +1359,7 @@ namespace DataMasker.Examples
                     result = "<font color='green'>PASS</font>";
                     Console.WriteLine(tableConfig.Name + " Pass Validation test on column " + dataColumn.Name);
                     File.AppendAllText(path, tableConfig.Name + " Pass Validation test on column " + dataColumn.Name + Environment.NewLine);
-                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, ConfigurationManager.AppSettings["DataSourceType"], DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
 
                 }
