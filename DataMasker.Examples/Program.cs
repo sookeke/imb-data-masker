@@ -38,6 +38,8 @@ namespace DataMasker.Examples
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
         private static string copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
         private static readonly string sheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
+        private static readonly string TSchema = ConfigurationManager.AppSettings["APP_NAME"];
+        private static readonly string Stype = ConfigurationManager.AppSettings["DataSourceType"];
         private const string ExcelSheetPath = "ExcelSheetPath"; private const string DatabaseName = "DatabaseName"; private const string WriteDML = "WriteDML";
         private const string MaskTabletoSpreadsheet = "MaskTabletoSpreadsheet"; private const string Schema = "APP_NAME"; private const string ConnectionString = "ConnectionString"; private const string ConnectionStringPrd = "ConnectionStringPrd";
         private const string MaskedCopyDatabase = "MaskedCopyDatabase"; private const string RunValidation = "RunValidation"; private const string EmailValidation = "EmailValidation"; private const string jsonMapPath = "jsonMapPath";
@@ -67,7 +69,7 @@ namespace DataMasker.Examples
         private static void Main(
             string[] args)
         {
-            report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("DataSourceType") ; report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
+            report.Columns.Add("Table"); report.Columns.Add("Schema"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("DataSourceType") ; report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
             Example1();
         }
         private static void JsonConfig(string json)
@@ -120,6 +122,7 @@ namespace DataMasker.Examples
                 Table table = new Table();
                 List<Column> colList = new List<Column>();
                 table.name = nameGroup.Key;
+                
                
 
                 //table.primaryKeyColumn = nameGroup.Select
@@ -127,6 +130,7 @@ namespace DataMasker.Examples
                 {
 
                     table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
+                    table.Schema = col.Schema;
                     table.RowCount = col.RowCount;
                     bool o = col.RetainNull.ToUpper().Equals("TRUE") ? true : false;
                     Column column = new Column
@@ -734,6 +738,8 @@ namespace DataMasker.Examples
             [DefaultValue("")]
             [JsonProperty("PKconstraintName", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string PKconstraintName { get; set; } = "";
+            [JsonRequired]
+            public string Schema { get; set; }
 
             [DefaultValue("TRUE")]
             [JsonProperty("Retain NULL", DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -767,8 +773,8 @@ namespace DataMasker.Examples
         private static Config LoadConfig(
             int example)
         {
-            //return Config.Load(Jsonpath);
-            return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_TAP_config.json");
+            return Config.Load(Jsonpath);
+            //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_TAP_config.json");
         }
 
         public static void Example1()
@@ -784,7 +790,7 @@ namespace DataMasker.Examples
             _SpreadSheetPath = ConfigurationManager.AppSettings[ExcelSheetPath];
             if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }
             copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
-            //JsonConfig(copyjsonPath);
+            JsonConfig(copyjsonPath);
             Config config = LoadConfig(1);
             IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
             IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
@@ -1377,14 +1383,14 @@ namespace DataMasker.Examples
                     Console.WriteLine(tableConfig.Name + " Failed Validation test on column " + dataColumn.Name + Environment.NewLine);
                     File.AppendAllText(path, tableConfig.Name + " Failed Validation test on column " + dataColumn.Name + Environment.NewLine);
 
-                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, ConfigurationManager.AppSettings["DataSourceType"], DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                    report.Rows.Add(tableConfig.Name, TSchema, dataColumn.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
                 }
                 else if (check.Contains("IGNORE"))
                 {
                     result = "No Validation";
                     failure = "Column not mask";
-                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, ConfigurationManager.AppSettings["DataSourceType"], DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                    report.Rows.Add(tableConfig.Name, TSchema, dataColumn.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
                 }
                 else
                 {
@@ -1402,7 +1408,7 @@ namespace DataMasker.Examples
                     result = "<font color='green'>PASS</font>";
                     Console.WriteLine(tableConfig.Name + " Pass Validation test on column " + dataColumn.Name);
                     File.AppendAllText(path, tableConfig.Name + " Pass Validation test on column " + dataColumn.Name + Environment.NewLine);
-                    report.Rows.Add(tableConfig.Name, dataColumn.Name, Hostname, ConfigurationManager.AppSettings["DataSourceType"], DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                    report.Rows.Add(tableConfig.Name, TSchema, dataColumn.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
 
                 }

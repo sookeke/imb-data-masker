@@ -12,7 +12,7 @@ namespace DataMasker.Models
     /// </summary>
     public class TableConfig
     {
-        private const string _schema = "app_tap";
+        //private const string _schema = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         /// <summary>
         /// The name of the table
         /// </summary>
@@ -41,8 +41,8 @@ namespace DataMasker.Models
         [JsonRequired]
         public IList<ColumnConfig> Columns { get; set; }
 
-        [DefaultValue(_schema)]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+
+        [JsonRequired]
         public string Schema { get; set; }
     }
 }
