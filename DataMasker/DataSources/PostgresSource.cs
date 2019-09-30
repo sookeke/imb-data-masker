@@ -57,7 +57,7 @@ namespace DataMasker.DataSources
             }
         }
 
-        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, TableConfig config, Action<int> updatedCallback = null)
+        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig config, Action<int> updatedCallback = null)
         {
             SqlMapper.AddTypeHandler(new GeographyMapper());
             int? batchSize = _sourceConfig.UpdateBatchSize;
@@ -198,7 +198,7 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object shuffle(string table, string column, object existingValue, bool retainnull, DataTable dataTable = null)
+        public object Shuffle(string table, string column, object existingValue, bool retainnull, DataTable dataTable = null)
         {
             //ArrayList list = new ArrayList();
             Random rnd = new Random();
@@ -357,6 +357,11 @@ namespace DataMasker.DataSources
         }
 
         public IEnumerable<IDictionary<string, object>> RawData(IEnumerable<IDictionary<string, object>> PrdData)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int GetCount(TableConfig config)
         {
             throw new NotImplementedException();
         }

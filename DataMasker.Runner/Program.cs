@@ -158,7 +158,7 @@ namespace DataMasker.Runner
 
 
                 //update all rows
-                dataSource.UpdateRows(rows, tableConfig, totalUpdated => UpdateProgress(ProgressType.Updating, totalUpdated));
+                dataSource.UpdateRows(rows,0, tableConfig, totalUpdated => UpdateProgress(ProgressType.Updating, totalUpdated));
                 UpdateProgress(ProgressType.Overall, i + 1);
             }
 

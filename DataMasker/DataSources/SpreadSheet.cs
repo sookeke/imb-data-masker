@@ -225,6 +225,11 @@ namespace DataMasker.DataSources
             return dataTable;
         }
 
+        public int GetCount(TableConfig config)
+        {
+            throw new NotImplementedException();
+        }
+
         public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig)
         {
             throw new NotImplementedException();
@@ -240,7 +245,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public object shuffle(string table, string column, object existingValue, bool retainnull, DataTable _dataTable)
+        public object Shuffle(string table, string column, object existingValue, bool retainnull, DataTable _dataTable)
         {
             
             Random rnd = new Random();
@@ -318,7 +323,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, TableConfig config, Action<int> updatedCallback = null)
+        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig config, Action<int> updatedCallback = null)
         {
             throw new NotImplementedException();
         }

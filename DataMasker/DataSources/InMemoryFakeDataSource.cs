@@ -92,6 +92,7 @@ namespace DataMasker.DataSources
         /// <inheritdoc/>
         public void UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
+            int rowCount,
             TableConfig config,
             Action<int> updatedCallback)
         {
@@ -102,7 +103,7 @@ namespace DataMasker.DataSources
             }
         }
 
-        public object shuffle(string table, string column, object existingValue, bool retainnull, DataTable dataTable)
+        public object Shuffle(string table, string column, object existingValue, bool retainnull, DataTable dataTable)
         {
             throw new NotImplementedException();
         }
@@ -194,6 +195,11 @@ namespace DataMasker.DataSources
         public IEnumerable<IDictionary<string, object>> RawData(IEnumerable<IDictionary<string, object>> PrdData)
         {
             throw new NotImplementedException();
+        }
+
+        public int GetCount(TableConfig config)
+        {
+            return tableData.Count;
         }
     }
 }

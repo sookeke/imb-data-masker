@@ -22,7 +22,7 @@ namespace DataMasker.DataSources
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() +  ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly string _successfulCommit = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_successfulCommit"];
        
-        private IEnumerable<IDictionary<string, object>> getData { get;  set; }
+        //private IEnumerable<IDictionary<string, object>> getData { get;  set; }
         public object[] Values { get; private set; }
         public int o = 0;
 
@@ -54,7 +54,7 @@ namespace DataMasker.DataSources
         public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig)
         {
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
-            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd))
+             var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd);
             {
                 connection.Open();
                 string query = "";
@@ -62,10 +62,11 @@ namespace DataMasker.DataSources
                 IEnumerable<IDictionary<string, object>> row = new List<IDictionary<string, object>>();
                 List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
                 rawData = new List<IDictionary<string, object>>();
-                var rowCount = ((IEnumerable<IDictionary<string, object>>)connection.Query("SELECT COUNT(*) FROM " + tableConfig.Name)).Select(n => n.Values).FirstOrDefault().ToArray();
-               
-                
-                if (rowCount != null && Convert.ToInt64(rowCount[0]) > 1500 && tableConfig.Columns.Where(n => n.Type == DataType.Blob).Count() > 0)
+                var rowCount = GetCount(tableConfig);
+
+
+
+                if (rowCount != 0 && rowCount > 50000 && tableConfig.Columns.Where(n => n.Type == DataType.Blob).Count() > 0)
                 {
                     query = BuildSelectSql(tableConfig);
                     using (OracleCommand cmd = new OracleCommand(query, connection))
@@ -117,12 +118,9 @@ namespace DataMasker.DataSources
                     query = BuildSelectSql(tableConfig);
                     //var retu = connection.Query(BuildSelectSql(tableConfig));
                     rawData = new List<IDictionary<string, object>>();
-                    var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: true);
-                    foreach (IDictionary<string, object> prd in _prdData)
-                    {
-                       
-                        rawData.Add(new Dictionary<string, object>(prd));
-                    }
+                    var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: false);
+                    rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
+                    
                    
 
                     return _prdData;
@@ -136,6 +134,11 @@ namespace DataMasker.DataSources
 
             return BitConverter.ToString(ba).Replace("-", "");
         }
+        private string BuildCountSql(
+           TableConfig tableConfig)
+        {
+            return $"SELECT COUNT(*) FROM {tableConfig.Schema}.{tableConfig.Name}";
+        }
         public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig)
         {
             using (var connection = new OracleConnection(_connectionString))
@@ -145,18 +148,18 @@ namespace DataMasker.DataSources
             }
         }
 
-        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, TableConfig config, Action<int> updatedCallback = null)
+        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows,int rowCount, TableConfig config, Action<int> updatedCallback = null)
         {
             SqlMapper.AddTypeHandler(new GeographyMapper());
             int? batchSize = _sourceConfig.UpdateBatchSize;
             if (batchSize == null ||
                 batchSize <= 0)
             {
-                batchSize = rows.Count();
+                batchSize = rowCount;
             }
 
             IEnumerable<Batch<IDictionary<string, object>>> batches = Batch<IDictionary<string, object>>.BatchItems(
-                rows.ToArray(),
+                rows,
                 (
                     objects,
                     enumerable) => enumerable.Count() < batchSize);
@@ -293,7 +296,7 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object shuffle(string table, string column, object existingValue, bool retainNull,DataTable dataTable = null)
+        public object Shuffle(string table, string column, object existingValue, bool retainNull,DataTable dataTable = null)
         {
             CompareLogic compareLogic = new CompareLogic();
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
@@ -578,6 +581,17 @@ namespace DataMasker.DataSources
                 }
             }
             return rawData;
+        }
+
+        public int GetCount(TableConfig config)
+        {
+            using (OracleConnection connection = new OracleConnection(_connectionStringPrd))
+            {
+                connection.Open();
+                //var tb = BuildCountSql(config);
+                var count = connection.ExecuteScalar(BuildCountSql(config));
+                return Convert.ToInt32(count);
+            }
         }
     }
 }

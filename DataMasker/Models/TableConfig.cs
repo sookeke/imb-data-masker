@@ -1,13 +1,18 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel;
+using System.Configuration;
+using System.IO;
 using Newtonsoft.Json;
 
 namespace DataMasker.Models
 {
+    //private static readonly string _schema = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
     /// <summary>
     /// TableConfig
     /// </summary>
     public class TableConfig
     {
+        private const string _schema = "app_tap";
         /// <summary>
         /// The name of the table
         /// </summary>
@@ -35,5 +40,9 @@ namespace DataMasker.Models
         /// </value>
         [JsonRequired]
         public IList<ColumnConfig> Columns { get; set; }
+
+        [DefaultValue(_schema)]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        public string Schema { get; set; }
     }
 }

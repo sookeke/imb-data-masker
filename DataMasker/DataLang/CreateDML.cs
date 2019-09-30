@@ -253,8 +253,13 @@ namespace DataMasker.DataLang
         {
             try
             {
-                DateTime dt = DateTime.Parse(date);
-                return true;
+                if (DateTime.TryParse(date, out DateTime dateTime))
+                {
+                    return true;
+                }
+                else
+                    return false;
+               
             }
             catch
             {
@@ -431,8 +436,10 @@ namespace DataMasker.DataLang
                     dataTable.Columns.Add(col.Name);
                 }
             }
-            var format = new ExcelTextFormat();
-            format.EOL = "\r\n";
+            var format = new ExcelTextFormat
+            {
+                EOL = "\r\n"
+            };
             for (int i = 0; i < dataTable.Columns.Count; i++)
             {
 
@@ -500,7 +507,7 @@ namespace DataMasker.DataLang
 
            
         }
-        public static DataTable removeBlob(DataTable dataTable)
+        public static DataTable RemoveBlob(DataTable dataTable)
         {
             foreach (DataColumn dataColumn in dataTable.Columns)
             {

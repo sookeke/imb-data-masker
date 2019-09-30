@@ -13,6 +13,7 @@ using Dapper;
 using System.Configuration;
 using System.Data;
 using System.Net.Http;
+using CountryData;
 
 namespace DataMasker
 {
@@ -283,7 +284,9 @@ namespace DataMasker
                         ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
                         ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_MAX_DATE));
                 case DataType.Rant:
-                    var rant = _faker.Rant.Review(columnConfig.StringFormatPattern);
+                    Random rnd = new Random();
+                    var rant = WaffleGenerator.WaffleEngine.Text(rnd, 1, false);
+                        //_faker.Rant.Review(columnConfig.StringFormatPattern);
                     int lenght = rant.Length;
 
                     if (!string.IsNullOrEmpty(columnConfig.Max) && rant.Length > Convert.ToInt32(columnConfig.Max))
@@ -306,6 +309,15 @@ namespace DataMasker
                 case DataType.Filename:
                     var file = _faker.System.FileName("");
                     return file.Remove(file.Length - 1);
+                case DataType.State:
+                    rnd = new Random();
+                    var state = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Name;
+                    return state;
+                case DataType.City:
+                    rnd = new Random();
+                    
+                    var cities = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Provinces;
+                    return cities.OrderBy(n => rnd.Next()).Where(n => n.Name != null).First().Name;
                 case DataType.Blob:
 
                     var fileUrl = _faker.Image.PicsumUrl();
@@ -343,37 +355,34 @@ namespace DataMasker
                     return season;
                 case DataType.Geometry:
                     //generate 20 SIZE LINESTRING random polygon coordinate with same precision model using GEOAPI and NETOPOLOGY SUITE
-                    Random random = new Random();
-                    SdoGeometry sdoGeometry = new SdoGeometry();
+                    //Random random = new Random();
+                    //SdoGeometry sdoGeometry = new SdoGeometry();
 
-                    var SDO_GTYPElist = new List<string> { "2003", "2006", "2002" };
-                    int index = random.Next(SDO_GTYPElist.Count);
-                    string SDO_GTYPE = SDO_GTYPElist[index];
-                    var gf = new GeometryFactory(new PrecisionModel(), 3857);
-                    //Identify the centre of the polygon
-                    Coordinate center = new Coordinate((random.NextDouble() * 360) - 180, (random.NextDouble() * 180) - 90);
-                    //decimal center1 = new decimal((random.NextDouble() * 360) - 180, (random.NextDouble() * 180) - 90);
-                    Coordinate[] coords = new Coordinate[20];
-                    decimal[] cood = new decimal[20];
-                    for (int i = 0; i < 20; i++)
-                    {
-                        coords[i] = new Coordinate(center.X + random.NextDouble(-4291402.04717672, 16144349.4032217), center.Y + random.NextDouble(-4291402.04717672, 16144349.4032217));
-                        cood[i] = new decimal(random.NextDouble(-4291402.04717672, 16144349.4032217));
-                    }
-                    //creates a new polygon from the coordinate array
-                    coords[19] = new Coordinate(coords[0].X, coords[0].Y);
+                    
+                    ////Identify the centre of the polygon
+                    //Coordinate center = new Coordinate((random.NextDouble() * 360) - 180, (random.NextDouble() * 180) - 90);
+                    ////decimal center1 = new decimal((random.NextDouble() * 360) - 180, (random.NextDouble() * 180) - 90);
+                    //Coordinate[] coords = new Coordinate[20];
+                    //decimal[] cood = new decimal[20];
+                    //for (int i = 0; i < 20; i++)
+                    //{
+                    //    coords[i] = new Coordinate(center.X + random.NextDouble(-4291402.04717672, 16144349.4032217), center.Y + random.NextDouble(-4291402.04717672, 16144349.4032217));
+                    //    cood[i] = new decimal(random.NextDouble(-4291402.04717672, 16144349.4032217));
+                    //}
+                    ////creates a new polygon from the coordinate array
+                    //coords[19] = new Coordinate(coords[0].X, coords[0].Y);
 
-                    var obj = new HazSqlGeo
-                    {
+                    //var obj = new HazSqlGeo
+                    //{
 
-                        Geo = new SdoGeometry()
-                        {
-                            ElemArray = new decimal[3] { 1, 2, 1 },
-                            OrdinatesArray = cood,
-                            Sdo_Gtype = Convert.ToInt32(_faker.PickRandom(SDO_GTYPElist)),
-                            Sdo_Srid = Convert.ToDecimal(ConfigurationManager.AppSettings["SRID"])
-                        }
-                    };
+                    //    Geo = new SdoGeometry()
+                    //    {
+                    //        ElemArray = new decimal[3] { 1, 2, 1 },
+                    //        OrdinatesArray = cood,
+                    //        Sdo_Gtype = Convert.ToInt32(_faker.PickRandom(SDO_GTYPElist)),
+                    //        Sdo_Srid = Convert.ToDecimal(ConfigurationManager.AppSettings["SRID"])
+                    //    }
+                    //};
 
                     //var pCoordinate = gf.CreateMultiPointFromCoords(coords);
                     //Geo = new SdoGeometry();
@@ -385,7 +394,7 @@ namespace DataMasker
                     SqlMapper.AddTypeHandler(new GeographyMapper());
                     //geographyMapper.SetValue("@GEO", obj.Geo);
 
-                    return obj.Geo;
+                    return null;
 
                 case DataType.RandomInt:
                     var min = columnConfig.Min;
@@ -590,7 +599,7 @@ namespace DataMasker
                 {
                     case DataType.Shuffle:
                         var random = new Random();
-                        var shuffle = dataSources.shuffle(table, column, existingValue, columnConfig.RetainNullValues, dataTable);
+                        var shuffle = dataSources.Shuffle(table, column, existingValue, columnConfig.RetainNullValues, dataTable);
                         return shuffle;
                 }
             }
@@ -914,6 +923,12 @@ namespace DataMasker
                         case nameof(Operation.percentage):
                             _value = factor / 100 * (Convert.ToDouble(source[0]));
                             return _value;
+                        case nameof(Operation.randomPercentage):
+                            Random random = new Random();
+                            _value = random.Next(factor,100) / 100 * (Convert.ToDouble(source[0]));
+                            return _value;
+                        case nameof(Operation.avarage):
+                            return source.Sum(n=>Convert.ToDouble(n))/source.Count();
                         default:
                             break;
                     }
@@ -925,10 +940,12 @@ namespace DataMasker
         public enum Operation
         {
             addition,
+            avarage,
             substraction,
             multiplication,
             division,
-            percentage
+            percentage,
+            randomPercentage
 
 
 

@@ -25,7 +25,7 @@ namespace DataMasker.DataSources
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly string _successfulCommit = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_successfulCommit"];
 
-        private IEnumerable<IDictionary<string, object>> getData { get; set; }
+        //private IEnumerable<IDictionary<string, object>> getData { get; set; }
         public object[] Values { get; private set; }
         public int o = 0;
 
@@ -75,12 +75,14 @@ namespace DataMasker.DataSources
                 rawData = new List<IDictionary<string, object>>();
 
                
-                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig), buffered: true);
+                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig), buffered: false);
+                //rawData.AddRange(_prdData.Select(n => n.ToDictionary(x => x.Key, x => x.Value).Select(x => x) as IDictionary<string, object>));
                 foreach (IDictionary<string, object> prd in _prdData)
                 {
 
                     rawData.Add(new Dictionary<string, object>(prd));
                 }
+             
                 return _prdData;
             }
         }
@@ -105,11 +107,16 @@ namespace DataMasker.DataSources
                 connection.Execute(BuildUpdateSql(tableConfig), row, null, commandType: CommandType.Text);
             }
         }
-
+        private string BuildCountSql(
+            TableConfig tableConfig)
+        {
+            return $"SELECT COUNT(*) FROM [{tableConfig.Schema}].[{tableConfig.Name}]";
+        }
 
         /// <inheritdoc/>
         public void UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
+            int rowCount,
             TableConfig config,
             Action<int> updatedCallback)
         {
@@ -117,11 +124,11 @@ namespace DataMasker.DataSources
             if (batchSize == null ||
                 batchSize <= 0)
             {
-                batchSize = rows.Count();
+                batchSize = rowCount;
             }
 
             IEnumerable<Batch<IDictionary<string, object>>> batches = Batch<IDictionary<string, object>>.BatchItems(
-                rows.ToArray(),
+                rows,
                 (
                     objects,
                     enumerable) => enumerable.Count() < batchSize);
@@ -206,7 +213,7 @@ namespace DataMasker.DataSources
             return sql;
         }
        
-        public object shuffle(string table, string column, object existingValue, bool retainNull, DataTable dataTable = null)
+        public object Shuffle(string table, string column, object existingValue, bool retainNull, DataTable dataTable = null)
         {
             CompareLogic compareLogic = new CompareLogic();
             //ArrayList list = new ArrayList();
@@ -509,6 +516,16 @@ namespace DataMasker.DataSources
                 }
             }
             return rawData;
+        }
+
+        public int GetCount(TableConfig config)
+        {
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                var count = connection.ExecuteScalar(BuildCountSql(config));
+                return Convert.ToInt32(count);
+            }
         }
     }
 }

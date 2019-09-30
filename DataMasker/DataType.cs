@@ -49,6 +49,8 @@
         /// The rant
         /// </summary>
         Rant,
+        State,
+        City,
 
         /// <summary>
         /// The lorem

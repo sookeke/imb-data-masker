@@ -35,6 +35,7 @@ namespace DataMasker.Examples
         public object min { get; set; }
         public object max { get; set; }
         public bool ignore { get; set; }
+        public string Operator { get; set; }
         public bool? retainNullValues { get; set; }
         public string useGenderColumn { get; set; }
         public string StringFormatPattern { get; set; }
