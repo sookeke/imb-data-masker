@@ -1,5 +1,6 @@
 ﻿using ChoETL;
 using DataMasker.Models;
+using KellermanSoftware.CompareNetObjects;
 using Microsoft.Exchange.WebServices.Data;
 using Oracle.DataAccess.Client;
 using System;
@@ -18,6 +19,9 @@ namespace DataMasker.MaskingValidation
 {
     public static class MaskValidationCheck
     {
+        private static readonly string TSchema = Directory.GetCurrentDirectory() +  ConfigurationManager.AppSettings["APP_NAME"];
+        private static readonly string Stype = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["DataSourceType"];
+
         public static string Jsonpath { get; private set; }
         public static string ZipName { get; private set; }
 
@@ -150,6 +154,7 @@ namespace DataMasker.MaskingValidation
                 var toEmail = ConfigurationManager.AppSettings["RecipientEmail"].Split(';').ToList();
                 var ccEmaill = ConfigurationManager.AppSettings["cCEmail"].Split(';').ToList();
                 var jsonPath = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["jsonMapPath"];
+                var TestJson = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["TestJson"];
                 ExchangeService service = new ExchangeService
                 {
                     UseDefaultCredentials = true
@@ -171,14 +176,31 @@ namespace DataMasker.MaskingValidation
                     From = new EmailAddress(fromEmail)
                 };
                 //email.From = "mcs@gov.bc.ca";
-
+                bool tj = ConfigurationManager.AppSettings["RunTestJson"].ToString().ToUpper().Equals("YES") ? true : false;
 
                 email.ToRecipients.AddRange(toEmail);
                 email.CcRecipients.AddRange(ccEmaill);
                 if (File.Exists(_appSpreadsheet)) { email.Attachments.AddFileAttachment(_appSpreadsheet); }  
                 if (File.Exists(ZipName)) { email.Attachments.AddFileAttachment(ZipName); }
                 if (File.Exists(exceptionPath)) { email.Attachments.AddFileAttachment(exceptionPath); }
-                if (File.Exists(jsonPath)){ email.Attachments.AddFileAttachment(jsonPath); }
+
+                if (tj)
+                {
+                    if (File.Exists(TestJson))
+                    {
+                        email.Attachments.AddFileAttachment(TestJson);
+                    }
+
+                }
+                else
+                {
+                    if (File.Exists(jsonPath))
+                    {
+                        email.Attachments.AddFileAttachment(jsonPath);
+                    }
+                }
+                       
+               
                     
 
                 //Console.WriteLine("start to send email from IDIR to TIDIR ...");
@@ -265,6 +287,11 @@ namespace DataMasker.MaskingValidation
         }
         public static void Verification( DataSourceConfig dataSourceConfig, Config config, string _appSpreadsheet, string _dmlpath, string database,string exceptionPath)
         {
+            CompareLogic compareLogic = new CompareLogic();
+            if (!Directory.Exists($@"Output\Validation"))
+            {
+                Directory.CreateDirectory($@"Output\Validation");
+            }
             string path = Directory.GetCurrentDirectory() + $@"\Output\Validation\ValidationResult.txt";
             var _columndatamask = new List<object>();
             var _columndataUnmask = new List<object>();
@@ -274,13 +301,14 @@ namespace DataMasker.MaskingValidation
             var result = "";
             var failure = "";
             DataTable report = new DataTable();
-            report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
+            //report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
+            report.Columns.Add("Table"); report.Columns.Add("Schema"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("DataSourceType"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
 
             foreach (TableConfig _tables in config.Tables)
             {
 
                 var _dataTable = GetdataTable(dataSourceConfig.Config.connectionString, _tables.Name, config);
-                var _dataTable2 = GetdataTable(dataSourceConfig.Config.connectionStringPrd, _tables.Name, config);
+                var _dataTablePrd = GetdataTable(dataSourceConfig.Config.connectionStringPrd, _tables.Name, config);
                 if (_dataTable.Rows.Count == 0)
                 {
                     var _norecord = _tables.Name + " No record found for validation test in this table";
@@ -288,19 +316,11 @@ namespace DataMasker.MaskingValidation
                 }
                 foreach (var col in _tables.Columns)
                 {
-                    if (col.Type == DataType.Ignore)
-                    {
-                        //    result = "Column not mask";
-                        //    File.AppendAllText(path, _tables.Name + " Column not mask " + col.Name + Environment.NewLine);
-                        //    report.Rows.Add(_tables.Name, col.Name, Hostname, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
-                        //}
-                    }
-                    else
-                    {
-                        _columndatamask = new DataView(_dataTable).ToTable(false, new string[] { col.Name }).AsEnumerable().Select(n => n[0]).ToList();
-                        _columndataUnmask = new DataView(_dataTable2).ToTable(false, new string[] { col.Name }).AsEnumerable().Select(n => n[0]).ToList();
 
-                    }
+                    _columndatamask = new DataView(_dataTable).ToTable(false, new string[] { col.Name }).AsEnumerable().Select(n => n[0]).ToList();
+                    _columndataUnmask = new DataView(_dataTablePrd).ToTable(false, new string[] { col.Name }).AsEnumerable().Select(n => n[0]).ToList();
+
+
                     //check for intersect
                     List<string> check = new List<string>();
                     int rownumber = 0;
@@ -316,19 +336,11 @@ namespace DataMasker.MaskingValidation
                         {
                             try
                             {
-                                if (_columndatamask[i].Equals(_columndataUnmask[i]))
+                                if (compareLogic.Compare(_columndatamask[i], _columndataUnmask[i]).AreEqual && col.Ignore != true)
                                 {
-                                    //if (col.Ignore == true)
-                                    //{
-                                    //    check.Add("IGNORE");
-                                    //}
-                                    //else
-                                    //{
+
                                     check.Add("FAIL");
-                                    //}
 
-
-                                    //match
                                 }
                                 else
                                 {
@@ -361,25 +373,29 @@ namespace DataMasker.MaskingValidation
                     if (check.Contains("FAIL"))
                     {
                         result = "<font color='red'>FAIL</font>";
-                        if (col.Name.Contains("USERID"))
+
+                        if (col.Ignore == true)
                         {
-                            failure = "New user commit";
-                        }
-                        else if (col.Ignore == true)
-                        {
-                            failure = "<font color='red'>Ignore = " + col.Ignore.ToString() + "</ font >";
-                            result = "<b><font color='blue'>PASS</font></b>";
+                            failure = "Masking not required";
+                            result = "<font color='green'>PASS</font>";
                         }
                         else if (col.Type == DataType.Shuffle && _columndatamask.Count() == 1)
                         {
-                            result = "<b><font color='RED'>FAIL</font></b>";
+                            result = "<b><font color='red'>FAIL</font></b>";
                             failure = "row count must be > 1 for " + DataType.Shuffle.ToString();
+                            //result = "<font color='red'>FAIL</font>";
+                        }
+                        else if (col.Type == DataType.NoMasking)
+                        {
+                            result = "<font color='green'>PASS</font>";
+                            //result = "<b><font color='blue'>PASS</font></b>";
+                            failure = "Masking not required";
                             //result = "<font color='red'>FAIL</font>";
                         }
                         else if (col.Type == DataType.Shuffle)
                         {
-                            result = "<b><font color='blue'>PASS</font></b>";
-                            failure = DataType.Shuffle.ToString() + " applied";
+                            result = "<b><font color='blue'>FAIL</font></b>";
+                            failure = "Cannot generate a unique shuffle value";
                             //result = "<font color='red'>FAIL</font>";
                         }
                         else if (col.Type == DataType.exception && check.Contains("PASS"))
@@ -390,19 +406,20 @@ namespace DataMasker.MaskingValidation
                         else
                         {
                             result = "<font color='red'>FAIL</font>";
-                            failure = "<b><font color='red'>Found exact match</font></b>";
+                            failure = "<b><font color='red'>Found exact match " + col.Type.ToString() + " </font></b>";
                         }
 
                         Console.WriteLine(_tables.Name + " Failed Validation test on column " + col.Name + Environment.NewLine);
-                        File.AppendAllText(path, _tables.Name + " Failed Validation test on column " + col.Name + Environment.NewLine);
-                        report.Rows.Add(_tables.Name, col.Name, Hostname, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                        File.AppendAllText(path, _tables.Name + " Failed Validation test on column " + _tables.Name + Environment.NewLine);
+
+                        report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
                     }
                     else if (check.Contains("IGNORE"))
                     {
                         result = "No Validation";
                         failure = "Column not mask";
-                        report.Rows.Add(_tables.Name, col.Name, Hostname, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                        report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
                     }
                     else
                     {
@@ -410,22 +427,23 @@ namespace DataMasker.MaskingValidation
                         {
                             failure = "No record found";
                         }
+                        else if (col.Ignore == true || col.Type == DataType.NoMasking)
+                        {
+                            failure = "Masking not required";
+                            result = "<font color='green'>PASS</font>";
+                        }
                         else
-                            failure = "null";
+                            failure = "NULL";
                         result = "<font color='green'>PASS</font>";
                         Console.WriteLine(_tables.Name + " Pass Validation test on column " + col.Name);
                         File.AppendAllText(path, _tables.Name + " Pass Validation test on column " + col.Name + Environment.NewLine);
-                        report.Rows.Add(_tables.Name, col.Name, Hostname, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                        report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
 
                     }
 
 
-                    rownumber = 0;
-
                 }
-               
-               
             }
             Analysis(report, dataSourceConfig, _appSpreadsheet, database, _dmlpath,exceptionPath);
 

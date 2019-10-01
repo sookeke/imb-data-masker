@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataMasker.Examples", "Data
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataMasker.Runner", "DataMasker.Runner\DataMasker.Runner.csproj", "{AFB6D45A-2D3C-42A9-8A17-717A473DE8EB}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "DataMaskerInstaller", "DataMaskerInstaller\DataMaskerInstaller.vdproj", "{C252B0A9-D454-4E6A-B884-069ACF1D2A59}"
+EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True
@@ -61,6 +63,12 @@ Global
 		{AFB6D45A-2D3C-42A9-8A17-717A473DE8EB}.Release|x64.Build.0 = Release|x64
 		{AFB6D45A-2D3C-42A9-8A17-717A473DE8EB}.Release|x86.ActiveCfg = Release|x86
 		{AFB6D45A-2D3C-42A9-8A17-717A473DE8EB}.Release|x86.Build.0 = Release|x86
+		{C252B0A9-D454-4E6A-B884-069ACF1D2A59}.Debug|Any CPU.ActiveCfg = Debug
+		{C252B0A9-D454-4E6A-B884-069ACF1D2A59}.Debug|x64.ActiveCfg = Debug
+		{C252B0A9-D454-4E6A-B884-069ACF1D2A59}.Debug|x86.ActiveCfg = Debug
+		{C252B0A9-D454-4E6A-B884-069ACF1D2A59}.Release|Any CPU.ActiveCfg = Release
+		{C252B0A9-D454-4E6A-B884-069ACF1D2A59}.Release|x64.ActiveCfg = Release
+		{C252B0A9-D454-4E6A-B884-069ACF1D2A59}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

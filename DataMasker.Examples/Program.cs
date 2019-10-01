@@ -40,10 +40,14 @@ namespace DataMasker.Examples
         private static readonly string sheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
         private static readonly string TSchema = ConfigurationManager.AppSettings["APP_NAME"];
         private static readonly string Stype = ConfigurationManager.AppSettings["DataSourceType"];
+        private static readonly string _testJson = ConfigurationManager.AppSettings["TestJson"];
         private const string ExcelSheetPath = "ExcelSheetPath"; private const string DatabaseName = "DatabaseName"; private const string WriteDML = "WriteDML";
         private const string MaskTabletoSpreadsheet = "MaskTabletoSpreadsheet"; private const string Schema = "APP_NAME"; private const string ConnectionString = "ConnectionString"; private const string ConnectionStringPrd = "ConnectionStringPrd";
         private const string MaskedCopyDatabase = "MaskedCopyDatabase"; private const string RunValidation = "RunValidation"; private const string EmailValidation = "EmailValidation"; private const string jsonMapPath = "jsonMapPath";
         private const string SourceType = "DataSourceType";
+        private const string RunTestJson = "RunTestJson"; private const string TestJson = "TestJson";
+
+
         private static readonly string exceptionPath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         #endregion
         private static string _nameDatabase;
@@ -773,7 +777,17 @@ namespace DataMasker.Examples
         private static Config LoadConfig(
             int example)
         {
-            return Config.Load(Jsonpath);
+            if (allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+            {
+                if (!Directory.Exists(@"output"))
+                {
+                    Directory.CreateDirectory(@"output");
+                }
+                return Config.Load(_testJson);
+            }
+            else
+                return Config.Load(Jsonpath);
+
             //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_TAP_config.json");
         }
 
@@ -787,10 +801,16 @@ namespace DataMasker.Examples
             }
             ////{ throw new NullReferenceException("Referencing a null app key value"); }
             _nameDatabase = ConfigurationManager.AppSettings[DatabaseName];
-            _SpreadSheetPath = ConfigurationManager.AppSettings[ExcelSheetPath];
+           
             if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }
-            copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
-            JsonConfig(copyjsonPath);
+            var ff = allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First();
+            if (!allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+            {
+                _SpreadSheetPath = ConfigurationManager.AppSettings[ExcelSheetPath];
+                copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
+                JsonConfig(copyjsonPath);
+            }
+           
             Config config = LoadConfig(1);
             IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
             IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
@@ -803,7 +823,8 @@ namespace DataMasker.Examples
                 string[] extcolumn = null;
                 IEnumerable<IDictionary<string, object>> rows = null;
                 IEnumerable<IDictionary<string, object>> rawData = null;
-               // IEnumerable<IDictionary<string, object>> masked = null;
+                // IEnumerable<IDictionary<string, object>> masked = null;
+                
                 File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
                 if (config.DataSource.Type == DataSourceType.SpreadSheet)
                 {
@@ -937,7 +958,7 @@ namespace DataMasker.Examples
                             Reportvalidation(PrdTable, _dmlTable, config.DataSource, tableConfig);
                         }
                         #endregion
-                        if (allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+                        if (allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
                         {
                             dataSource.UpdateRows(masked, rowCount, tableConfig);
                         }
@@ -953,17 +974,21 @@ namespace DataMasker.Examples
             }
             #endregion
             //write mapped table and column with type in csv file
-            var o = OutputSheet(config, copyjsonPath, _nameDatabase);
+            if (!allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+            {
+                var o = OutputSheet(config, copyjsonPath, _nameDatabase);
+            }
+              
             if (report.Rows.Count != 0
-                && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+                && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
             { 
                 MaskValidationCheck.Analysis(report, config.DataSource, sheetPath, _nameDatabase, CreateDir,exceptionPath);
             }
 
             #region validate masking 
-            if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
-                && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
-                && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+            if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
+                && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
+                && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
             {
                 Console.WriteLine("Data Masking Validation has started......................................");
                 MaskValidationCheck.Verification(config.DataSource, config, sheetPath,CreateDir, _nameDatabase,exceptionPath);
@@ -1158,6 +1183,9 @@ namespace DataMasker.Examples
                     case nameof(AppConfig.Hostname):
                         allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
                         break;
+                    case nameof(AppConfig.TestJson):
+                        allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
+                        break;
                     case nameof(AppConfig.jsonMapPath):
                         allkey.Add(key, ConfigurationManager.AppSettings[key].ToString());
                         break;
@@ -1180,6 +1208,10 @@ namespace DataMasker.Examples
                     case nameof(AppConfig.EmailValidation):
                         bool e = ConfigurationManager.AppSettings[key].ToString().ToUpper().Equals("YES") ? true : false;
                         allkey.Add(key, e);
+                        break;
+                    case nameof(AppConfig.RunTestJson):
+                        bool tj = ConfigurationManager.AppSettings[key].ToString().ToUpper().Equals("YES") ? true : false;
+                        allkey.Add(key, tj);
                         break;
                     default:
                         break;
@@ -1213,6 +1245,8 @@ namespace DataMasker.Examples
             MaskedCopyDatabase,
             RunValidation,
             Hostname,
+            TestJson,
+            RunTestJson,
             EmailValidation
         }
         private static void UpdateProgress(
