@@ -2,6 +2,7 @@
 using DataMasker.Interfaces;
 using DataMasker.Models;
 using DataMasker.Utils;
+using KellermanSoftware.CompareNetObjects;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -16,11 +17,18 @@ namespace DataMasker.DataSources
     {
         private readonly DataSourceConfig _sourceConfig;
         //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
-        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\" + ConfigurationManager.AppSettings["APP_NAME"] + "_exception.txt";
-        private static readonly string _successfulCommit = Directory.GetCurrentDirectory() + $@"\Output\" + ConfigurationManager.AppSettings["APP_NAME"] + "_successfulCommit.txt";
+        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
+        private static readonly string _successfulCommit = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_successfulCommit"];
 
+        //private IEnumerable<IDictionary<string, object>> getData { get;  set; }
+        public object[] Values { get; private set; }
+        public int o = 0;
+
+        private static List<IDictionary<string, object>> rawData = new List<IDictionary<string, object>>();
+        private static Dictionary<string, string> exceptionBuilder = new Dictionary<string, string>();
 
         private readonly string _connectionString;
+        private readonly string _connectionStringPrd;
 
         public PostgresSource(
            DataSourceConfig sourceConfig)
@@ -35,40 +43,60 @@ namespace DataMasker.DataSources
                 _connectionString =
                     $"User ID={sourceConfig.Config.userName};Password={sourceConfig.Config.password};Data Source={sourceConfig.Config.server};Initial Catalog={sourceConfig.Config.name};Persist Security Info=False;";
             }
-
+            if (sourceConfig.Config.connectionStringPrd != null && !string.IsNullOrWhiteSpace(sourceConfig.Config.connectionStringPrd.ToString()))
+            {
+                _connectionStringPrd = sourceConfig.Config.connectionStringPrd;
+            }
         }
-        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig)
+        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config)
         {
             string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
-            using (var connection = new NpgsqlConnection(_connectionStringGet))
+
+            var connection = new NpgsqlConnection(_connectionStringGet);
             {
+                
                 connection.Open();
+                string query = "";
+                IDictionary<string, object> idict = new Dictionary<string, object>();
+                IEnumerable<IDictionary<string, object>> row = new List<IDictionary<string, object>>();
+                List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
+                rawData = new List<IDictionary<string, object>>();
+                var rowCount = GetCount(tableConfig);
+                query = BuildSelectSql(tableConfig, config);
                 //var retu = connection.Query(BuildSelectSql(tableConfig));
-                return (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig));
+                rawData = new List<IDictionary<string, object>>();
+                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: false);
+                rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
+
+
+
+                return _prdData;
+                //var retu = connection.Query(BuildSelectSql(tableConfig));
+               // return (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig));
             }
         }
 
-        public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig)
+        public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig, Config config)
         {
             using (var connection = new NpgsqlConnection(_connectionString))
             {
                 connection.Open();
-                connection.Execute(BuildUpdateSql(tableConfig), row, null, commandType: System.Data.CommandType.Text);
+                connection.Execute(BuildUpdateSql(tableConfig,config), row, null, commandType: System.Data.CommandType.Text);
             }
         }
 
-        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig config, Action<int> updatedCallback = null)
+        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
         {
             SqlMapper.AddTypeHandler(new GeographyMapper());
             int? batchSize = _sourceConfig.UpdateBatchSize;
             if (batchSize == null ||
                 batchSize <= 0)
             {
-                batchSize = rows.Count();
+                batchSize = rowCount;
             }
 
             IEnumerable<Batch<IDictionary<string, object>>> batches = Batch<IDictionary<string, object>>.BatchItems(
-                rows.ToArray(),
+                rows,
                 (
                     objects,
                     enumerable) => enumerable.Count() < batchSize);
@@ -124,7 +152,7 @@ namespace DataMasker.DataSources
                         //OracleBulkCopy oracleBulkCopy = new OracleBulkCopy(connection, OracleBulkCopyOptions.UseInternalTransaction);
 
 
-                        string sql = BuildUpdateSql(config);
+                        string sql = BuildUpdateSql(tableConfig, config);
 
 
                         try
@@ -140,7 +168,7 @@ namespace DataMasker.DataSources
                             else
                             {
                                 sqlTransaction.Commit();
-                                File.AppendAllText(_successfulCommit, "Successful Commit on table " + config.Name + Environment.NewLine + Environment.NewLine);
+                                File.AppendAllText(_successfulCommit, "Successful Commit on table " + tableConfig.Name + Environment.NewLine + Environment.NewLine);
                             }
 
 
@@ -154,7 +182,7 @@ namespace DataMasker.DataSources
                         {
 
                             Console.WriteLine(ex.Message);
-                            File.AppendAllText(_exceptionpath, ex.Message + " on table " + config.Name + Environment.NewLine + Environment.NewLine);
+                            File.AppendAllText(_exceptionpath, ex.Message + " on table " + tableConfig.Name + Environment.NewLine + Environment.NewLine);
 
                         }
 
@@ -164,12 +192,12 @@ namespace DataMasker.DataSources
             }
         }
         public string BuildUpdateSql(
-           TableConfig tableConfig)
+           TableConfig tableConfig, Config config)
         {
             var charsToRemove = new string[] { "[", "]" };
             string sql = $"UPDATE [{tableConfig.Name}] SET ";
 
-            sql += tableConfig.Columns.GetUpdateColumns();
+            sql += tableConfig.Columns.GetUpdateColumns(config);
             sql += $" WHERE [{tableConfig.PrimaryKeyColumn}] = @{tableConfig.PrimaryKeyColumn}";
             //thisis oracle replace @ WITH :
             var sqltOrc = new string[] { "@" };
@@ -184,10 +212,18 @@ namespace DataMasker.DataSources
             return sql;
         }
         private string BuildSelectSql(
-           TableConfig tableConfig)
+           TableConfig tableConfig, Config config)
         {
             //var clumns = tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)
-            string sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name}";
+            string sql = "";
+            if (int.TryParse(tableConfig.RowCount, out int n))
+            {
+                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Name} LIMIT {n}";
+            }
+            else
+                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Name}";
+            //return sql;
+            //string sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name}";
             if (sql.Contains("[") || sql.Contains("]"))
             {
                 var charsToRemove = new string[] { "[", "]" };
@@ -198,9 +234,10 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object Shuffle(string table, string column, object existingValue, bool retainnull, DataTable dataTable = null)
+        public object Shuffle(string table, string column, object existingValue, bool retainNull, DataTable dataTable = null)
         {
             //ArrayList list = new ArrayList();
+            CompareLogic compareLogic = new CompareLogic();
             Random rnd = new Random();
             string sql = "SELECT " + column + " FROM " + " " + table;
             using (var connection = new NpgsqlConnection(_connectionString))
@@ -209,22 +246,45 @@ namespace DataMasker.DataSources
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                 //Randomizer randomizer = new Randomizer();
 
-                var values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
-                //var find = randomizer.Shuffle(values);
-                object value = values[rnd.Next(values.Count())];
-                if (values.Count() <= 1)
+                if (retainNull)
                 {
-                    File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + "for column " + column + Environment.NewLine + Environment.NewLine);
+                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
+                }
+                else
+                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+
+
+                //var find = values.Count();
+                object value = Values[rnd.Next(Values.Count())];
+                if (Values.Count() <= 1)
+                {
+                    o = o + 1;
+                    if (o == 1)
+                    {
+                        File.WriteAllText(_exceptionpath, "");
+                    }
+
+                    if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                    {
+                        exceptionBuilder.Add(table, column);
+                        File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                    }
+                    //o = o + 1;
+                    //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
                     return value;
                 }
-                while (value.Equals(existingValue))
+                if (compareLogic.Compare(value, null).AreEqual && retainNull)
+                {
+                    //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
+                    return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
+                }
+                while (compareLogic.Compare(value, existingValue).AreEqual)
                 {
 
-                    value = values[rnd.Next(0, values.Count())];
+                    value = Values[rnd.Next(0, Values.Count())];
                 }
 
                 return value;
-
             }
 
             //return list;
@@ -258,7 +318,7 @@ namespace DataMasker.DataSources
 
                 var length = children.Any() ? children.Length : 1;
 
-                var parentEntries = parent.Where(x => x.Value is object)
+                var parentEntries = parent
                                           .Repeat(length)
                                           .ToLookup(x => x.Key, x => x.Value);
                 var childEntries = children.SelectMany(x => x.First())
@@ -276,6 +336,9 @@ namespace DataMasker.DataSources
                 table.Columns.AddRange(headers);
 
                 var addedRows = new int[length];
+
+               
+
                 for (int i = 0; i < length; i++)
                     addedRows[i] = table.Rows.IndexOf(table.Rows.Add());
 
@@ -358,12 +421,57 @@ namespace DataMasker.DataSources
 
         public IEnumerable<IDictionary<string, object>> RawData(IEnumerable<IDictionary<string, object>> PrdData)
         {
-            throw new NotImplementedException();
+            //rawData = getData; 
+            if (!(File.Exists(_successfulCommit) && File.Exists(_exceptionpath)))
+            {
+
+
+                //write to the file
+                File.Create(_successfulCommit).Close();
+
+                //write to the file
+                File.Create(_exceptionpath).Close();
+
+
+
+            }
+            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_exceptionpath))
+            {
+                if (new FileInfo(_exceptionpath).Length == 0)
+                {
+                    sw.WriteLine("exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    //  File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                }
+                // sw.WriteLine(""); 
+            }
+            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_successfulCommit))
+            {
+                //write my text 
+                if (new FileInfo(_successfulCommit).Length == 0)
+                {
+                    // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+
+                    sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                }
+            }
+            return rawData;
         }
 
         public int GetCount(TableConfig config)
         {
-            throw new NotImplementedException();
+            using (NpgsqlConnection connection = new NpgsqlConnection(_connectionStringPrd))
+            {
+                connection.Open();
+                //var tb = BuildCountSql(config);
+                var count = connection.ExecuteScalar(BuildCountSql(config));
+                return Convert.ToInt32(count);
+            }
+        }
+        private string BuildCountSql(
+         TableConfig tableConfig)
+        {
+            var ss = $"SELECT COUNT(*) FROM  \"{tableConfig.Schema}\".{tableConfig.Name}";
+            return $"SELECT COUNT(*) FROM {tableConfig.Schema}.{tableConfig.Name}";
         }
     }
 }

@@ -2,6 +2,7 @@
 using DataMasker.Models;
 using KellermanSoftware.CompareNetObjects;
 using Microsoft.Exchange.WebServices.Data;
+using Npgsql;
 using Oracle.DataAccess.Client;
 using System;
 using System.Collections;
@@ -19,8 +20,8 @@ namespace DataMasker.MaskingValidation
 {
     public static class MaskValidationCheck
     {
-        private static readonly string TSchema = Directory.GetCurrentDirectory() +  ConfigurationManager.AppSettings["APP_NAME"];
-        private static readonly string Stype = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["DataSourceType"];
+        private static readonly string TSchema = ConfigurationManager.AppSettings["APP_NAME"];
+        private static readonly string Stype = ConfigurationManager.AppSettings["DataSourceType"];
 
         public static string Jsonpath { get; private set; }
         public static string ZipName { get; private set; }
@@ -155,6 +156,8 @@ namespace DataMasker.MaskingValidation
                 var ccEmaill = ConfigurationManager.AppSettings["cCEmail"].Split(';').ToList();
                 var jsonPath = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["jsonMapPath"];
                 var TestJson = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["TestJson"];
+                var MaskedCopyDatabase = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["MaskedCopyDatabase"];
+                var _successfulCommit = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["_successfulCommit"];
                 ExchangeService service = new ExchangeService
                 {
                     UseDefaultCredentials = true
@@ -177,6 +180,7 @@ namespace DataMasker.MaskingValidation
                 };
                 //email.From = "mcs@gov.bc.ca";
                 bool tj = ConfigurationManager.AppSettings["RunTestJson"].ToString().ToUpper().Equals("YES") ? true : false;
+                bool maskCopy = ConfigurationManager.AppSettings["MaskedCopyDatabase"].ToString().ToUpper().Equals("YES") ? true : false;
 
                 email.ToRecipients.AddRange(toEmail);
                 email.CcRecipients.AddRange(ccEmaill);
@@ -197,6 +201,10 @@ namespace DataMasker.MaskingValidation
                     if (File.Exists(jsonPath))
                     {
                         email.Attachments.AddFileAttachment(jsonPath);
+                    }
+                    if (maskCopy && File.Exists(_successfulCommit))
+                    {
+                        email.Attachments.AddFileAttachment(_successfulCommit);
                     }
                 }
                        
@@ -227,61 +235,96 @@ namespace DataMasker.MaskingValidation
 
             }
         }
-        private static DataTable GetdataTable(dynamic connectionString1, string table, Config config)
+        private static DataTable GetdataTable(string connectionString1, string table, Config config)
         {
             // This is your table to hold the result set:
             DataTable dataTable = new DataTable();
-            if (config.DataSource.Type == DataSourceType.OracleServer)
+            switch (config.DataSource.Type)
             {
-                using (OracleConnection oracleConnection = new OracleConnection(connectionString1))
-                {
-                    string squery = "Select * from " + table;
-                    oracleConnection.Open();
-                    
-                    using (OracleDataAdapter oda = new OracleDataAdapter(squery, oracleConnection))
-                    {
-                        try
-                        {
-                            //Fill the data table with select statement's query results:
-                            int recordsAffectedSubscriber = 0;
-
-                            recordsAffectedSubscriber = oda.Fill(dataTable);
-
-                        }
-                        catch (Exception ex)
-                        {
-
-                            Console.WriteLine(ex.Message);
-                        }
-                    }
-                }
-            }
-            else if (config.DataSource.Type == DataSourceType.SqlServer)
-            {
-                using (SqlConnection sqlConnection = new SqlConnection(connectionString1))
-                {
-
-                    string squery = "Select * from " + table;
-                    sqlConnection.Open();
-                    using (SqlDataAdapter adapter = new SqlDataAdapter(squery, sqlConnection))
+                case DataSourceType.InMemoryFake:
+                    break;
+                case DataSourceType.SqlServer:
+                    using (SqlConnection sqlConnection = new SqlConnection(connectionString1))
                     {
 
-                        try
-                        {
-                            //Fill the data table with select statement's query results:
-                            int recordsAffectedSubscriber = 0;
-
-                            recordsAffectedSubscriber = adapter.Fill(dataTable);
-
-                        }
-                        catch (Exception ex)
+                        string squery = "Select * from " + table;
+                        sqlConnection.Open();
+                        using (SqlDataAdapter adapter = new SqlDataAdapter(squery, sqlConnection))
                         {
 
-                            Console.WriteLine(ex.Message);
-                        }
+                            try
+                            {
+                                //Fill the data table with select statement's query results:
+                                int recordsAffectedSubscriber = 0;
 
+                                recordsAffectedSubscriber = adapter.Fill(dataTable);
+
+                            }
+                            catch (Exception ex)
+                            {
+
+                                Console.WriteLine(ex.Message);
+                            }
+
+                        }
+                        return dataTable;
                     }
-                }
+                   
+                    break;
+                case DataSourceType.OracleServer:
+                    using (OracleConnection oracleConnection = new OracleConnection(connectionString1))
+                    {
+                        string squery = "Select * from " + table;
+                        oracleConnection.Open();
+
+                        using (OracleDataAdapter oda = new OracleDataAdapter(squery, oracleConnection))
+                        {
+                            try
+                            {
+                                //Fill the data table with select statement's query results:
+                                int recordsAffectedSubscriber = 0;
+
+                                recordsAffectedSubscriber = oda.Fill(dataTable);
+
+                            }
+                            catch (Exception ex)
+                            {
+
+                                Console.WriteLine(ex.Message);
+                            }
+                        }
+                    }
+                    return dataTable;
+                    break;
+                case DataSourceType.SpreadSheet:
+                    break;
+                case DataSourceType.PostgresServer:
+                    using (NpgsqlConnection oracleConnection = new NpgsqlConnection(connectionString1.ToString()))
+                    {
+                        string squery = "Select * from " + table;
+                        oracleConnection.Open();
+
+                        using (NpgsqlDataAdapter oda = new NpgsqlDataAdapter(squery, oracleConnection))
+                        {
+                            try
+                            {
+                                //Fill the data table with select statement's query results:
+                                int recordsAffectedSubscriber = 0;
+
+                                recordsAffectedSubscriber = oda.Fill(dataTable);
+
+                            }
+                            catch (Exception ex)
+                            {
+
+                                Console.WriteLine(ex.Message);
+                            }
+                        }
+                    }
+                    return dataTable;
+                    break;
+                default:
+                    break;
             }
             return dataTable;
         }
@@ -297,6 +340,8 @@ namespace DataMasker.MaskingValidation
             var _columndataUnmask = new List<object>();
             string Hostname = dataSourceConfig.Config.Hostname;
             string _operator = System.DirectoryServices.AccountManagement.UserPrincipal.Current.DisplayName;
+            string connectionString = dataSourceConfig.Config.connectionString;
+            string connectionStringPrd = dataSourceConfig.Config.connectionStringPrd;
 
             var result = "";
             var failure = "";
@@ -306,9 +351,10 @@ namespace DataMasker.MaskingValidation
 
             foreach (TableConfig _tables in config.Tables)
             {
+               
 
-                var _dataTable = GetdataTable(dataSourceConfig.Config.connectionString, _tables.Name, config);
-                var _dataTablePrd = GetdataTable(dataSourceConfig.Config.connectionStringPrd, _tables.Name, config);
+                var _dataTable = GetdataTable(connectionString, _tables.Name.ToString(), config);
+                var _dataTablePrd = GetdataTable(connectionStringPrd, _tables.Name, config);
                 if (_dataTable.Rows.Count == 0)
                 {
                     var _norecord = _tables.Name + " No record found for validation test in this table";
@@ -332,6 +378,7 @@ namespace DataMasker.MaskingValidation
                     for (int i = 0; i < _columndatamask.Count; i++)
                     {
                         rownumber = i;
+                       
                         if (!_columndatamask[i].IsNullOrDbNull())
                         {
                             try

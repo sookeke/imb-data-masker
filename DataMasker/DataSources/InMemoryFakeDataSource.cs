@@ -63,7 +63,7 @@ namespace DataMasker.DataSources
 
         /// <inheritdoc/>
         public IEnumerable<IDictionary<string, object>> GetData(
-            TableConfig tableConfig)
+            TableConfig tableConfig, Config config)
         {
             return tableData[tableConfig.Name];
         }
@@ -71,7 +71,7 @@ namespace DataMasker.DataSources
         /// <inheritdoc/>
         public void UpdateRow(
             IDictionary<string, object> row,
-            TableConfig tableConfig)
+            TableConfig tableConfig, Config config)
         {
 
             int index = tables[tableConfig.Name]
@@ -93,13 +93,13 @@ namespace DataMasker.DataSources
         public void UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
-            TableConfig config,
+            TableConfig tableConfig, Config config,
             Action<int> updatedCallback)
         {
 
             foreach (IDictionary<string, object> dictionary in rows)
             {
-                UpdateRow(dictionary, config);
+                UpdateRow(dictionary, tableConfig, config);
             }
         }
 

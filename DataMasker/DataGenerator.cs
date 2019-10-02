@@ -317,7 +317,17 @@ namespace DataMasker
                     rnd = new Random();
                     
                     var cities = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Provinces;
-                    return cities.OrderBy(n => rnd.Next()).Where(n => n.Name != null).First().Name;
+                    var states = CountryLoader.LoadCanadaLocationData().States.Where(n => n.Provinces.Count > 1 ).Select(n=>n).ToArray();
+                    var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null).Select(n=>n).ToArray();
+                  
+                    if (provinces.Count() < 2)
+                    {
+
+                    }
+                    var city = provinces[rnd.Next(0, provinces.Count())];
+                    //var cityname = cities.OrderBy(n => rnd.Next()).Where(n => n.Name != null).First().Name;
+                   
+                    return city.Name;
                 case DataType.Blob:
 
                     var fileUrl = _faker.Image.PicsumUrl();
@@ -339,6 +349,9 @@ namespace DataMasker
                     return bs64;
                 case DataType.Ignore:
                     return null;
+                case DataType.Money:
+                    var money = _faker.Parse(columnConfig.StringFormatPattern);
+                    return Convert.ToDecimal(money);
                 case DataType.RandomYear:
                     DateTime start = new DateTime(1999, 1, 1);
                     Random gen = new Random();

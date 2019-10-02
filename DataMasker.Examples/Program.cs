@@ -801,114 +801,117 @@ namespace DataMasker.Examples
             }
             ////{ throw new NullReferenceException("Referencing a null app key value"); }
             _nameDatabase = ConfigurationManager.AppSettings[DatabaseName];
-           
-            if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }
-            var ff = allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First();
-            if (!allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+
+            try
             {
-                _SpreadSheetPath = ConfigurationManager.AppSettings[ExcelSheetPath];
-                copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
-                JsonConfig(copyjsonPath);
-            }
-           
-            Config config = LoadConfig(1);
-            IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
-            IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
-            #region Masking operation and Data generation
-            foreach (TableConfig tableConfig in config.Tables)
-            {
-                //checked if table contains blob column datatype and get column that is blob
-                var isblob = tableConfig.Columns.Where(x => !x.Ignore && x.Type == DataType.Blob);
-                object extension = null;
-                string[] extcolumn = null;
-                IEnumerable<IDictionary<string, object>> rows = null;
-                IEnumerable<IDictionary<string, object>> rawData = null;
-                // IEnumerable<IDictionary<string, object>> masked = null;
-                
-                File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
-                if (config.DataSource.Type == DataSourceType.SpreadSheet)
+
+
+                if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }             
+                if (!allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
                 {
-                    //load spreadsheet to dataTable
-                    var SheetTable = dataSource.DataTableFromCsv(ConfigurationManager.AppSettings[ConnectionString]);
-                    //convert DataTable to object
-                    rows = dataSource.CreateObject(SheetTable);
-                    rawData = dataSource.CreateObject(SheetTable);
-                    foreach (IDictionary<string, object> row in rows)
+                    _SpreadSheetPath = ConfigurationManager.AppSettings[ExcelSheetPath];
+                    copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
+                    JsonConfig(copyjsonPath);
+                }
+
+                Config config = LoadConfig(1);
+                IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
+                IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
+                #region Masking operation and Data generation
+                foreach (TableConfig tableConfig in config.Tables)
+                {
+                    //checked if table contains blob column datatype and get column that is blob
+                    var isblob = tableConfig.Columns.Where(x => !x.Ignore && x.Type == DataType.Blob);
+                    object extension = null;
+                    string[] extcolumn = null;
+                    IEnumerable<IDictionary<string, object>> rows = null;
+                    IEnumerable<IDictionary<string, object>> rawData = null;
+                    // IEnumerable<IDictionary<string, object>> masked = null;
+
+                    File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
+                    if (config.DataSource.Type == DataSourceType.SpreadSheet)
                     {
-                        dataMasker.Mask(row, tableConfig, dataSource, SheetTable);
-                    }
-                    try
-                    { 
-                        //convert the object to DataTable
-                       var _maskSpreadSheet = dataSource.SpreadSheetTable(rows, tableConfig);
-                        MaskTable = _maskSpreadSheet;
-                        PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig);
-                        if (_maskSpreadSheet.Rows.Count != 0)
+                        //load spreadsheet to dataTable
+                        var SheetTable = dataSource.DataTableFromCsv(ConfigurationManager.AppSettings[ConnectionString]);
+                        //convert DataTable to object
+                        rows = dataSource.CreateObject(SheetTable);
+                        rawData = dataSource.CreateObject(SheetTable);
+                        foreach (IDictionary<string, object> row in rows)
                         {
-                            var csvFile = WriteTofile(_maskSpreadSheet, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
-                            var createsheet = ToExcel(csvFile, _nameDatabase, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
-                            if (createsheet == false)
+                            dataMasker.Mask(row, tableConfig, dataSource, SheetTable);
+                        }
+                        try
+                        {
+                            //convert the object to DataTable
+                            var _maskSpreadSheet = dataSource.SpreadSheetTable(rows, tableConfig);
+                            MaskTable = _maskSpreadSheet;
+                            PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig);
+                            if (_maskSpreadSheet.Rows.Count != 0)
                             {
-                                Console.WriteLine("cannot create excel file");
-                            }
-                            //convert to DML
-                            #region DML Script
-
-                            if (allkey.Where(n => n.Key.ToUpper().Equals(WriteDML)).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
-                            {
-                                _maskSpreadSheet.TableName = tableConfig.Name;
-                                CreateDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
-                                if (!Directory.Exists(CreateDir))
+                                var csvFile = WriteTofile(_maskSpreadSheet, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
+                                var createsheet = ToExcel(csvFile, _nameDatabase, _nameDatabase, "_Masked_" + Guid.NewGuid().ToString());
+                                if (createsheet == false)
                                 {
-                                    Directory.CreateDirectory(CreateDir);
+                                    Console.WriteLine("cannot create excel file");
                                 }
-                                string writePath = CreateDir + @"\" + tableConfig.Name + ".sql";
-                                var multimedia = tableConfig.Columns.Where(n => n.Type == DataType.Blob).Select(n => n.Name);
-                                if (multimedia.Count() != 0)
+                                //convert to DML
+                                #region DML Script
+
+                                if (allkey.Where(n => n.Key.ToUpper().Equals(WriteDML)).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                                 {
-                                    extcolumn = new string[] { string.Join("", multimedia.ToArray()[0].ToArray()) };
+                                    _maskSpreadSheet.TableName = tableConfig.Name;
+                                    CreateDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
+                                    if (!Directory.Exists(CreateDir))
+                                    {
+                                        Directory.CreateDirectory(CreateDir);
+                                    }
+                                    string writePath = CreateDir + @"\" + tableConfig.Name + ".sql";
+                                    var multimedia = tableConfig.Columns.Where(n => n.Type == DataType.Blob).Select(n => n.Name);
+                                    if (multimedia.Count() != 0)
+                                    {
+                                        extcolumn = new string[] { string.Join("", multimedia.ToArray()[0].ToArray()) };
+                                    }
+
+                                    var insertSQL = SqlDML.GenerateInsert(_maskSpreadSheet, extcolumn, null, null, writePath, config, tableConfig);
+                                    //MaskValidationCheck.verification(config.DataSource, config);
                                 }
+                                #endregion
 
-                                var insertSQL = SqlDML.GenerateInsert(_maskSpreadSheet, extcolumn, null, null, writePath, config, tableConfig);
-                                //MaskValidationCheck.verification(config.DataSource, config);
                             }
-                            #endregion
-
+                        }
+                        catch (Exception ex)
+                        {
+                            //string path = Directory.GetCurrentDirectory() + $@"\Output\MaskedExceptions.txt";
+                            File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
+                            Console.WriteLine(ex.Message);
                         }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        //string path = Directory.GetCurrentDirectory() + $@"\Output\MaskedExceptions.txt";
-                        File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
-                        Console.WriteLine(ex.Message);
-                    }
-                }
-                else
-                {                  
-                    rows = dataSource.GetData(tableConfig);
-                    //var outDataR = rows.Select(r => r.ToDictionary(d => d.Key, d => d.Value)).AsEnumerable();
-                    rawData = dataSource.RawData(null);
-                    var rowCount = dataSource.GetCount(tableConfig);
-                    //rawData = dataSource.GetData(tableConfig);
-                   // foreach (IDictionary<string, object> row in rows)
-                    //{
+                        rows = dataSource.GetData(tableConfig, config);
+                        //var outDataR = rows.Select(r => r.ToDictionary(d => d.Key, d => d.Value)).AsEnumerable();
+                        rawData = dataSource.RawData(null);
+                        var rowCount = dataSource.GetCount(tableConfig);
+                        //rawData = dataSource.GetData(tableConfig);
+                        // foreach (IDictionary<string, object> row in rows)
+                        //{
 
                         //if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                         //{
-                            
 
-                           var masked = rows.Select(row =>
-                            {
-                                if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
-                                {
-                                    extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
-                                    return dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
-                                }
-                                else
-                                    return dataMasker.Mask(row, tableConfig, dataSource);
 
-                            });
-                            //dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                        var masked = rows.Select(row =>
+                         {
+                             if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
+                             {
+                                 extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
+                                 return dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                             }
+                             else
+                                 return dataMasker.Mask(row, tableConfig, dataSource);
+
+                         });
+                        //dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
                         //}
                         //else
                         //{
@@ -919,81 +922,91 @@ namespace DataMasker.Examples
                         //    //dataMasker.Mask(row, tableConfig, dataSource);
                         //}
                         //Console.WriteLine(extension);
-                    //}
+                        //}
 
-                    //update all rows
-                    Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
-                    try
-                    {
-                        #region Create DML Script
-                       //var outData = rows.Select(r => r.ToDictionary(d => d.Key, d => d.Value)).AsEnumerable();
-                        _dmlTable = dataSource.SpreadSheetTable(masked, tableConfig);
-                        MaskTable = _dmlTable;
-                        PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig);
-                        // var diff = differences.Any() ? differences.CopyToDataTable() : new DataTable();
-                        //var differences =
-                        //MaskTable.AsEnumerable().Intersect(PrdTable.AsEnumerable(), DataRowComparer.Default);
-                       
-                        if (allkey.Where(n => n.Key.ToUpper().Equals(WriteDML.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+                        //update all rows
+                        Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
+                        try
                         {
+                            #region Create DML Script
+                            //var outData = rows.Select(r => r.ToDictionary(d => d.Key, d => d.Value)).AsEnumerable();
+                            _dmlTable = dataSource.SpreadSheetTable(masked, tableConfig);
+                            MaskTable = _dmlTable;
+                            PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig);
+                            // var diff = differences.Any() ? differences.CopyToDataTable() : new DataTable();
+                            //var differences =
+                            //MaskTable.AsEnumerable().Intersect(PrdTable.AsEnumerable(), DataRowComparer.Default);
 
-                            _dmlTable.TableName = tableConfig.Name;
-                            CreateDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
-                            if (!Directory.Exists(CreateDir))
+                            if (allkey.Where(n => n.Key.ToUpper().Equals(WriteDML.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                             {
-                                Directory.CreateDirectory(CreateDir);
+
+                                _dmlTable.TableName = tableConfig.Name;
+                                CreateDir = Directory.GetCurrentDirectory() + @"\output\" + _nameDatabase + @"\";
+                                if (!Directory.Exists(CreateDir))
+                                {
+                                    Directory.CreateDirectory(CreateDir);
+                                }
+                                string writePath = CreateDir + @"\" + tableConfig.Name + ".sql";
+                                //var multimedia = tableConfig.Columns.Where(n => n.Type == DataType.Blob).Select(n => n.Name);
+                                var insertSQL = SqlDML.GenerateInsert(_dmlTable, extcolumn, null, null, writePath, config, tableConfig);
+                                if (allkey.Where(n => n.Key.ToUpper().Equals(MaskTabletoSpreadsheet.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+                                {
+                                    SqlDML.DataTableToExcelSheet(_dmlTable, CreateDir + @"\" + tableConfig.Name + ".xlsx", tableConfig);
+                                }
                             }
-                            string writePath = CreateDir + @"\" + tableConfig.Name + ".sql";
-                            //var multimedia = tableConfig.Columns.Where(n => n.Type == DataType.Blob).Select(n => n.Name);
-                            var insertSQL = SqlDML.GenerateInsert(_dmlTable, extcolumn, null, null, writePath, config, tableConfig);
-                            if (allkey.Where(n => n.Key.ToUpper().Equals(MaskTabletoSpreadsheet.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
+                            if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
+                                && PrdTable.Rows != null && MaskTable.Rows != null
+                                && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(false))
                             {
-                               SqlDML.DataTableToExcelSheet(_dmlTable, CreateDir + @"\" + tableConfig.Name + ".xlsx", tableConfig);
+                                Reportvalidation(PrdTable, _dmlTable, config.DataSource, tableConfig);
                             }
+                            #endregion
+                            if (allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+                            {
+                                dataSource.UpdateRows(masked, rowCount, tableConfig, config);
+                            }
+
                         }
-                        if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true)
-                            && PrdTable.Rows != null && MaskTable.Rows != null
-                            && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(false))
-                        {  
-                            Reportvalidation(PrdTable, _dmlTable, config.DataSource, tableConfig);
-                        }
-                        #endregion
-                        if (allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+                        catch (Exception ex)
                         {
-                            dataSource.UpdateRows(masked, rowCount, tableConfig);
+                            //string path = Directory.GetCurrentDirectory() + $@"\Output\MaskedExceptions.txt";
+                            //File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
+                            Console.WriteLine(ex.Message);
                         }
-                       
-                    }
-                    catch (Exception ex)
-                    {
-                        //string path = Directory.GetCurrentDirectory() + $@"\Output\MaskedExceptions.txt";
-                        //File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
-                        Console.WriteLine(ex.Message);
                     }
                 }
-            }
-            #endregion
-            //write mapped table and column with type in csv file
-            if (!allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
-            {
-                var o = OutputSheet(config, copyjsonPath, _nameDatabase);
-            }
-              
-            if (report.Rows.Count != 0
-                && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
-            { 
-                MaskValidationCheck.Analysis(report, config.DataSource, sheetPath, _nameDatabase, CreateDir,exceptionPath);
-            }
+                #endregion
+                //write mapped table and column with type in csv file
+                if (!allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+                {
+                    var o = OutputSheet(config, copyjsonPath, _nameDatabase);
+                }
 
-            #region validate masking 
-            if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
-                && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
-                && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
-            {
-                Console.WriteLine("Data Masking Validation has started......................................");
-                MaskValidationCheck.Verification(config.DataSource, config, sheetPath,CreateDir, _nameDatabase,exceptionPath);
+                if (report.Rows.Count != 0
+                    && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+                {
+                    MaskValidationCheck.Analysis(report, config.DataSource, sheetPath, _nameDatabase, CreateDir, exceptionPath);
+                }
+
+                #region validate masking 
+                if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
+                    && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
+                    && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+                {
+                    Console.WriteLine("Data Masking Validation has started......................................");
+                    MaskValidationCheck.Verification(config.DataSource, config, sheetPath, CreateDir, _nameDatabase, exceptionPath);
+                }
+                #endregion
             }
-            #endregion
+            catch (Exception e)
+            {
+
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                Console.ReadLine();
+            }
 
 
         }

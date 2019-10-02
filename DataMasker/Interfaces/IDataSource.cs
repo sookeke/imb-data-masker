@@ -17,7 +17,7 @@ namespace DataMasker.Interfaces
         /// <param name="tableConfig">The table configuration.</param>
         /// <returns></returns>
         IEnumerable<IDictionary<string, object>> GetData(
-            TableConfig tableConfig);
+            TableConfig tableConfig, Config config);
         IEnumerable<IDictionary<string, object>> RawData(
            IEnumerable<IDictionary<string, object>> PrdData);
 
@@ -35,7 +35,7 @@ namespace DataMasker.Interfaces
         /// <param name="tableConfig">The table configuration.</param>
         void UpdateRow(
             IDictionary<string, object> row,
-            TableConfig tableConfig);
+            TableConfig tableConfig, Config config);
         object Shuffle(
             string table, string column,
             object existingValue, bool retainnull,
@@ -53,7 +53,7 @@ namespace DataMasker.Interfaces
         void UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
-            TableConfig config,
+            TableConfig tableConfig, Config config,
             Action<int> updatedCallback = null);
 
         int GetCount(TableConfig config);

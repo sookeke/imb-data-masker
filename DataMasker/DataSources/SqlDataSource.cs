@@ -67,7 +67,7 @@ namespace DataMasker.DataSources
         /// <returns></returns>
         /// <inheritdoc/>
         public IEnumerable<IDictionary<string, object>> GetData(
-            TableConfig tableConfig)
+            TableConfig tableConfig, Config config)
         {
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -75,7 +75,7 @@ namespace DataMasker.DataSources
                 rawData = new List<IDictionary<string, object>>();
 
                
-                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig), buffered: false);
+                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig,config), buffered: false);
                 //rawData.AddRange(_prdData.Select(n => n.ToDictionary(x => x.Key, x => x.Value).Select(x => x) as IDictionary<string, object>));
                 foreach (IDictionary<string, object> prd in _prdData)
                 {
@@ -99,12 +99,12 @@ namespace DataMasker.DataSources
         /// <inheritdoc/>
         public void UpdateRow(
             IDictionary<string, object> row,
-            TableConfig tableConfig)
+            TableConfig tableConfig, Config config)
         {
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                connection.Execute(BuildUpdateSql(tableConfig), row, null, commandType: CommandType.Text);
+                connection.Execute(BuildUpdateSql(tableConfig, config), row, null, commandType: CommandType.Text);
             }
         }
         private string BuildCountSql(
@@ -117,7 +117,7 @@ namespace DataMasker.DataSources
         public void UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
-            TableConfig config,
+            TableConfig tableConfig, Config config,
             Action<int> updatedCallback)
         {
             int? batchSize = _sourceConfig.UpdateBatchSize;
@@ -145,7 +145,7 @@ namespace DataMasker.DataSources
                     SqlTransaction sqlTransaction = connection.BeginTransaction();
 
 
-                    string sql = BuildUpdateSql(config);
+                    string sql = BuildUpdateSql(tableConfig, config);
                     try
                     {
 
@@ -159,7 +159,7 @@ namespace DataMasker.DataSources
                         else
                         {
                             sqlTransaction.Commit();
-                            File.AppendAllText(_successfulCommit, "Successful Commit on table " + config.Name + Environment.NewLine + Environment.NewLine);
+                            File.AppendAllText(_successfulCommit, "Successful Commit on table " + tableConfig.Name + Environment.NewLine + Environment.NewLine);
                         }
 
 
@@ -173,7 +173,7 @@ namespace DataMasker.DataSources
                     {
 
                         Console.WriteLine(ex.Message);
-                        File.AppendAllText(_exceptionpath, ex.Message + " on table " + config.Name + Environment.NewLine + Environment.NewLine); ;
+                        File.AppendAllText(_exceptionpath, ex.Message + " on table " + tableConfig.Name + Environment.NewLine + Environment.NewLine); ;
                     }
                 }
             }
@@ -185,11 +185,11 @@ namespace DataMasker.DataSources
         /// <param name="tableConfig">The table configuration.</param>
         /// <returns></returns>
         private string BuildUpdateSql(
-            TableConfig tableConfig)
+            TableConfig tableConfig, Config config)
         {
             string sql = $"UPDATE [{tableConfig.Name}] SET ";
 
-            sql += tableConfig.Columns.GetUpdateColumns();
+            sql += tableConfig.Columns.GetUpdateColumns(config);
             sql += $" WHERE [{tableConfig.PrimaryKeyColumn}] = @{tableConfig.PrimaryKeyColumn}";
             return sql;
         }
@@ -201,15 +201,15 @@ namespace DataMasker.DataSources
         /// <param name="tableConfig">The table configuration.</param>
         /// <returns></returns>
         private string BuildSelectSql(
-            TableConfig tableConfig)
+            TableConfig tableConfig, Config config)
         {
             string sql = "";
             if (int.TryParse(tableConfig.RowCount, out int n))
             {
-                sql = $"SELECT TOP ({n})  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM [{tableConfig.Name}]";
+                sql = $"SELECT TOP ({n})  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn,config)} FROM [{tableConfig.Name}]";
             }
             else
-                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM [{tableConfig.Name}]"; ;
+                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM [{tableConfig.Name}]"; ;
             return sql;
         }
        

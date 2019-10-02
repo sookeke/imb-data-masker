@@ -51,7 +51,7 @@ namespace DataMasker.DataSources
             }
 
         }
-        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig)
+        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config)
         {
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
              var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd);
@@ -68,7 +68,7 @@ namespace DataMasker.DataSources
 
                 if (rowCount != 0 && rowCount > 50000 && tableConfig.Columns.Where(n => n.Type == DataType.Blob).Count() > 0)
                 {
-                    query = BuildSelectSql(tableConfig);
+                    query = BuildSelectSql(tableConfig, config);
                     using (OracleCommand cmd = new OracleCommand(query, connection))
                     {
                         cmd.InitialLOBFetchSize = 1;
@@ -100,11 +100,7 @@ namespace DataMasker.DataSources
                                     // }
 
                                 }
-                                var end_time = DateTime.Now;
-                                var ts = end_time - start_time;
-                                var ts2 = Math.Round(ts.TotalSeconds, 3);
-                                Console.WriteLine("Fetch Size = 100: " + ts2 + " seconds");
-                                Console.WriteLine();
+                                
                                 row = rows;
                                 GC.Collect();
                                 GC.WaitForPendingFinalizers();
@@ -115,7 +111,7 @@ namespace DataMasker.DataSources
                 }
                 else
                 {
-                    query = BuildSelectSql(tableConfig);
+                    query = BuildSelectSql(tableConfig,config);
                     //var retu = connection.Query(BuildSelectSql(tableConfig));
                     rawData = new List<IDictionary<string, object>>();
                     var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: false);
@@ -139,16 +135,16 @@ namespace DataMasker.DataSources
         {
             return $"SELECT COUNT(*) FROM {tableConfig.Schema}.{tableConfig.Name}";
         }
-        public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig)
+        public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig, Config config)
         {
             using (var connection = new OracleConnection(_connectionString))
             {
                 connection.Open();
-                connection.Execute(BuildUpdateSql(tableConfig), row, null,commandType: System.Data.CommandType.Text);
+                connection.Execute(BuildUpdateSql(tableConfig, config), row, null,commandType: System.Data.CommandType.Text);
             }
         }
 
-        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows,int rowCount, TableConfig config, Action<int> updatedCallback = null)
+        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows,int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
         {
             SqlMapper.AddTypeHandler(new GeographyMapper());
             int? batchSize = _sourceConfig.UpdateBatchSize;
@@ -215,7 +211,7 @@ namespace DataMasker.DataSources
                         //OracleBulkCopy oracleBulkCopy = new OracleBulkCopy(connection, OracleBulkCopyOptions.UseInternalTransaction);
 
 
-                        string sql = BuildUpdateSql(config);
+                        string sql = BuildUpdateSql(tableConfig, config);
                        
                         
                         try
@@ -231,7 +227,7 @@ namespace DataMasker.DataSources
                             else
                             {
                                 sqlTransaction.Commit();
-                                File.AppendAllText(_successfulCommit, "Successful Commit on table " + config.Name + Environment.NewLine + Environment.NewLine);
+                                File.AppendAllText(_successfulCommit, "Successful Commit on table " + tableConfig.Name + Environment.NewLine + Environment.NewLine);
                             }
 
 
@@ -245,7 +241,7 @@ namespace DataMasker.DataSources
                         {
 
                             Console.WriteLine(ex.Message);
-                            File.AppendAllText(_exceptionpath, ex.Message + " on table " + config.Name + Environment.NewLine + Environment.NewLine);
+                            File.AppendAllText(_exceptionpath, ex.Message + " on table " + tableConfig.Name + Environment.NewLine + Environment.NewLine);
                            
                         }
 
@@ -255,12 +251,12 @@ namespace DataMasker.DataSources
             }
         }
         public string BuildUpdateSql(
-           TableConfig tableConfig)
+           TableConfig tableConfig, Config config)
         {
             var charsToRemove = new string[] { "[", "]" };
             string sql = $"UPDATE [{tableConfig.Name}] SET ";
 
-            sql += tableConfig.Columns.GetUpdateColumns();
+            sql += tableConfig.Columns.GetUpdateColumns(config);
             sql += $" WHERE [{tableConfig.PrimaryKeyColumn}] = @{tableConfig.PrimaryKeyColumn}";
             //thisis oracle replace @ WITH :
             var sqltOrc = new string[] { "@" };
@@ -275,16 +271,16 @@ namespace DataMasker.DataSources
             return sql;
         }
         private string BuildSelectSql(
-           TableConfig tableConfig)
+           TableConfig tableConfig, Config config)
         {
             //var clumns = tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)
             string sql = "";
             if (int.TryParse(tableConfig.RowCount, out int n))
             {
-                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name} WHERE rownum <=" + n;
+                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Name} WHERE rownum <=" + n;
             }
             else
-                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name}";
+                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Name}";
 
             if (sql.Contains("[") || sql.Contains("]"))
             {

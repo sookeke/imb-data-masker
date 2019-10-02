@@ -141,7 +141,7 @@ namespace DataMasker.Runner
 
 
                 //load the data, this needs optimizing for large tables
-                IEnumerable<IDictionary<string, object>> rows = dataSource.GetData(tableConfig);
+                IEnumerable<IDictionary<string, object>> rows = dataSource.GetData(tableConfig, config);
                 UpdateProgress(ProgressType.Masking, 0, rows.Count(), "Masking Progress");
                 UpdateProgress(ProgressType.Updating, 0, rows.Count(), "Update Progress");
                 int rowIndex = 0;
@@ -158,7 +158,7 @@ namespace DataMasker.Runner
 
 
                 //update all rows
-                dataSource.UpdateRows(rows,0, tableConfig, totalUpdated => UpdateProgress(ProgressType.Updating, totalUpdated));
+                dataSource.UpdateRows(rows,0, tableConfig, config, totalUpdated => UpdateProgress(ProgressType.Updating, totalUpdated));
                 UpdateProgress(ProgressType.Overall, i + 1);
             }
 

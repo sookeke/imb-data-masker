@@ -16,6 +16,7 @@
         StringConcat,
         Shuffle,
         Ignore,
+        Money,
         NoMasking,
         math,
         Shufflegeometry,
