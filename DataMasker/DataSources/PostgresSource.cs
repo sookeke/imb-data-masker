@@ -52,7 +52,7 @@ namespace DataMasker.DataSources
         {
             string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
 
-            var connection = new NpgsqlConnection(_connectionStringGet);
+            var connection = new NpgsqlConnection(_connectionStringPrd);
             {
                 
                 connection.Open();
@@ -115,11 +115,13 @@ namespace DataMasker.DataSources
 
 
             }
+            else
+                File.WriteAllText(_successfulCommit, String.Empty);
             using (System.IO.StreamWriter sw = System.IO.File.AppendText(_exceptionpath))
             {
                 if (new FileInfo(_exceptionpath).Length == 0)
                 {
-                    sw.WriteLine("exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    sw.WriteLine("exceptions for " + ConfigurationManager.AppSettings["DatabaseName"] + ".........." + Environment.NewLine + Environment.NewLine);
                     //  File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
                 }
                 // sw.WriteLine(""); 
@@ -131,7 +133,7 @@ namespace DataMasker.DataSources
                 {
                     // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
 
-                    sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    sw.WriteLine("Successful Commits for database" + ConfigurationManager.AppSettings["DatabaseName"] + ".........." + Environment.NewLine + Environment.NewLine);
                 }
             }
 
@@ -168,7 +170,7 @@ namespace DataMasker.DataSources
                             else
                             {
                                 sqlTransaction.Commit();
-                                File.AppendAllText(_successfulCommit, "Successful Commit on table " + tableConfig.Name + Environment.NewLine + Environment.NewLine);
+                                File.AppendAllText(_successfulCommit, $"Successful Commit on table  {tableConfig.Schema}.{ tableConfig.Name}" + Environment.NewLine + Environment.NewLine);
                             }
 
 
@@ -182,7 +184,7 @@ namespace DataMasker.DataSources
                         {
 
                             Console.WriteLine(ex.Message);
-                            File.AppendAllText(_exceptionpath, ex.Message + " on table " + tableConfig.Name + Environment.NewLine + Environment.NewLine);
+                            File.AppendAllText(_exceptionpath, ex.Message + $" on table  {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);
 
                         }
 
@@ -218,10 +220,10 @@ namespace DataMasker.DataSources
             string sql = "";
             if (int.TryParse(tableConfig.RowCount, out int n))
             {
-                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Name} LIMIT {n}";
+                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name} LIMIT {n}";
             }
             else
-                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Name}";
+                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name}";
             //return sql;
             //string sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name}";
             if (sql.Contains("[") || sql.Contains("]"))
@@ -432,14 +434,14 @@ namespace DataMasker.DataSources
                 //write to the file
                 File.Create(_exceptionpath).Close();
 
-
+                
 
             }
             using (System.IO.StreamWriter sw = System.IO.File.AppendText(_exceptionpath))
             {
                 if (new FileInfo(_exceptionpath).Length == 0)
                 {
-                    sw.WriteLine("exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    sw.WriteLine("exceptions for " + ConfigurationManager.AppSettings["DatabaseName"] + ".........." + Environment.NewLine + Environment.NewLine);
                     //  File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
                 }
                 // sw.WriteLine(""); 
@@ -451,7 +453,7 @@ namespace DataMasker.DataSources
                 {
                     // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
 
-                    sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    sw.WriteLine("Successful Commits for database" + ConfigurationManager.AppSettings["DatabaseName"] + ".........." + Environment.NewLine + Environment.NewLine);
                 }
             }
             return rawData;

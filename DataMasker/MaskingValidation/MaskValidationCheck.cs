@@ -504,14 +504,16 @@ namespace DataMasker.MaskingValidation
                 ZipName = Directory.GetCurrentDirectory() + "/" + database + "/" + database + "_MASKED_DML.zip";
                 if (File.Exists(ZipName))
                 {
-                    Console.WriteLine(Path.GetFileName(ZipName)  + " already exist. Do you want to replace it? [yes/no]");
+                    Console.WriteLine(Path.GetFileName(ZipName)  + " already exist. Do you want to replace and attach. No to attach old zipfile? [yes/no]");
                     var key = Console.ReadLine();
                     if (key.ToUpper() == "YES")
                     {
                         File.Delete(ZipName);
+                        ZipFile.CreateFromDirectory(_dmlPath, ZipName, CompressionLevel.Optimal, true);
                     }
+                    
                 }
-                ZipFile.CreateFromDirectory(_dmlPath, ZipName, CompressionLevel.Optimal,true);
+                
             }
             var tablecount = new DataView(report).ToTable(true, new string[] { "Table" }).AsEnumerable().Select(n => n[0]).ToList().Count;
             var columncount = new DataView(report).ToTable(false, new string[] { "Column" }).AsEnumerable().Select(r => r.Field<string>("Column")).ToList().Count;

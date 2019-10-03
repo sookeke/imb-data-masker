@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DiscoveryClientResultsFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Results>
+    <DiscoveryClientResult referenceType="System.Web.Services.Discovery.DiscoveryDocumentReference" url="https://sand-pims.th.gov.bc.ca/idir_GetUsersInfo/GetUserInfo.asmx?disco" filename="GetUserInfo.disco" />
+    <DiscoveryClientResult referenceType="System.Web.Services.Discovery.ContractReference" url="https://sand-pims-proxied.th.gov.bc.ca/idir_GetUsersInfo/GetUserInfo.asmx?wsdl" filename="GetUserInfo.wsdl" />
+  </Results>
+</DiscoveryClientResultsFile>

@@ -87,7 +87,7 @@ namespace DataMasker
                 //}
                 if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
                 {
-                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Name, columnConfig.Name, dataSource,dataTable, existingValue, gender);
+                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Schema}.{tableConfig.Name}", columnConfig.Name, dataSource,dataTable, existingValue, gender);
                 }          
                 else if (columnConfig.Type == DataType.File)
                 {

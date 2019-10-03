@@ -320,10 +320,7 @@ namespace DataMasker
                     var states = CountryLoader.LoadCanadaLocationData().States.Where(n => n.Provinces.Count > 1 ).Select(n=>n).ToArray();
                     var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null).Select(n=>n).ToArray();
                   
-                    if (provinces.Count() < 2)
-                    {
-
-                    }
+                    
                     var city = provinces[rnd.Next(0, provinces.Count())];
                     //var cityname = cities.OrderBy(n => rnd.Next()).Where(n => n.Name != null).First().Name;
                    

@@ -743,6 +743,7 @@ namespace DataMasker.Examples
             [JsonProperty("PKconstraintName", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string PKconstraintName { get; set; } = "";
             [JsonRequired]
+            [JsonProperty("SCHEMA")]
             public string Schema { get; set; }
 
             [DefaultValue("TRUE")]
@@ -800,6 +801,10 @@ namespace DataMasker.Examples
                 System.Environment.Exit(1);
             }
             ////{ throw new NullReferenceException("Referencing a null app key value"); }
+            //GetUserInfo.GetUserInfo getUserInfo = new GetUserInfo.GetUserInfo();
+            //SoapHttpClient.SoapClient soapHttpClient = new SoapHttpClient.SoapClient();
+            //getUserInfo.Credentials = new System.Net.NetworkCredential("sookeke", "***@", "IDIR");
+            //var u = getUserInfo.GetUserbyName("Okeke");
             _nameDatabase = ConfigurationManager.AppSettings[DatabaseName];
 
             try
@@ -826,6 +831,8 @@ namespace DataMasker.Examples
                     string[] extcolumn = null;
                     IEnumerable<IDictionary<string, object>> rows = null;
                     IEnumerable<IDictionary<string, object>> rawData = null;
+                    
+                    List<IDictionary<string, object>> MaskedRow = new List<IDictionary<string, object>>();
                     // IEnumerable<IDictionary<string, object>> masked = null;
 
                     File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
@@ -893,44 +900,45 @@ namespace DataMasker.Examples
                         rawData = dataSource.RawData(null);
                         var rowCount = dataSource.GetCount(tableConfig);
                         //rawData = dataSource.GetData(tableConfig);
-                        // foreach (IDictionary<string, object> row in rows)
-                        //{
+                        foreach (IDictionary<string, object> row in rows)
+                        {
 
-                        //if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
-                        //{
+                            if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
+                            {
 
 
-                        var masked = rows.Select(row =>
-                         {
-                             if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
-                             {
-                                 extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
-                                 return dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
-                             }
-                             else
-                                 return dataMasker.Mask(row, tableConfig, dataSource);
+                                //var masked = rows.Select(row =>
+                                // {
+                                //     if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
+                                //     {
+                                //         extension = row[string.Join("", isblob.Select(n => n.StringFormatPattern))];
+                                //         return dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                                //     }
+                                //     else
+                                //         return dataMasker.Mask(row, tableConfig, dataSource);
 
-                         });
-                        //dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
-                        //}
-                        //else
-                        //{
-                        //    masked = rows.Select(row =>
-                        //    {
-                        //        return dataMasker.Mask(row, tableConfig, dataSource);
-                        //    });
-                        //    //dataMasker.Mask(row, tableConfig, dataSource);
-                        //}
-                        //Console.WriteLine(extension);
-                        //}
+                                // });
+                                dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                            }
+                            else
+                            {
+                                //    masked = rows.Select(row =>
+                                //    {
+                                //        return dataMasker.Mask(row, tableConfig, dataSource);
+                                //    });
+                                dataMasker.Mask(row, tableConfig, dataSource);
+                            }
 
-                        //update all rows
-                        Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
+                            //Console.WriteLine(extension);
+                        }
+
+                    //update all rows
+                    Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
                         try
                         {
                             #region Create DML Script
                             //var outData = rows.Select(r => r.ToDictionary(d => d.Key, d => d.Value)).AsEnumerable();
-                            _dmlTable = dataSource.SpreadSheetTable(masked, tableConfig);
+                            _dmlTable = dataSource.SpreadSheetTable(rows, tableConfig);
                             MaskTable = _dmlTable;
                             PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig);
                             // var diff = differences.Any() ? differences.CopyToDataTable() : new DataTable();
@@ -963,14 +971,14 @@ namespace DataMasker.Examples
                             #endregion
                             if (allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
                             {
-                                dataSource.UpdateRows(masked, rowCount, tableConfig, config);
+                                dataSource.UpdateRows(rows, rowCount, tableConfig, config);
                             }
 
                         }
                         catch (Exception ex)
                         {
                             //string path = Directory.GetCurrentDirectory() + $@"\Output\MaskedExceptions.txt";
-                            //File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
+                            File.WriteAllText(_exceptionpath, ex.Message + Environment.NewLine + Environment.NewLine);
                             Console.WriteLine(ex.Message);
                         }
                     }
@@ -1000,12 +1008,13 @@ namespace DataMasker.Examples
             }
             catch (Exception e)
             {
-
+                File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
                 Console.WriteLine(e.Message);
+                Console.ReadLine();
             }
             finally
             {
-                Console.ReadLine();
+               
             }
 
 
