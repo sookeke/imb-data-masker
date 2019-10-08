@@ -148,7 +148,7 @@ namespace DataMasker.Examples
                     };
                     var rule = col.MaskingRule;
 
-                    if (col.MaskingRule.Contains("No masking"))
+                    if (col.MaskingRule.ToUpper().Contains("NO MASKING"))
                     {
                         column.type = DataType.NoMasking.ToString();
                         if (col.DataType.ToUpper().Equals("SDO_GEOMETRY") || col.DataType.ToUpper().ToUpper().Contains("GEOMETRY"))
@@ -157,7 +157,7 @@ namespace DataMasker.Examples
                         }
                         column.ignore = true;
                     }
-                    else if (col.MaskingRule.Contains("Shuffle"))
+                    else if (col.MaskingRule.ToUpper().Contains("SHUFFLE"))
                     {
                         column.type = DataType.Shuffle.ToString();
                         column.max = col.Max.ToString(); ;
@@ -165,7 +165,7 @@ namespace DataMasker.Examples
                         column.StringFormatPattern = "";
                         column.useGenderColumn = "";
                     }
-                    else if (col.MaskingRule.Contains("Math"))
+                    else if (col.MaskingRule.ToUpper().Contains("MATH"))
                     {
                         column.type = DataType.math.ToString();
                         column.max = col.Max.ToString();
@@ -330,7 +330,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.DataType.ToUpper().Contains("MONEY"))
                     {
-                        column.type = DataType.Bogus.ToString();
+                        column.type = DataType.Money.ToString();
                         column.max = col.Max.ToString();
                         column.min = col.Min.ToString();
                         column.StringFormatPattern = "{{FINANCE.AMOUNT}}";
@@ -933,7 +933,7 @@ namespace DataMasker.Examples
                         }
 
                     //update all rows
-                    Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
+                        Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
                         try
                         {
                             #region Create DML Script

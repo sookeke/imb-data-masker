@@ -69,20 +69,20 @@ namespace DataMasker.DataSources
         public IEnumerable<IDictionary<string, object>> GetData(
             TableConfig tableConfig, Config config)
         {
-            SqlConnection connection = new SqlConnection(_connectionString);
+            using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
                 rawData = new List<IDictionary<string, object>>();
 
-               
-                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig,config), buffered: false);
+
+                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig, config), buffered: true);
                 //rawData.AddRange(_prdData.Select(n => n.ToDictionary(x => x.Key, x => x.Value).Select(x => x) as IDictionary<string, object>));
                 foreach (IDictionary<string, object> prd in _prdData)
                 {
 
                     rawData.Add(new Dictionary<string, object>(prd));
                 }
-             
+
                 return _prdData;
             }
         }

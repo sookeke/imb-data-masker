@@ -14,6 +14,7 @@ using System.Configuration;
 using System.Data;
 using System.Net.Http;
 using CountryData;
+using System.Globalization;
 
 namespace DataMasker
 {
@@ -348,7 +349,7 @@ namespace DataMasker
                     return null;
                 case DataType.Money:
                     var money = _faker.Parse(columnConfig.StringFormatPattern);
-                    return Convert.ToDecimal(money);
+                    return ToDecimal(money);
                 case DataType.RandomYear:
                     DateTime start = new DateTime(1999, 1, 1);
                     Random gen = new Random();
@@ -412,7 +413,7 @@ namespace DataMasker
                     if (min.Contains(".") || max.Contains("."))
                     {
                         //return decimal
-                        return Math.Round(_faker.Random.Decimal(Convert.ToDecimal(min), Convert.ToDecimal(max)), 2);
+                        return Math.Round(_faker.Random.Decimal(ToDecimal(min), ToDecimal(max)), 2);
                     }
                     return _faker.Random.Int(Convert.ToInt32(min), Convert.ToInt32(max));
                 //return _faker.Random.Int(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));
@@ -461,7 +462,7 @@ namespace DataMasker
                     var numeric = "TONUMERIC(" + _phone + ")";
                     return _phone;
                 case DataType.RandomDec:
-                    var value = _faker.Random.Decimal(Convert.ToDecimal(columnConfig.Min), Convert.ToDecimal(columnConfig.Max));
+                    var value = _faker.Random.Decimal(ToDecimal(columnConfig.Min), ToDecimal(columnConfig.Max));
                     return value;
                 case DataType.PickRandom:
                     var stringarray = columnConfig.StringFormatPattern.Split(',');
@@ -472,7 +473,7 @@ namespace DataMasker
                     var _gen = _faker.Parse(columnConfig.StringFormatPattern);
                     if (columnConfig.Min.Contains(".") || columnConfig.Max.Contains("."))
                     {
-                        if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > Convert.ToDecimal(columnConfig.Max))
+                        if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > ToDecimal(columnConfig.Max))
                         {
                             var _short = _gen.Substring(0, Convert.ToInt32(columnConfig.Max));
                             return _short;
@@ -862,6 +863,20 @@ namespace DataMasker
             Min = 0,
 
             Max = 1
+        }
+        public static decimal ToDecimal(object value)
+        {
+            if (null == value)
+                return 0.00m;
+
+            try
+            {
+                return Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+            }
+            catch (FormatException)
+            {
+                return 0.00m;
+            }
         }
         private enum FileTypes{
             PDF,
