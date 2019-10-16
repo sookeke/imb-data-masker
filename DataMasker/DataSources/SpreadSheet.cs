@@ -49,6 +49,11 @@ namespace DataMasker.DataSources
             return _sheetObject;
         }
 
+        public IEnumerable<T> CreateObjecttst<T>(DataTable dataTable)
+        {
+            throw new NotImplementedException();
+        }
+
         public DataTable CreateTable(IEnumerable<IDictionary<string, object>> obj)
         {
             var table = new DataTable();

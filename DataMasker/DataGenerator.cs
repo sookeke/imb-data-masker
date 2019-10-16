@@ -15,6 +15,7 @@ using System.Data;
 using System.Net.Http;
 using CountryData;
 using System.Globalization;
+using WaffleGenerator;
 
 namespace DataMasker
 {
@@ -25,13 +26,14 @@ namespace DataMasker
     public class DataGenerator : IDataGenerator
     {
         private static readonly DateTime DEFAULT_MIN_DATE = new DateTime(1900, 1, 1, 0, 0, 0, 0);
-
+        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
         private static readonly List<string> shuffleList = new List<string>();
 
         private const int DEFAULT_LOREM_MIN = 5;
 
         private const int DEFAULT_LOREM_MAX = 30;
+        private const int MAX_UNIQUE_VALUE_ITERATIONS = 5000;
 
         private const int DEFAULT_RANT_MAX = 25;
 
@@ -85,9 +87,12 @@ namespace DataMasker
         public object GetValue(
             ColumnConfig columnConfig,
             object existingValue,
+            string tableName,
             Name.Gender? gender)
         {
             object getValue = null;
+            int totalIterations = 0;
+            string uniqueCacheKey = $"{tableName}.{columnConfig.Name}";
             if (columnConfig.ValueMappings == null)
             {
                 columnConfig.ValueMappings = new Dictionary<object, object>();
@@ -110,6 +115,12 @@ namespace DataMasker
                 getValue = GetValue(columnConfig, gender);
                 while (Convert.ToString(getValue).Equals(Convert.ToString(existingValue)))
                 {
+                    totalIterations++;
+                    if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
+                    {
+                        File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                        break;
+                    }
                     getValue = GetValue(columnConfig, gender);
                 }
                 return getValue;
@@ -179,6 +190,12 @@ namespace DataMasker
           
             while (Convert.ToString(newValue).Equals(Convert.ToString(existingValue)))
             {
+                totalIterations++;
+                if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
+                {
+                    File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                    break;
+                }
                 newValue = GetValue(columnConfig,gender);
             }
            
@@ -285,21 +302,21 @@ namespace DataMasker
                         ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
                         ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_MAX_DATE));
                 case DataType.Rant:
-                    Random rnd = new Random();
-                    var rant = WaffleGenerator.WaffleEngine.Text(rnd, 1, false);
+                    //Random rnd = new Random();
+                    var rant = WaffleEngine.Text(rnd, 1, false);
                         //_faker.Rant.Review(columnConfig.StringFormatPattern);
                     int lenght = rant.Length;
 
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && rant.Length > Convert.ToInt32(columnConfig.Max))
+                    if (!string.IsNullOrEmpty(columnConfig.Max) && rant.Length > ToInt32(columnConfig.Max))
                     {
-                        var rantSub = rant.Substring(0, Convert.ToInt32(columnConfig.Max));
+                        var rantSub = rant.Substring(0, ToInt32(columnConfig.Max));
                         return rantSub;
                     }
                     //var rant = _faker.Rant.Reviews(lines: ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_RANT_MAX))[0];
 
                     return rant; // return _faker.Rant.Review(columnConfig.StringFormatPattern);
                 case DataType.Lorem:
-                    return _faker.Lorem.Sentence(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max))
+                    return _faker.Lorem.Sentence(ToInt32(columnConfig.Min), ToInt32(columnConfig.Max))
                         ;
                 case DataType.StringFormat:
                     return _randomizer.Replace(columnConfig.StringFormatPattern);
@@ -311,11 +328,11 @@ namespace DataMasker
                     var file = _faker.System.FileName("");
                     return file.Remove(file.Length - 1);
                 case DataType.State:
-                    rnd = new Random();
+                    //rnd = new Random();
                     var state = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Name;
                     return state;
                 case DataType.City:
-                    rnd = new Random();
+                    //rnd = new Random();
                     
                     var cities = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Provinces;
                     var states = CountryLoader.LoadCanadaLocationData().States.Where(n => n.Provinces.Count > 1 ).Select(n=>n).ToArray();
@@ -415,7 +432,7 @@ namespace DataMasker
                         //return decimal
                         return Math.Round(_faker.Random.Decimal(ToDecimal(min), ToDecimal(max)), 2);
                     }
-                    return _faker.Random.Int(Convert.ToInt32(min), Convert.ToInt32(max));
+                    return _faker.Random.Int(ToInt32(min), ToInt32(max));
                 //return _faker.Random.Int(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));
                 case DataType.CompanyPersonName:
                     var _compName = new Faker().Company.CompanyName();
@@ -429,28 +446,28 @@ namespace DataMasker
                 case DataType.Company:
                     var company = new Faker();
                     var _genCompany = company.Company.CompanyName(columnConfig.StringFormatPattern); ;
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && _genCompany.Length > Convert.ToInt32(columnConfig.Max))
+                    if (!string.IsNullOrEmpty(columnConfig.Max) && _genCompany.Length > ToInt32(columnConfig.Max))
                     {
-                        var _shortComp = _genCompany.Substring(0, Convert.ToInt32(columnConfig.Max));
+                        var _shortComp = _genCompany.Substring(0, ToInt32(columnConfig.Max));
                         return _shortComp;
                     }
                     return _genCompany;
                 case DataType.RandomString2:
-                    var rand = _faker.Random.String2(Convert.ToInt32(columnConfig.Max), columnConfig.StringFormatPattern);
-                    return _faker.Random.String2(Convert.ToInt32(columnConfig.Max), columnConfig.StringFormatPattern);
+                    var rand = _faker.Random.String2(ToInt32(columnConfig.Max), columnConfig.StringFormatPattern);
+                    return _faker.Random.String2(ToInt32(columnConfig.Max), columnConfig.StringFormatPattern);
                 case DataType.PhoneNumber:
                     var _number = _faker.Phone.PhoneNumber(columnConfig.StringFormatPattern);
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && _number.Length > Convert.ToInt32(columnConfig.Max))
+                    if (!string.IsNullOrEmpty(columnConfig.Max) && _number.Length > ToInt32(columnConfig.Max))
                     {
-                        var _shortnum = _number.Substring(0, Convert.ToInt32(columnConfig.Max));
+                        var _shortnum = _number.Substring(0, ToInt32(columnConfig.Max));
                         return _shortnum;
                     }
                     return _number;
                 case DataType.StringConcat:
                     var _string = _faker.Parse(columnConfig.StringFormatPattern);
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && _string.Length > Convert.ToInt32(columnConfig.Max))
+                    if (!string.IsNullOrEmpty(columnConfig.Max) && _string.Length > ToInt32(columnConfig.Max))
                     {
-                        var _shortString = _string.Substring(0, Convert.ToInt32(columnConfig.Max));
+                        var _shortString = _string.Substring(0, ToInt32(columnConfig.Max));
                         return _shortString;
                     }
                     return _string;
@@ -468,22 +485,22 @@ namespace DataMasker
                     var stringarray = columnConfig.StringFormatPattern.Split(',');
                     return _faker.PickRandom(stringarray);
                 case DataType.RandomHexa:
-                    return _faker.Random.Hexadecimal(Convert.ToInt32(columnConfig.StringFormatPattern));
+                    return _faker.Random.Hexadecimal(ToInt32(columnConfig.StringFormatPattern));
                 case DataType.Bogus:
                     var _gen = _faker.Parse(columnConfig.StringFormatPattern);
                     if (columnConfig.Min.Contains(".") || columnConfig.Max.Contains("."))
                     {
                         if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > ToDecimal(columnConfig.Max))
                         {
-                            var _short = _gen.Substring(0, Convert.ToInt32(columnConfig.Max));
+                            var _short = _gen.Substring(0, ToInt32(columnConfig.Max));
                             return _short;
                         }
                     }
                     else
                     {
-                        if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > Convert.ToInt32(columnConfig.Max))
+                        if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > ToInt32(columnConfig.Max))
                         {
-                            var _short = _gen.Substring(0, Convert.ToInt32(columnConfig.Max));
+                            var _short = _gen.Substring(0, ToInt32(columnConfig.Max));
                             return _short;
                         }
                     }
@@ -535,7 +552,7 @@ namespace DataMasker
             public int[] Point { get; set; }
         }
 
-
+        private static Random rnd = new Random();
         private dynamic ParseMinMaxValue(
             ColumnConfig columnConfig,
             MinMax minMax,
@@ -863,6 +880,20 @@ namespace DataMasker
             Min = 0,
 
             Max = 1
+        }
+        public static int ToInt32(object value)
+        {
+            if (null == value)
+                return 0;
+
+            try
+            {
+                return Convert.ToInt32(value, CultureInfo.InvariantCulture);
+            }
+            catch (FormatException)
+            {
+                return 0;
+            }
         }
         public static decimal ToDecimal(object value)
         {

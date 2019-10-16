@@ -72,16 +72,19 @@ namespace DataMasker.DataSources
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                rawData = new List<IDictionary<string, object>>();
+                //rawData = new List<IDictionary<string, object>>();
 
 
                 var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig, config), buffered: true);
                 //rawData.AddRange(_prdData.Select(n => n.ToDictionary(x => x.Key, x => x.Value).Select(x => x) as IDictionary<string, object>));
+
                 foreach (IDictionary<string, object> prd in _prdData)
                 {
 
                     rawData.Add(new Dictionary<string, object>(prd));
                 }
+                //rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
+
 
                 return _prdData;
             }
@@ -302,7 +305,17 @@ namespace DataMasker.DataSources
 
         public IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable)
         {
-            throw new NotImplementedException();
+            List<Dictionary<string, object>> _sheetObject = new List<Dictionary<string, object>>();
+            foreach (DataRow row in dataTable.Rows)
+            {
+
+                var dictionary = row.Table.Columns
+                                .Cast<DataColumn>()
+                                .ToDictionary(col => col.ColumnName, col => row.Field<object>(col.ColumnName));
+                _sheetObject.Add(dictionary);
+
+            }
+            return _sheetObject;
         }
 
         public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig config)
@@ -526,6 +539,11 @@ namespace DataMasker.DataSources
                 var count = connection.ExecuteScalar(BuildCountSql(config));
                 return Convert.ToInt32(count);
             }
+        }
+
+        public IEnumerable<T> CreateObjecttst<T>(DataTable dataTable)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -26,7 +26,7 @@ namespace DataMasker
         /// <summary>
         /// The maximum iterations allowed when attempting to retrieve a unique value per column
         /// </summary>
-        private const int MAX_UNIQUE_VALUE_ITERATIONS = 50000;
+        private const int MAX_UNIQUE_VALUE_ITERATIONS = 5000;
         /// <summary>
         /// The data generator
         /// </summary>
@@ -81,11 +81,7 @@ namespace DataMasker
                 {
                   existingValue = GetUniqueValue(tableConfig.Name, columnConfig, existingValue, gender);
                 }
-                //else if (columnConfig.Name == "VALUE" || columnConfig.Name == "KEY" || columnConfig.Name == "ACCESS_TYPE_DESCRIPTION")
-                //{
-
-                //}
-                if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
+                else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
                 {
                     existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Schema}.{tableConfig.Name}", columnConfig.Name, dataSource,dataTable, existingValue, gender);
                 }          
@@ -101,7 +97,7 @@ namespace DataMasker
                         columnConfig.Type = DataType.Filename;
                     }
                     
-                    existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+                    existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
 
                     // existingValue = _dataGenerator.get(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
                 }
@@ -141,10 +137,7 @@ namespace DataMasker
                     {
                         File.WriteAllText(_exceptionpath, "Masking Operation InvalidOperationException: " + ex.Message  + Environment.NewLine);
                        // throw;
-                    }
-                    
-                    //check columns position in stringformat pattern
-                    //_dataGenerator.GetValue(colum);
+                    }                                     
                 }
                 else if (columnConfig.Type == DataType.exception)
                 {
@@ -152,7 +145,7 @@ namespace DataMasker
                     if (existingValue.ToString().Length > Convert.ToInt32(columnConfig.StringFormatPattern))
                     {
                         columnConfig.Ignore = false;
-                        existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+                        existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
                     }
                     else
                     {
@@ -162,7 +155,7 @@ namespace DataMasker
                 }
                 else
                 {               
-                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);               
+                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);               
                 }
                 //replace the original value
                 obj[columnConfig.Name] = existingValue;
@@ -243,7 +236,7 @@ namespace DataMasker
                 else
                 {
                     //existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, gender);
-                    existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+                    existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
                 }
                 //replace the original value
                 obj[columnConfig.Name] = existingValue;
@@ -279,7 +272,7 @@ namespace DataMasker
             do
             {
 
-                existingValue = _dataGenerator.GetValue(columnConfig, existingValue, gender);
+                existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableName, gender);
                 totalIterations++;
                 if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
                 {

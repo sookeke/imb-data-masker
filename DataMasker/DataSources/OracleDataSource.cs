@@ -54,7 +54,7 @@ namespace DataMasker.DataSources
         public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config)
         {
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
-             var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd);
+            using (var connection = new OracleConnection(_connectionStringPrd))
             {
                 connection.Open();
                 string query = "";
@@ -84,23 +84,23 @@ namespace DataMasker.DataSources
 
                                 while (reader.Read())
                                 {
-                                   
-                                    
-                                   
+
+
+
                                     var o = Enumerable.Range(0, reader.FieldCount).ToDictionary(reader.GetName, reader.GetValue);
 
-                                    
+
 
 
                                     rows.Add(o);
 
-                                    
-                                    rawData.Add(new Dictionary<string,object>(o));
+
+                                    rawData.Add(new Dictionary<string, object>(o));
                                     //Console.WriteLine(it);
                                     // }
 
                                 }
-                                
+
                                 row = rows;
                                 GC.Collect();
                                 GC.WaitForPendingFinalizers();
@@ -111,18 +111,23 @@ namespace DataMasker.DataSources
                 }
                 else
                 {
-                    query = BuildSelectSql(tableConfig,config);
+                    query = BuildSelectSql(tableConfig, config);
                     //var retu = connection.Query(BuildSelectSql(tableConfig));
                     rawData = new List<IDictionary<string, object>>();
-                    var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: false);
-                    rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
-                    
-                   
+                    var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: true);
+                    foreach (IDictionary<string, object> prd in _prdData)
+                    {
+
+                        rawData.Add(new Dictionary<string, object>(prd));
+                    }
+                    //rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
+
+
 
                     return _prdData;
                 }
-                
-                
+
+
             }
         }
         public static string ByteArrayToString(byte[] ba)
@@ -362,7 +367,17 @@ namespace DataMasker.DataSources
 
         public IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable)
         {
-            throw new NotImplementedException();
+            List<Dictionary<string, object>> _sheetObject = new List<Dictionary<string, object>>();
+            foreach (DataRow row in dataTable.Rows)
+            {
+
+                var dictionary = row.Table.Columns
+                                .Cast<DataColumn>()
+                                .ToDictionary(col => col.ColumnName, col => row.Field<object>(col.ColumnName));
+                _sheetObject.Add(dictionary);
+
+            }
+            return _sheetObject;
         }
 
         public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig config)
@@ -588,6 +603,11 @@ namespace DataMasker.DataSources
                 var count = connection.ExecuteScalar(BuildCountSql(config));
                 return Convert.ToInt32(count);
             }
+        }
+
+        public IEnumerable<T> CreateObjecttst<T>(DataTable dataTable)
+        {
+            throw new NotImplementedException();
         }
     }
 }

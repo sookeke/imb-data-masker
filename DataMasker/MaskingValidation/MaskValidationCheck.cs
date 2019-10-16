@@ -26,7 +26,7 @@ namespace DataMasker.MaskingValidation
         public static string Jsonpath { get; private set; }
         public static string ZipName { get; private set; }
 
-        public static string ToHTML_Table(DataTable dt, IList ts)
+        public static string ToHTML(DataTable dt, IList ts)
         {
             if (dt.Rows.Count == 0) return ""; // enter code here
 
@@ -87,7 +87,7 @@ namespace DataMasker.MaskingValidation
                 {
                     //File.ReadAllBytes("");
                     //string[] location = new string[] { fileHtml[1].ToString() };
-                    signature = File.ReadAllLines(fileHtml[1]);
+                    signature = File.ReadAllLines(fileHtml[0]);
                     foreach (var item in signature)
                     {
                         //sig += item;
@@ -121,7 +121,7 @@ namespace DataMasker.MaskingValidation
                         int index = st.ToString().IndexOf(search[0], xxxx + i);
 
                         final = st.ToString().Insert(index + 5, pat);
-                        Console.WriteLine(final);
+                        //Console.WriteLine(final);
                     }
 
 
@@ -134,7 +134,7 @@ namespace DataMasker.MaskingValidation
                     Array.Resize(ref signature, signature.Length + 1);
                     final = "Thank you <br/>";
 
-                    Console.WriteLine(signature[0]);
+                    //Console.WriteLine(signature[0]);
                 }
             }
 
@@ -147,7 +147,9 @@ namespace DataMasker.MaskingValidation
             }
             return final;
         }
-        public static void SendMail(string signature, string body, string database, int tcount, int ccount, int pass, int fail, decimal error, string _appSpreadsheet,string exceptionPath)
+        public static void SendMail(string signature, string body, string database, int tcount, 
+            int ccount, int pass, int fail, decimal error, 
+            string _appSpreadsheet,string exceptionPath, string columnMapping)
         {
             try
             {
@@ -188,6 +190,7 @@ namespace DataMasker.MaskingValidation
                 if (File.Exists(ZipName)) { email.Attachments.AddFileAttachment(ZipName); }
                 if (File.Exists(exceptionPath)) { email.Attachments.AddFileAttachment(exceptionPath); }
 
+
                 if (tj)
                 {
                     if (File.Exists(TestJson))
@@ -205,6 +208,10 @@ namespace DataMasker.MaskingValidation
                     if (maskCopy && File.Exists(_successfulCommit))
                     {
                         email.Attachments.AddFileAttachment(_successfulCommit);
+                    }
+                    if (File.Exists(columnMapping))
+                    {
+                        email.Attachments.AddFileAttachment(columnMapping);
                     }
                 }
                        
@@ -328,7 +335,9 @@ namespace DataMasker.MaskingValidation
             }
             return dataTable;
         }
-        public static void Verification( DataSourceConfig dataSourceConfig, Config config, string _appSpreadsheet, string _dmlpath, string database,string exceptionPath)
+        public static void Verification( DataSourceConfig dataSourceConfig, Config config, 
+            string _appSpreadsheet, string _dmlpath, string database,
+            string exceptionPath, string columnMapping)
         {
             CompareLogic compareLogic = new CompareLogic();
             if (!Directory.Exists($@"Output\Validation"))
@@ -492,16 +501,23 @@ namespace DataMasker.MaskingValidation
 
                 }
             }
-            Analysis(report, dataSourceConfig, _appSpreadsheet, database, _dmlpath,exceptionPath);
+            Analysis(report, dataSourceConfig, _appSpreadsheet, database, _dmlpath,exceptionPath,columnMapping);
 
         }
-        public static void Analysis(DataTable report, DataSourceConfig dataSourceConfig, string _appSpreadsheet, string database, string _dmlPath,string exceptionPath)
+        public static void Analysis(DataTable report, DataSourceConfig dataSourceConfig, string _appSpreadsheet, 
+            string database, string _dmlPath,
+            string exceptionPath, string columnMapping)
         {
             List<string> analysis = new List<string>();
             if (!string.IsNullOrEmpty(_dmlPath))
             {
                 //add dml files to zip
                 ZipName = Directory.GetCurrentDirectory() + "/" + database + "/" + database + "_MASKED_DML.zip";
+                var dirName = Path.GetDirectoryName(ZipName);
+                if (!Directory.Exists(dirName))
+                {
+                    Directory.CreateDirectory(dirName);
+                }
                 if (File.Exists(ZipName))
                 {
                     Console.WriteLine(Path.GetFileName(ZipName)  + " already exist. Do you want to replace and attach. No to attach old zipfile? [yes/no]");
@@ -513,7 +529,9 @@ namespace DataMasker.MaskingValidation
                     }
                     
                 }
-                
+                else
+                    ZipFile.CreateFromDirectory(_dmlPath, ZipName, CompressionLevel.Optimal, true);
+
             }
             var tablecount = new DataView(report).ToTable(true, new string[] { "Table" }).AsEnumerable().Select(n => n[0]).ToList().Count;
             var columncount = new DataView(report).ToTable(false, new string[] { "Column" }).AsEnumerable().Select(r => r.Field<string>("Column")).ToList().Count;
@@ -534,10 +552,10 @@ namespace DataMasker.MaskingValidation
             analysis.Add("Total Pass = " + top);
             analysis.Add("Total Fail = " + _fail);
             analysis.Add("% Accuracy = " + dc);
-            string body = ToHTML_Table(report, analysis);
+            string body = ToHTML(report, analysis);
             string sig = GetSignature();
 
-            SendMail(sig, body, database, tablecount, columncount, _pass, _fail, dc, _appSpreadsheet,exceptionPath);
+            SendMail(sig, body, database, tablecount, columncount, _pass, _fail, dc, _appSpreadsheet,exceptionPath, columnMapping);
 
 
 

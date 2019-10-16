@@ -10,6 +10,7 @@ namespace DataMasker.Interfaces
         object GetValue(
             ColumnConfig columnConfig,
             object existingValue,
+            string tableName,
             Name.Gender? gender);
         object GetValueShuffle(
             ColumnConfig columnConfig, string table, string column, IDataSource dataSources, DataTable dataTable,

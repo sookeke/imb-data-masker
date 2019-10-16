@@ -50,11 +50,11 @@ namespace DataMasker.DataSources
         }
         public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config)
         {
-            string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
+            //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
 
-            var connection = new NpgsqlConnection(_connectionStringPrd);
+            using (var connection = new NpgsqlConnection(_connectionStringPrd))
             {
-                
+
                 connection.Open();
                 string query = "";
                 IDictionary<string, object> idict = new Dictionary<string, object>();
@@ -65,17 +65,21 @@ namespace DataMasker.DataSources
                 query = BuildSelectSql(tableConfig, config);
                 //var retu = connection.Query(BuildSelectSql(tableConfig));
                 rawData = new List<IDictionary<string, object>>();
-                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: false);
-                rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
+                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: true);
+               // rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
 
+                foreach (IDictionary<string, object> prd in _prdData)
+                {
 
+                    rawData.Add(new Dictionary<string, object>(prd));
+                }
 
                 return _prdData;
                 //var retu = connection.Query(BuildSelectSql(tableConfig));
-               // return (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig));
+                // return (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig));
             }
         }
-
+       
         public void UpdateRow(IDictionary<string, object> row, TableConfig tableConfig, Config config)
         {
             using (var connection = new NpgsqlConnection(_connectionString))
@@ -302,12 +306,40 @@ namespace DataMasker.DataSources
         {
             throw new NotImplementedException();
         }
-
         public IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable)
         {
-            throw new NotImplementedException();
-        }
+            List<IDictionary<string, object>> _sheetObject = new List<IDictionary<string, object>>();
+            Dictionary<string, object> dictionary = new Dictionary<string, object>();
+            foreach (DataRow row in dataTable.Rows)
+            {
 
+                dictionary = row.Table.Columns
+                                .Cast<DataColumn>()
+                                .ToDictionary(col => col.ColumnName, col => row.Field<object>(col.ColumnName));
+                _sheetObject.Add(dictionary);
+            }
+          
+            return _sheetObject;
+        } 
+        public IEnumerable<T> CreateObjecttst<T>(DataTable dataTable)
+        {
+           
+            List<IDictionary<string,object>> _sheetObject = new List<IDictionary<string,object>>();
+            Dictionary<string, object> dictionary = new Dictionary<string, object>();
+            
+
+            
+            foreach (DataRow row in dataTable.Rows)
+            {
+
+                dictionary = row.Table.Columns
+                                .Cast<DataColumn>()
+                                .ToDictionary(col => col.ColumnName, col => row.Field<object>(col.ColumnName));
+                _sheetObject.Add(dictionary);
+            }
+            return (IEnumerable<T>)_sheetObject;
+        }
+       
         public DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig config)
         {
             var table = new DataTable();

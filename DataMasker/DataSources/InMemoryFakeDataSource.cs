@@ -201,5 +201,10 @@ namespace DataMasker.DataSources
         {
             return tableData.Count;
         }
+
+        public IEnumerable<T> CreateObjecttst<T>(DataTable dataTable)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
