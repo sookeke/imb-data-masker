@@ -38,8 +38,9 @@ namespace DataMasker
         /// A dictionary key'd by {tableName}.{columnName} containing a <see cref="HashSet{T}"/> of values which have been previously used for this table/column
         /// </summary>
         private readonly ConcurrentDictionary<string, HashSet<object>> _uniqueValues = new ConcurrentDictionary<string, HashSet<object>>();
+        private readonly DataTable _location = new DataTable() { Columns = { "Country", "States", "Province", "City", "Address" } };
         //private readonly IDataSource _dataSource;
-       
+
 
 
         /// <summary>
@@ -61,14 +62,16 @@ namespace DataMasker
         /// <returns></returns>
         public IDictionary<string, object> Mask(
             IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource, DataTable dataTable)
+            TableConfig tableConfig, IDataSource dataSource,int rowCount, DataTable dataTable)
         {
-
+            var addr = new DataTable();
+            _location.Rows.Clear();
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
                 //CompareLogic compareLogic = new CompareLogic();
                 object existingValue = obj[columnConfig.Name];
-                
+              
+               
 
                 Name.Gender? gender = null;
                 if (!string.IsNullOrEmpty(columnConfig.UseGenderColumn))
@@ -153,9 +156,23 @@ namespace DataMasker
                         //existingValue = existingValue;
                     }
                 }
+                else if (_location.Columns.Contains(columnConfig.Name) || _location.Columns.Contains(columnConfig.Type.ToString()))
+                {
+                    if (_location.Rows.Count == 0)
+                    {
+                        addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location);
+                    }
+                    if (_location.Rows.Count > 0)
+                    {
+                        existingValue = _location.Rows[0][columnConfig.Name];
+                    }
+                    else
+                        existingValue = null;
+                }
                 else
-                {               
-                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);               
+                {
+                   
+                    existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);               
                 }
                 //replace the original value
                 obj[columnConfig.Name] = existingValue;

@@ -829,6 +829,7 @@ namespace DataMasker.Examples
                     object extension = null;
                     string[] extcolumn = null;
                     IEnumerable<IDictionary<string, object>> rows = null;
+                    var rowCount = dataSource.GetCount(tableConfig);
                     IEnumerable<IDictionary<string, object>> rawData = null;
                     File.WriteAllText(_exceptionpath, "exception for " + tableConfig.Name + ".........." + Environment.NewLine + Environment.NewLine);
                     if (config.DataSource.Type == DataSourceType.SpreadSheet)
@@ -840,7 +841,7 @@ namespace DataMasker.Examples
                         //rawData = dataSource.CreateObject(SheetTable);
                         foreach (IDictionary<string, object> row in rows)
                         {
-                            dataMasker.Mask(row, tableConfig, dataSource, SheetTable);
+                            dataMasker.Mask(row, tableConfig, dataSource, rowCount, SheetTable);
                         }
                         try
                         {
@@ -891,8 +892,7 @@ namespace DataMasker.Examples
                     else
                     {
                         rows = dataSource.GetData(tableConfig, config);
-                        rawData = dataSource.RawData(null);
-                        var rowCount = dataSource.GetCount(tableConfig);
+                        rawData = dataSource.RawData(null);                        
                         foreach (IDictionary<string, object> row in rows)
                         {
                             if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
@@ -900,7 +900,7 @@ namespace DataMasker.Examples
                                 dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
                             }
                             else
-                                dataMasker.Mask(row, tableConfig, dataSource);
+                                dataMasker.Mask(row, tableConfig, dataSource, rowCount);
                         }
                         //rows = rows.ForEach(row =>
                         //{

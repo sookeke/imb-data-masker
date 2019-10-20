@@ -17,6 +17,7 @@
         Shuffle,
         Ignore,
         Money,
+        Location,
         NoMasking,
         math,
         Shufflegeometry,

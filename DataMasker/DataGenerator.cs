@@ -922,7 +922,7 @@ namespace DataMasker
             JPEG,
             TXT,
             MSG,
-                RTF
+            RTF
         }
 
         public bool IsValidUri(Uri uri)
@@ -993,6 +993,23 @@ namespace DataMasker
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
+
+        public object GetAddress(ColumnConfig columnConfig, object existingValue, DataTable dataTable)
+        {
+            if (columnConfig.RetainNullValues &&
+              existingValue == null)
+            {
+                return null;
+            }
+           
+            var states = CountryLoader.LoadCanadaLocationData().States.Where(n => n.Provinces.Count > 1).Select(n => n).ToArray();
+            var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null).Select(n => n).ToArray();          
+            var city = provinces[rnd.Next(0, provinces.Count())];
+            var address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}") + " " + city.Name + ", " + city.State.Name;
+            dataTable.Rows.Add(CountryLoader.LoadCanadaLocationData().Name, city.State.Name, city.State.Name, city.Name, address);      
+            return dataTable;
+        }
+
         public enum Operation
         {
             addition,

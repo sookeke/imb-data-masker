@@ -107,7 +107,7 @@ namespace DataMasker.DataLang
             else if (config.DataSource.Type == DataSourceType.PostgresServer)
             {
                
-                    output.AppendFormat("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", table.TableName, string.Join(", ", names.ToArray()));
+                    output.AppendFormat("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
 
             }
             else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
