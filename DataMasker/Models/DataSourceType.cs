@@ -6,6 +6,7 @@
         SqlServer,
         OracleServer,
         SpreadSheet,
-        PostgresServer
+        PostgresServer,
+        MySqlServer
     }
 }

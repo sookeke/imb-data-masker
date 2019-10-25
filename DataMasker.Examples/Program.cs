@@ -38,7 +38,7 @@ namespace DataMasker.Examples
         #region system declarations
         #region read-only and const app config
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
-        private static string copyjsonPath = ConfigurationManager.AppSettings["jsonPath"];
+        private static string copyjsonPath;
         private static readonly string fromEmail = ConfigurationManager.AppSettings["fromEmail"];
         private static readonly string Recipients = ConfigurationManager.AppSettings["RecipientEmail"];
         private static readonly string sheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
@@ -67,7 +67,6 @@ namespace DataMasker.Examples
         private static List<KeyValuePair<string, Dictionary<string, string>>> copyJsTable = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static List<KeyValuePair<string, Dictionary<string, string>>> _allNull = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static readonly Dictionary<ProgressType, ProgressbarUpdate> _progressBars = new Dictionary<ProgressType, ProgressbarUpdate>();
-        private static IEnumerable<IDictionary<string, object>> masked = null;
         private static readonly Dictionary<string, object> allkey = new Dictionary<string, object>();
 
 
@@ -231,7 +230,7 @@ namespace DataMasker.Examples
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{ADDRESS.COUNTRY}}";
-                        column.useGenderColumn = "";
+                        column.useGenderColumn = "Canada";
                     }
                     else if (col.DataType.ToUpper().Equals("SDO_GEOMETRY") || col.DataType.ToUpper().ToUpper().Contains("GEOMETRY"))
                     {
@@ -395,7 +394,7 @@ namespace DataMasker.Examples
                                 column.max = Convert.ToInt32(sizze);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
-                                column.useGenderColumn = "";
+                                column.useGenderColumn = "Canada";
                             }
                             else
                             {
@@ -403,7 +402,7 @@ namespace DataMasker.Examples
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
-                                column.useGenderColumn = "";
+                                column.useGenderColumn = "Canada";
                             }
                         }
                         else
@@ -413,7 +412,7 @@ namespace DataMasker.Examples
                             column.min = col.Min.ToString(); ;
                             //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
                             column.StringFormatPattern = "{{address.fullAddress}}";
-                            column.useGenderColumn = "";
+                            column.useGenderColumn = "Canada";
                         }
                     }
                     else if (col.ColumnName.ToUpper().Contains("USERID"))
@@ -1351,24 +1350,14 @@ namespace DataMasker.Examples
                     {
                         try
                         {
-
-
                             if (compareLogic.Compare(_columndatamask[i], _columndataUnmask[i]).AreEqual && dataColumn.Ignore != true)
                             {
-
-
                                 check.Add("FAIL");
-
-
-
-
-                                //match
+                                                                //match
                             }
                             else
                             {
-
                                 check.Add("PASS");
-
                             }
                         }
                         catch (IndexOutOfRangeException es)
@@ -1427,6 +1416,11 @@ namespace DataMasker.Examples
                     else if (dataColumn.Type == DataType.exception && check.Contains("PASS"))
                     {
                         failure = "<font color='red'>Applied mask with " + dataColumn.Type.ToString() + "</ font >";
+                        result = "<b><font color='blue'>PASS</font></b>";
+                    }
+                    else if (dataColumn.Type == DataType.City && dataColumn.Ignore == false)
+                    {
+                        failure = "Same City found but different state or province";
                         result = "<b><font color='blue'>PASS</font></b>";
                     }
                     else

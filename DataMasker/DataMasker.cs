@@ -66,12 +66,13 @@ namespace DataMasker
         {
             var addr = new DataTable();
             _location.Rows.Clear();
+           
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
                 //CompareLogic compareLogic = new CompareLogic();
                 object existingValue = obj[columnConfig.Name];
-              
-               
+                string uniqueCacheKey = $"{tableConfig.Name}.{columnConfig.Name}";
+
 
                 Name.Gender? gender = null;
                 if (!string.IsNullOrEmpty(columnConfig.UseGenderColumn))
@@ -158,16 +159,24 @@ namespace DataMasker
                 }
                 else if (_location.Columns.Contains(columnConfig.Name) || _location.Columns.Contains(columnConfig.Type.ToString()))
                 {
-                    if (_location.Rows.Count == 0)
+                    try
                     {
-                        addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location);
+                        if (_location.Rows.Count == 0)
+                        {
+                            addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location);
+                        }
+                        if (_location.Rows.Count > 0)
+                        {
+                            existingValue = _location.Rows[0][columnConfig.Name]; 
+                        }
+                        else
+                            existingValue = null;
                     }
-                    if (_location.Rows.Count > 0)
+                    catch (Exception)
                     {
-                        existingValue = _location.Rows[0][columnConfig.Name];
-                    }
-                    else
                         existingValue = null;
+                    }
+                   
                 }
                 else
                 {

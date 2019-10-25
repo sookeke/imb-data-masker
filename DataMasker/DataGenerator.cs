@@ -131,15 +131,8 @@ namespace DataMasker
                 return GetValueMapping(columnConfig, existingValue);
             }
             if (columnConfig.Type == DataType.Geometry)
-            {
-               
-                Random random = new Random();
-                
-                
-                //Identify the centre of the polygon
-                
-                
-               
+            {               
+                Random random = new Random();              
                 var exist = (SdoGeometry)existingValue;
                 var obj = new HazSqlGeo {
                 Geo = new SdoGeometry()
@@ -380,50 +373,7 @@ namespace DataMasker
                     int _range = ((TimeSpan)(DateTime.Today - _start)).Days;
                     var _randomYear = _start.AddDays(_genD.Next(_range));
                     var season = _randomYear.Year + "/" + _randomYear.AddYears(1).ToString("yy");
-                    return season;
-                case DataType.Geometry:
-                    //generate 20 SIZE LINESTRING random polygon coordinate with same precision model using GEOAPI and NETOPOLOGY SUITE
-                    //Random random = new Random();
-                    //SdoGeometry sdoGeometry = new SdoGeometry();
-
-                    
-                    ////Identify the centre of the polygon
-                    //Coordinate center = new Coordinate((random.NextDouble() * 360) - 180, (random.NextDouble() * 180) - 90);
-                    ////decimal center1 = new decimal((random.NextDouble() * 360) - 180, (random.NextDouble() * 180) - 90);
-                    //Coordinate[] coords = new Coordinate[20];
-                    //decimal[] cood = new decimal[20];
-                    //for (int i = 0; i < 20; i++)
-                    //{
-                    //    coords[i] = new Coordinate(center.X + random.NextDouble(-4291402.04717672, 16144349.4032217), center.Y + random.NextDouble(-4291402.04717672, 16144349.4032217));
-                    //    cood[i] = new decimal(random.NextDouble(-4291402.04717672, 16144349.4032217));
-                    //}
-                    ////creates a new polygon from the coordinate array
-                    //coords[19] = new Coordinate(coords[0].X, coords[0].Y);
-
-                    //var obj = new HazSqlGeo
-                    //{
-
-                    //    Geo = new SdoGeometry()
-                    //    {
-                    //        ElemArray = new decimal[3] { 1, 2, 1 },
-                    //        OrdinatesArray = cood,
-                    //        Sdo_Gtype = Convert.ToInt32(_faker.PickRandom(SDO_GTYPElist)),
-                    //        Sdo_Srid = Convert.ToDecimal(ConfigurationManager.AppSettings["SRID"])
-                    //    }
-                    //};
-
-                    //var pCoordinate = gf.CreateMultiPointFromCoords(coords);
-                    //Geo = new SdoGeometry();
-
-                    //var xx = pCoordinate.ToString().Replace(",", string.Empty).Replace(" ", ",").Split(new string[] { "LINESTRING," }, StringSplitOptions.None);
-                    //var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + SDO_GTYPE + "," + 5255 + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(1,2,1),MDSYS.SDO_ORDINATE_ARRAY" + pCoordinate + ")";
-                    //var values = "ST_GeomFromText(" + pCoordinate + ")";
-                    //GeographyMapper geographyMapper = new GeographyMapper();
-                    SqlMapper.AddTypeHandler(new GeographyMapper());
-                    //geographyMapper.SetValue("@GEO", obj.Geo);
-
-                    return null;
-
+                    return season;              
                 case DataType.RandomInt:
                     var min = columnConfig.Min;
                     var max = columnConfig.Max;
@@ -996,16 +946,34 @@ namespace DataMasker
 
         public object GetAddress(ColumnConfig columnConfig, object existingValue, DataTable dataTable)
         {
+            var loader = CountryLoader.LoadCanadaLocationData();
             if (columnConfig.RetainNullValues &&
               existingValue == null)
             {
                 return null;
             }
-           
-            var states = CountryLoader.LoadCanadaLocationData().States.Where(n => n.Provinces.Count > 1).Select(n => n).ToArray();
-            var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null).Select(n => n).ToArray();          
-            var city = provinces[rnd.Next(0, provinces.Count())];
-            var address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}") + " " + city.Name + ", " + city.State.Name;
+            switch (columnConfig.UseGenderColumn)
+            {
+                case nameof(CountryLoad.Canada):
+                    loader = CountryLoader.LoadCanadaLocationData();
+                    break;         
+                case nameof(CountryLoad.UnitedStates):
+                    loader = CountryLoader.LoadUnitedStatesLocationData();
+                    break;
+                case nameof(CountryLoad.Australia):
+                    loader = CountryLoader.LoadAustraliaLocationData();
+                    break;
+                case nameof(CountryLoad.France):
+                    loader = CountryLoader.LoadFranceLocationData();
+                    break;
+                default:
+                    break;
+            }
+
+            var states = loader.States.Where(n => n.Provinces.Count > 1 && n.Name != null && !n.Name.ToString().Equals(existingValue.ToString())).Select(n => n).ToArray();
+            var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null && !n.Name.ToString().Equals(existingValue.ToString())).Where(x=>!x.Name.ToString().Equals(existingValue)).Select(n => n).ToArray();
+            var city = provinces[rnd.Next(0, provinces.Count())];         
+            var address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}") + " " + city.Name + ", " + city.State.Name;      
             dataTable.Rows.Add(CountryLoader.LoadCanadaLocationData().Name, city.State.Name, city.State.Name, city.Name, address);      
             return dataTable;
         }
@@ -1022,6 +990,14 @@ namespace DataMasker
 
 
 
+        }
+        public enum CountryLoad
+        {
+            Canada,
+            UnitedStates,
+            UnitedKingdom,
+            Australia,
+            France
         }
     }
     public static class RandomExtensions

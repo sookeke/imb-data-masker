@@ -26,6 +26,8 @@ namespace DataMasker
                     return new SpreadSheet(dataSourceConfig);
                 case DataSourceType.PostgresServer:
                     return new PostgresSource(dataSourceConfig);
+                case DataSourceType.MySqlServer:
+                    return new MySqlServer(dataSourceConfig);
 
             }
 
