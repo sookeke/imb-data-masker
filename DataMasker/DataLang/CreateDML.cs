@@ -46,11 +46,13 @@ namespace DataMasker.DataLang
             var names = new List<string>();
             if (table.Rows.Count == 0 && table.Columns.Count == 0 && config.DataSource.Type != DataSourceType.OracleServer)
             {
-                names.Add("[" + tableConfig.Name + "]");
-                foreach (ColumnConfig col in tableConfig.Columns)
+                
+
+
+                if (config.DataSource.Type == DataSourceType.SqlServer)
                 {
-                   
-                    if (config.DataSource.Type == DataSourceType.SqlServer)
+                    names.Add("[" + tableConfig.Name + "]");
+                    foreach (ColumnConfig col in tableConfig.Columns)
                     {
                         if (!excludeNames.ContainsKey(col.Name.ToUpper()))
                         {
@@ -58,6 +60,18 @@ namespace DataMasker.DataLang
                         }
                     }
                 }
+                if (config.DataSource.Type == DataSourceType.MySqlServer)
+                {
+                    names.Add("`" + tableConfig.Name + "`");
+                    foreach (ColumnConfig col in tableConfig.Columns)
+                    {
+                        if (!excludeNames.ContainsKey(col.Name.ToUpper()))
+                        {
+                            names.Add("`" + col.Name + "`");
+                        }
+                    }
+                }
+                
             }
             else
             {
@@ -82,6 +96,13 @@ namespace DataMasker.DataLang
                         if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
                         {
                             names.Add("\"" + col.ColumnName + "\"");
+                        }
+                    }
+                    else if (config.DataSource.Type == DataSourceType.MySqlServer)
+                    {
+                        if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
+                        {
+                            names.Add("`" + col.ColumnName + "`");
                         }
                     }
                     else
@@ -118,6 +139,12 @@ namespace DataMasker.DataLang
 
 
               
+            }
+            else if (config.DataSource.Type == DataSourceType.MySqlServer)
+            {
+                //output.AppendFormat("INSERT INTO `{0}`\n\t({1})\nVALUES ", table.TableName, string.Join(", ", names.ToArray()));
+                output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
+
             }
             else
             {
@@ -325,6 +352,22 @@ namespace DataMasker.DataLang
                             }
                             else
                                 output = "'" + row[column.ColumnName].ToString().Replace("'", "''") + "'";
+                        }
+                        else if (config.DataSource.Type == DataSourceType.MySqlServer)
+                        {
+                            if (column.DataType == typeof(DateTime))
+                            {
+                                var data = DateTime.ParseExact(row[column.ColumnName].ToString(), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                                output = "'" + data.ToString("yyyy-MM-dd HH:mm:ss") + "'" ;
+                            }
+                            else if (CheckDate(row[column.ColumnName].ToString()))
+                            {
+                                DateTime dt = DateTime.Parse(row[column.ColumnName].ToString());
+                                output = "'" + dt.ToString("yyyy-MM-dd HH:mm:ss") + "'";
+                            }
+                            else
+                                output = "'" + row[column.ColumnName].ToString().Replace("'", "''") + "'";
+
                         }
                         else
                         {

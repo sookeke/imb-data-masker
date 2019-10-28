@@ -37,6 +37,9 @@ namespace DataMasker
                 case DataSourceType.PostgresServer:
                     columnNames = new List<string>(columns.Select(x => $"{x.Name.AddDoubleQuotes()}"));
                     break;
+                case DataSourceType.MySqlServer:
+                    columnNames = new List<string>(columns.Select(x => $"`{x.Name}`"));
+                    break;
                 default:
                     columnNames = new List<string>(columns.Select(x => $"[{x.Name}]"));
                     break;
@@ -79,6 +82,12 @@ namespace DataMasker
                                ", ",
                                columns.Where(x => !x.Ignore)
                                       .Select(x => $"[{x.Name}] = :{paramPrefix}{x.Name}"));
+                    break;
+                case DataSourceType.MySqlServer:
+                    o = string.Join(
+                               ", ",
+                               columns.Where(x => !x.Ignore)
+                                      .Select(x => $"`{x.Name}` = @{paramPrefix}{x.Name}"));
                     break;
                 case DataSourceType.SpreadSheet:
                     o = string.Join(

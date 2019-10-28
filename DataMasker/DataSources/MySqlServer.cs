@@ -110,7 +110,7 @@ namespace DataMasker.DataSources
         private string BuildCountSql(
             TableConfig tableConfig)
         {
-            return $"SELECT COUNT(*) FROM [{tableConfig.Schema}].[{tableConfig.Name}]";
+            return $"SELECT COUNT(*) FROM `{tableConfig.Schema}`.`{tableConfig.Name}`";
         }
 
         /// <inheritdoc/>
@@ -150,7 +150,7 @@ namespace DataMasker.DataSources
                     {
 
 
-                        connection.Execute(sql, batch.Items, sqlTransaction, null, CommandType.Text);
+                        connection.Execute(sql, batch.Items, sqlTransaction, null);
 
                         if (_sourceConfig.DryRun)
                         {
@@ -187,10 +187,10 @@ namespace DataMasker.DataSources
         private string BuildUpdateSql(
             TableConfig tableConfig, Config config)
         {
-            string sql = $"UPDATE [{tableConfig.Name}] SET ";
+            string sql = $"UPDATE `{tableConfig.Schema}`.`{tableConfig.Name}` SET ";
 
             sql += tableConfig.Columns.GetUpdateColumns(config);
-            sql += $" WHERE [{tableConfig.PrimaryKeyColumn}] = @{tableConfig.PrimaryKeyColumn}";
+            sql += $" WHERE `{tableConfig.PrimaryKeyColumn}` = @{tableConfig.PrimaryKeyColumn}";
             return sql;
         }
 
@@ -206,10 +206,10 @@ namespace DataMasker.DataSources
             string sql = "";
             if (int.TryParse(tableConfig.RowCount, out int n))
             {
-                sql = $"SELECT TOP ({n})  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM [{tableConfig.Schema}].[{tableConfig.Name}]";
+                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM `{tableConfig.Schema}`.`{tableConfig.Name}` LIMIT {n}";
             }
             else
-                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM [{tableConfig.Schema}].[{tableConfig.Name}]"; ;
+                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM `{tableConfig.Schema}`.`{tableConfig.Name}`"; ;
             return sql;
         }
 

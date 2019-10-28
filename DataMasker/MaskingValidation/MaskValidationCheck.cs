@@ -2,6 +2,7 @@
 using DataMasker.Models;
 using KellermanSoftware.CompareNetObjects;
 using Microsoft.Exchange.WebServices.Data;
+using MySql.Data.MySqlClient;
 using Npgsql;
 using Oracle.DataAccess.Client;
 using System;
@@ -276,8 +277,6 @@ namespace DataMasker.MaskingValidation
                         }
                         return dataTable;
                     }
-                   
-                    break;
                 case DataSourceType.OracleServer:
                     using (OracleConnection oracleConnection = new OracleConnection(connectionString1))
                     {
@@ -302,7 +301,6 @@ namespace DataMasker.MaskingValidation
                         }
                     }
                     return dataTable;
-                    break;
                 case DataSourceType.SpreadSheet:
                     break;
                 case DataSourceType.PostgresServer:
@@ -329,7 +327,26 @@ namespace DataMasker.MaskingValidation
                         }
                     }
                     return dataTable;
-                    break;
+                case DataSourceType.MySqlServer:
+                    using (MySqlConnection mySqlConnection = new MySqlConnection(connectionString1.ToString()))
+                    {
+                        string squery = "Select * from " + table;
+                        mySqlConnection.Open();
+                        using (MySqlDataAdapter oda = new MySqlDataAdapter(squery, mySqlConnection))
+                        {
+                            try
+                            {
+                                //Fill the data table with select statement's query results:
+                                int recordsAffectedSubscriber = 0;
+                                recordsAffectedSubscriber = oda.Fill(dataTable);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine(ex.Message);
+                            }
+                        }
+                    }
+                    return dataTable;
                 default:
                     break;
             }
@@ -538,7 +555,8 @@ namespace DataMasker.MaskingValidation
             var _pass = new DataView(report).ToTable(false, new string[] { "Result" }).AsEnumerable().Select(r => r.Field<string>("Result")).Where(n => n == "<font color='green'>PASS</font>").ToList().Count;
             var _passIgnore = new DataView(report).ToTable(false, new string[] { "Result" }).AsEnumerable().Select(r => r.Field<string>("Result")).Where(n => n == "<b><font color='blue'>PASS</font></b>").ToList().Count;
             var _fail = new DataView(report).ToTable(false, new string[] { "Result" }).AsEnumerable().Select(r => r.Field<string>("Result")).Where(n => n == "<font color='red'>FAIL</font>" || n == "<b><font color='blue'>FAIL</font></b>").ToList().Count;
-            //var _ignore = new DataView(report).ToTable(false, new string[] { "Result" }).AsEnumerable().Select(r => r.Field<string>("Result")).Where(n => n == "<font color='red'>FAIL</font>").ToList().Count;
+            var _nomasking = new DataView(report).ToTable(false, new string[] { "Result Comment" }).AsEnumerable().Select(r => r.Field<string>("Result Comment")).Where(n => n == "Masking not required").ToList().Count;
+            var masked = new DataView(report).ToTable(false, new string[] { "Result Comment" }).AsEnumerable().Select(r => r.Field<string>("Result Comment")).Where(n => n != "Masking not required").ToList().Count;
 
 
             decimal top = _pass + _passIgnore;

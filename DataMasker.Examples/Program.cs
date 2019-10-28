@@ -77,6 +77,7 @@ namespace DataMasker.Examples
         private static void Main(
             string[] args)
         {
+            Console.Title = "Data Masker";
             report.Columns.Add("Table"); report.Columns.Add("Schema"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("DataSourceType") ; report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
             Example1();
         }
@@ -180,7 +181,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("FIRST_NAME") || col.ColumnName.ToUpper().Contains("MIDDLE_NAME"))
                     {
-                        column.type = DataType.Bogus.ToString();
+                        column.type = DataType.FirstName.ToString();
                         column.max = col.Max.ToString(); 
                         column.min = col.Min.ToString(); 
                         column.StringFormatPattern = "{{NAME.FIRSTNAME}}";
@@ -242,7 +243,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("SURNAME") || col.ColumnName.ToUpper().Contains("LASTNAME") || col.ColumnName.ToUpper().Contains("LAST_NAME"))
                     {
-                        column.type = DataType.Bogus.ToString();
+                        column.type = DataType.LastName.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{NAME.LASTNAME}}";
@@ -390,7 +391,7 @@ namespace DataMasker.Examples
                             var sizze = size[1].ToString();
                             if (!string.IsNullOrEmpty(sizze))
                             {
-                                column.type = DataType.Bogus.ToString();
+                                column.type = DataType.FullAddress.ToString();
                                 column.max = Convert.ToInt32(sizze);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
@@ -398,7 +399,7 @@ namespace DataMasker.Examples
                             }
                             else
                             {
-                                column.type = DataType.Bogus.ToString();
+                                column.type = DataType.FullAddress.ToString();
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
@@ -407,7 +408,7 @@ namespace DataMasker.Examples
                         }
                         else
                         {
-                            column.type = DataType.Bogus.ToString();
+                            column.type = DataType.FullAddress.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
                             //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
@@ -426,7 +427,7 @@ namespace DataMasker.Examples
                     }
                     else if (col.ColumnName.ToUpper().Contains("FILE_NAME"))
                     {
-                        column.type = DataType.Bogus.ToString();
+                        column.type = DataType.File.ToString();
                         column.max = col.Max.ToString(); ;
                         column.min = col.Min.ToString(); ;
                         //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
@@ -597,7 +598,7 @@ namespace DataMasker.Examples
                             var mapped = string.Join(",", jsconfigTable[i].Value.Select(n => n.Value).ToArray());
                             Console.WriteLine(jsconfigTable[i].Key.ToString() + " " + string.Join(",", copyJsTable[i].Value.ToArray()) + " now mapped with: " + mapped);
                         }
-                        else if (jsconfigTable[i].Value.Where(n => n.Value.Equals(DataType.Ignore)).Count() != 0)
+                        else if (jsconfigTable[i].Value.Where(n => n.Value.Equals(DataType.Ignore.ToString())).Count() != 0)
                         {
                             var xxxx = jsconfigTable[i].Value.Where(n => n.Value.Equals(DataType.Ignore)).ToDictionary(n => n.Key, n => n.Value);
                             //exit
@@ -792,17 +793,18 @@ namespace DataMasker.Examples
 
         public static void Example1()
         {
+            
             if (!CheckAppConfig())
             {
                 Console.WriteLine("Program will exit: Press ENTER to exist..");
                 Console.ReadLine();
                 System.Environment.Exit(1);
             }
-            ////{ throw new NullReferenceException("Referencing a null app key value"); }
+            //{ throw new NullReferenceException("Referencing a null app key value"); }
             //GetUserInfo.GetUserInfo getUserInfo = new GetUserInfo.GetUserInfo();
-            //SoapHttpClient.SoapClient soapHttpClient = new SoapHttpClient.SoapClient();
-            //getUserInfo.Credentials = new System.Net.NetworkCredential("sookeke", "***@", "IDIR");
-            //var u = getUserInfo.GetUserbyName("Okeke");
+            ////SoapHttpClient.SoapClient soapHttpClient = new SoapHttpClient.SoapClient();
+            ////getUserInfo.Credentials = new System.Net.NetworkCredential("sookeke", "5D16stod@", "IDIR");
+            //var u = getUserInfo.GetUserbyName("stanley");
             _nameDatabase = ConfigurationManager.AppSettings[DatabaseName];
 
             try
@@ -816,7 +818,7 @@ namespace DataMasker.Examples
                     copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
                     JsonConfig(copyjsonPath);
                 }
-
+                Console.Title = "Data Masker";
                 Config config = LoadConfig(1);
                 IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
                 IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
@@ -840,6 +842,7 @@ namespace DataMasker.Examples
                         //rawData = dataSource.CreateObject(SheetTable);
                         foreach (IDictionary<string, object> row in rows)
                         {
+                            Console.Title = "Data Generation";
                             dataMasker.Mask(row, tableConfig, dataSource, rowCount, SheetTable);
                         }
                         try
@@ -894,6 +897,7 @@ namespace DataMasker.Examples
                         rawData = dataSource.RawData(null);                        
                         foreach (IDictionary<string, object> row in rows)
                         {
+                            Console.Title = "Data Generation";
                             if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                             {
                                 dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
@@ -972,6 +976,7 @@ namespace DataMasker.Examples
                     && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
                 {
                     Console.WriteLine("Data Masking Validation has started......................................");
+                    Console.Title = "Data Masking Validation";
                     MaskValidationCheck.Verification(config.DataSource, config, sheetPath, CreateDir, _nameDatabase, exceptionPath, _columnMapping);
                 }
                 #endregion
@@ -1232,8 +1237,9 @@ namespace DataMasker.Examples
             if (allkey.Values.Where(n=>n.Equals(string.Empty)).Count() != 0)
             {
                 //var xxx = allkey.Values.Where(n => n.Equals(string.Empty));
-                Console.WriteLine(new NullReferenceException("Referencing a null app key value: Mandatory app key value is not set in the App.config" + Environment.NewLine));
+                Console.WriteLine("Referencing a null app key value: Mandatory app key value is not set in the App.config" + Environment.NewLine);
                 Console.WriteLine(string.Join(Environment.NewLine, allkey.Where(n => n.Value.ToString() == string.Empty).Select(n => n.Key + " : " + n.Value + "Null").ToArray()));
+                Console.Title = "Referencing a Null key";
                 flag = false;
             }
             else
