@@ -69,7 +69,7 @@ namespace DataMasker.DataSources
             using (MySqlConnection connection = new MySqlConnection(_connectionString))
             {
                 connection.Open();
-                //rawData = new List<IDictionary<string, object>>();
+                rawData = new List<IDictionary<string, object>>();
 
 
                 var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig, config), buffered: true);

@@ -29,6 +29,7 @@ namespace DataMasker
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
         private static readonly List<string> shuffleList = new List<string>();
+        private static readonly Dictionary<string,string> uniquevalue = new Dictionary<string, string>();
 
         private const int DEFAULT_LOREM_MIN = 5;
 
@@ -118,7 +119,11 @@ namespace DataMasker
                     totalIterations++;
                     if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
                     {
-                        File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                        if (!(uniquevalue.ContainsKey(tableName) && uniquevalue.ContainsValue(columnConfig.Name)))
+                        {
+                            File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                            uniquevalue.Add(tableName, columnConfig.Name);
+                        }
                         break;
                     }
                     getValue = GetValue(columnConfig, gender);
@@ -186,7 +191,13 @@ namespace DataMasker
                 totalIterations++;
                 if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
                 {
-                    File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                    if (!(uniquevalue.ContainsKey(tableName) && uniquevalue.ContainsValue(columnConfig.Name)))
+                    {
+                        File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                        uniquevalue.Add(tableName, columnConfig.Name);
+                        //break;
+                    }
+                    //File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
                     break;
                 }
                 newValue = GetValue(columnConfig,gender);
