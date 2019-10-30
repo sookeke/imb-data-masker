@@ -79,7 +79,7 @@ namespace DataMasker.Examples
         {
             Console.Title = "Data Masker";
             report.Columns.Add("Table"); report.Columns.Add("Schema"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("DataSourceType") ; report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
-            Example1();
+            Run();
         }
         private static void JsonConfig(string json)
         {
@@ -161,6 +161,10 @@ namespace DataMasker.Examples
                             column.type = DataType.Geometry.ToString();
                         }
                         column.ignore = true;
+                        column.max = col.Max.ToString(); ;
+                        column.min = col.Min.ToString(); ;
+                        column.StringFormatPattern = "";
+                        column.useGenderColumn = "";
                     }
                     else if (col.MaskingRule.ToUpper().Contains("SHUFFLE"))
                     {
@@ -791,7 +795,7 @@ namespace DataMasker.Examples
             //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_TAP_config.json");
         }
 
-        public static void Example1()
+        public static void Run()
         {
             
             if (!CheckAppConfig())
