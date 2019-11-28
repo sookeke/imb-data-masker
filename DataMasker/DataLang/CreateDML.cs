@@ -1,5 +1,6 @@
 ﻿using DataMasker.Models;
 using OfficeOpenXml;
+using OfficeOpenXml.FormulaParsing.ExcelUtilities;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -7,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -542,13 +544,33 @@ namespace DataMasker.DataLang
             using (ExcelPackage pack = new ExcelPackage())
             {
                 ExcelWorksheet ws = pack.Workbook.Worksheets.Add(dataTable.TableName);
-                ws.Cells["A1"].LoadFromDataTable(dataTable,true,OfficeOpenXml.Table.TableStyles.Medium28);
-                var ms = new System.IO.MemoryStream();
+                dataTable.TableName = ExcelAddressUtil.GetValidName(dataTable.TableName);
+                if (ExcelCellBase.IsValidAddress(dataTable.TableName))
+                {
+                    dataTable.TableName = dataTable.TableName + "_";
+                }
+
+                ws.Cells["A1"].LoadFromDataTable(dataTable,true,OfficeOpenXml.Table.TableStyles.Medium28);              
                 pack.SaveAs(new FileInfo(path));
                 
             }
 
            
+        }
+        public static string RemoveSpecialChars(string input)
+        {
+            // Replace invalid characters with empty strings.
+            try
+            {
+                return Regex.Replace(input, @"[^\w\.@-]", "_",
+                                     RegexOptions.None, TimeSpan.FromSeconds(1.5));
+            }
+            // If we timeout when replacing invalid characters, 
+            // we should return Empty.
+            catch (RegexMatchTimeoutException)
+            {
+                return String.Empty;
+            }
         }
         public static DataTable RemoveBlob(DataTable dataTable)
         {

@@ -29,7 +29,7 @@ namespace DataMasker
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
         private static readonly List<string> shuffleList = new List<string>();
-        private static readonly Dictionary<string,string> uniquevalue = new Dictionary<string, string>();
+        private static readonly List<KeyValuePair<object, object>> uniquevalue = new List<KeyValuePair<object, object>>();
 
         private const int DEFAULT_LOREM_MIN = 5;
 
@@ -50,7 +50,7 @@ namespace DataMasker
         /// <summary>
         /// The faker
         /// </summary>
-        private readonly Faker _faker;
+        private static Faker _faker;
         private readonly Fare.Xeger _xeger = new Fare.Xeger("[A-Za-z][0-9][A-Za-z] [0-9][A-Za-z][0-9]", new Random());
 
         /// <summary>
@@ -119,10 +119,10 @@ namespace DataMasker
                     totalIterations++;
                     if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
                     {
-                        if (!(uniquevalue.ContainsKey(tableName) && uniquevalue.ContainsValue(columnConfig.Name)))
+                        if (!(uniquevalue.Where(n=>n.Key.Equals(tableName)).Count() > 0 && uniquevalue.Where(n => n.Value.Equals(columnConfig.Name)).Count() > 0))
                         {
                             File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
-                            uniquevalue.Add(tableName, columnConfig.Name);
+                            uniquevalue.Add(new KeyValuePair<object, object>(tableName,columnConfig.Name));
                         }
                         break;
                     }
@@ -191,10 +191,10 @@ namespace DataMasker
                 totalIterations++;
                 if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
                 {
-                    if (!(uniquevalue.ContainsKey(tableName) && uniquevalue.ContainsValue(columnConfig.Name)))
+                    if (!(uniquevalue.Where(n => n.Key.Equals(tableName)).Count() > 0 && uniquevalue.Where(n => n.Value.Equals(columnConfig.Name)).Count() > 0))
                     {
                         File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
-                        uniquevalue.Add(tableName, columnConfig.Name);
+                        uniquevalue.Add(new KeyValuePair<object, object>(tableName, columnConfig.Name));
                         //break;
                     }
                     //File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
@@ -294,6 +294,7 @@ namespace DataMasker
             ColumnConfig columnConfig,
             Name.Gender? gender = null)
         {
+            _faker = new Faker();
             //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
             switch (columnConfig.Type)
             {

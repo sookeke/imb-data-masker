@@ -360,7 +360,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTable DataTableFromCsv(string csvPath)
+        public DataTableCollection DataTableFromCsv(string csvPath)
         {
             throw new NotImplementedException();
         }

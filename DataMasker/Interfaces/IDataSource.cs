@@ -22,7 +22,7 @@ namespace DataMasker.Interfaces
            IEnumerable<IDictionary<string, object>> PrdData);
 
         //For spreadshet
-        DataTable DataTableFromCsv(string csvPath);
+        DataTableCollection DataTableFromCsv(string csvPath);
         IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable);
 
         IEnumerable<T> CreateObjecttst<T>(DataTable dataTable);

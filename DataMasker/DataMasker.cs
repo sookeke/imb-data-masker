@@ -38,7 +38,7 @@ namespace DataMasker
         /// A dictionary key'd by {tableName}.{columnName} containing a <see cref="HashSet{T}"/> of values which have been previously used for this table/column
         /// </summary>
         private readonly ConcurrentDictionary<string, HashSet<object>> _uniqueValues = new ConcurrentDictionary<string, HashSet<object>>();
-        private readonly DataTable _location = new DataTable() { Columns = { "Country", "States", "Province", "City", "Address" } };
+        private readonly DataTable _location = new DataTable() { Columns = { "Country", "States", "Province", "City", "Address"} };
         //private readonly IDataSource _dataSource;
 
 
@@ -66,7 +66,9 @@ namespace DataMasker
         {
             var addr = new DataTable();
             _location.Rows.Clear();
-           
+            var t = _location.Columns.Cast<DataColumn>().ToList();
+
+
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
                 //CompareLogic compareLogic = new CompareLogic();
@@ -75,7 +77,7 @@ namespace DataMasker
 
 
                 Name.Gender? gender = null;
-                if (!string.IsNullOrEmpty(columnConfig.UseGenderColumn))
+                if (!string.IsNullOrEmpty(columnConfig.UseGenderColumn) && columnConfig.Type == DataType.FirstName && columnConfig.Type == DataType.LastName)
                 {
                   object g = obj[columnConfig.UseGenderColumn];
                   gender = Utils.Utils.TryParseGender(g?.ToString());
@@ -87,7 +89,12 @@ namespace DataMasker
                 }
                 else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
                 {
-                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Schema}.{tableConfig.Name}", columnConfig.Name, dataSource,dataTable, existingValue, gender);
+                    if (string.IsNullOrEmpty(tableConfig.Schema))
+                    {
+                        existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Name}", columnConfig.Name, dataSource, dataTable, existingValue, gender);
+                    }
+                    else
+                         existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Schema}.{tableConfig.Name}", columnConfig.Name, dataSource,dataTable, existingValue, gender);
                 }          
                 else if (columnConfig.Type == DataType.File)
                 {
@@ -154,8 +161,30 @@ namespace DataMasker
                     else
                     {
                         //columnConfig.Ignore = true;
-                        //existingValue = existingValue;
+                        //existingValue = existingValue;col
                     }
+                }
+                else if (_location.Columns.Cast<DataColumn>().Where(s=>columnConfig.Name.Contains(s.ColumnName)).Count() == 1 || _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Type.ToString().Contains(s.ColumnName)).Count() == 1)
+                {
+                    var cname = _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.Contains(s.ColumnName)).ToList()[0];
+                    try
+                    {
+                        if (_location.Rows.Count == 0)
+                        {
+                            addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location);
+                        }
+                        if (_location.Rows.Count > 0)
+                        {
+                            existingValue = _location.Rows[0][cname.ColumnName];
+                        }
+                        else
+                            existingValue = null;
+                    }
+                    catch (Exception)
+                    {
+                        existingValue = null;
+                    }
+
                 }
                 else if (_location.Columns.Contains(columnConfig.Name) || _location.Columns.Contains(columnConfig.Type.ToString()))
                 {
