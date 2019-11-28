@@ -315,7 +315,7 @@ namespace DataMasker.DataSources
             {
                 if (retainNull)
                 {
-                    Values = result.Where(n => n != null).Distinct().ToArray();
+                    Values = result.Where(n => n != DBNull.Value).Distinct().ToArray();
                 }
                 else
                     Values = result.Distinct().ToArray();

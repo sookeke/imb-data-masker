@@ -75,73 +75,14 @@ namespace DataMasker.MaskingValidation
         }
         private static string GetSignature()
         {
-            string path = System.Environment.UserName;
-            string pat = @"C:\Users\" + path + @"\AppData\Roaming\Microsoft\Signatures\";
-            StringBuilder st = new StringBuilder();
-            string[] signature = new string[] { };
-            //CreateIfMissing(pat + @"\garbage");
             string final = "";
-            if (Directory.Exists(pat))
+            if (File.Exists(@"Signature.htm"))
             {
-                var fileHtml = Directory.GetFiles(pat, "*.htm");
-                if (fileHtml.Length != 0)
-                {
-                    //File.ReadAllBytes("");
-                    //string[] location = new string[] { fileHtml[1].ToString() };
-                    signature = File.ReadAllLines(fileHtml[0]);
-                    foreach (var item in signature)
-                    {
-                        //sig += item;
-                        st.AppendLine(item);
-                        //Console.WriteLine(item);
-
-                    }
-
-                    var foundIndexes = new List<int>();
-                    string[] search = new string[] { "src" };
-                    //List<int> indexes = st.ToString().AllIndexesOf("src");
-
-                    //string[] insert = new string[] { @"\img" };
-                    int xxxx = st.ToString().IndexOf(search[0]);
-                    final = st.ToString();
-                    //Console.WriteLine(final);
-
-                    for (int i = st.ToString().IndexOf(search[0]); i > -1; i = st.ToString().IndexOf(search[0], i + 1))
-                    {
-                        // for loop end when i=-1 ('a' not found)
-
-                        foundIndexes.Add(i);
-
-
-
-                    }
-
-                    for (int i = 0; i < foundIndexes.Count; i++)
-                    {
-
-                        int index = st.ToString().IndexOf(search[0], xxxx + i);
-
-                        final = st.ToString().Insert(index + 5, pat);
-                        //Console.WriteLine(final);
-                    }
-
-
-
-
-
-                }
-                else
-                {
-                    Array.Resize(ref signature, signature.Length + 1);
-                    final = "Thank you <br/>";
-
-                    //Console.WriteLine(signature[0]);
-                }
+                return File.ReadAllText(@"Signature.htm");
             }
-
             else
             {
-                Array.Resize(ref signature, signature.Length + 1);
+                //string _successfulCommit = Directory.GetCurrentDirectory();
                 final = "Thank you <br/>"
                     ;
 
@@ -167,20 +108,19 @@ namespace DataMasker.MaskingValidation
                 };
                 //service.Credentials = new NetworkCredential(user, decryptPassword);
                 service.AutodiscoverUrl(fromEmail);
-                //service.UseDefaultCredentials = true;
-                //service.Credentials = new NetworkCredential(@"idir\sookek_o", "5D16Stod@");
                 EmailMessage email = new EmailMessage(service)
                 {
                     Subject = "Data Masking Validation Test Report Analysis for " + database,
 
                     Body = new MessageBody(BodyType.HTML, "<p>This is an automated email for data masking verification and validation test report analysis for " + database + "<br />" + "</p> " +
-                    body + "<br />" +
+                    body + Environment.NewLine + " " + "<br />" +
                 signature +
-                "<br />" +
-                "</body>" +
-              "</html>"),
+                "<br />"
+                ),
                     From = new EmailAddress(fromEmail)
                 };
+
+
                 //email.From = "mcs@gov.bc.ca";
                 bool tj = ConfigurationManager.AppSettings["RunTestJson"].ToString().ToUpper().Equals("YES") ? true : false;
                 bool maskCopy = ConfigurationManager.AppSettings["MaskedCopyDatabase"].ToString().ToUpper().Equals("YES") ? true : false;
