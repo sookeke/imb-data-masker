@@ -1,21 +1,17 @@
 ﻿using ChoETL;
+using DataMasker.Interfaces;
 using DataMasker.Models;
 using KellermanSoftware.CompareNetObjects;
 using Microsoft.Exchange.WebServices.Data;
-using MySql.Data.MySqlClient;
-using Npgsql;
-using Oracle.DataAccess.Client;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
-using System.Data.SqlClient;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DataMasker.MaskingValidation
 {
@@ -187,106 +183,21 @@ namespace DataMasker.MaskingValidation
         {
             // This is your table to hold the result set:
             DataTable dataTable = new DataTable();
+            IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
             switch (config.DataSource.Type)
             {
                 case DataSourceType.InMemoryFake:
                     break;
                 case DataSourceType.SqlServer:
-                    using (SqlConnection sqlConnection = new SqlConnection(connectionString1))
-                    {
-
-                        string squery = "Select * from " + table;
-                        sqlConnection.Open();
-                        using (SqlDataAdapter adapter = new SqlDataAdapter(squery, sqlConnection))
-                        {
-
-                            try
-                            {
-                                //Fill the data table with select statement's query results:
-                                int recordsAffectedSubscriber = 0;
-
-                                recordsAffectedSubscriber = adapter.Fill(dataTable);
-
-                            }
-                            catch (Exception ex)
-                            {
-
-                                Console.WriteLine(ex.Message);
-                            }
-
-                        }
-                        return dataTable;
-                    }
+                    return dataSource.GetDataTable(table, connectionString1.ToString());
                 case DataSourceType.OracleServer:
-                    using (OracleConnection oracleConnection = new OracleConnection(connectionString1))
-                    {
-                        string squery = "Select * from " + table;
-                        oracleConnection.Open();
-
-                        using (OracleDataAdapter oda = new OracleDataAdapter(squery, oracleConnection))
-                        {
-                            try
-                            {
-                                //Fill the data table with select statement's query results:
-                                int recordsAffectedSubscriber = 0;
-
-                                recordsAffectedSubscriber = oda.Fill(dataTable);
-
-                            }
-                            catch (Exception ex)
-                            {
-
-                                Console.WriteLine(ex.Message);
-                            }
-                        }
-                    }
-                    return dataTable;
+                    return dataSource.GetDataTable(table, connectionString1.ToString());                
                 case DataSourceType.SpreadSheet:
                     break;
                 case DataSourceType.PostgresServer:
-                    using (NpgsqlConnection oracleConnection = new NpgsqlConnection(connectionString1.ToString()))
-                    {
-                        string squery = "Select * from " + table;
-                        oracleConnection.Open();
-
-                        using (NpgsqlDataAdapter oda = new NpgsqlDataAdapter(squery, oracleConnection))
-                        {
-                            try
-                            {
-                                //Fill the data table with select statement's query results:
-                                int recordsAffectedSubscriber = 0;
-
-                                recordsAffectedSubscriber = oda.Fill(dataTable);
-
-                            }
-                            catch (Exception ex)
-                            {
-
-                                Console.WriteLine(ex.Message);
-                            }
-                        }
-                    }
-                    return dataTable;
+                    return dataSource.GetDataTable(table, connectionString1.ToString());
                 case DataSourceType.MySqlServer:
-                    using (MySqlConnection mySqlConnection = new MySqlConnection(connectionString1.ToString()))
-                    {
-                        string squery = "Select * from " + table;
-                        mySqlConnection.Open();
-                        using (MySqlDataAdapter oda = new MySqlDataAdapter(squery, mySqlConnection))
-                        {
-                            try
-                            {
-                                //Fill the data table with select statement's query results:
-                                int recordsAffectedSubscriber = 0;
-                                recordsAffectedSubscriber = oda.Fill(dataTable);
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine(ex.Message);
-                            }
-                        }
-                    }
-                    return dataTable;
+                    return dataSource.GetDataTable(table, connectionString1.ToString());
                 default:
                     break;
             }

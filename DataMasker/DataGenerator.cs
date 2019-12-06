@@ -110,7 +110,11 @@ namespace DataMasker
             {
                 return null;
             }
-
+            if (columnConfig.RetainEmptyStringValues &&
+               (existingValue is string && string.IsNullOrWhiteSpace((string)existingValue)))
+            {
+                return existingValue;
+            }
             if (existingValue == null)
             {
                 getValue = GetValue(columnConfig, gender);
@@ -306,6 +310,10 @@ namespace DataMasker
                     return _faker.Date.Between(
                         ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
                         ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_MAX_DATE));
+                case DataType.Longitude:
+                    return _faker.Address.Longitude();
+                case DataType.Latitude:
+                    return _faker.Address.Latitude();
                 case DataType.Rant:
                     //Random rnd = new Random();
                     var rant = WaffleEngine.Text(rnd, 1, false);
@@ -449,6 +457,12 @@ namespace DataMasker
                 case DataType.RandomHexa:
                     return _faker.Random.Hexadecimal(ToInt32(columnConfig.StringFormatPattern));
                 case DataType.Bogus:
+                    if (string.IsNullOrEmpty(columnConfig.StringFormatPattern))
+                    {
+                        
+                        throw new ArgumentException(nameof(columnConfig.Type) + " must have a StringFormatPattern", columnConfig.StringFormatPattern);
+                        
+                    }
                     var _gen = _faker.Parse(columnConfig.StringFormatPattern);
                     if (columnConfig.Min.Contains(".") || columnConfig.Max.Contains("."))
                     {
@@ -496,7 +510,19 @@ namespace DataMasker
                 case DataType.Rant:
                 case DataType.Lorem:
                 case DataType.StringFormat:
+                case DataType.Company:
+                case DataType.CompanyPersonName:
+                case DataType.PostalCode:
+                case DataType.RandomUsername:
+                case DataType.RandomYear:
+                case DataType.RandomSeason:
+                case DataType.RandomInt:
+                case DataType.RandomDec:
+                case DataType.PickRandom:
                 case DataType.FullAddress:
+                case DataType.State:
+                case DataType.City:
+                case DataType.StringConcat:
                 case DataType.PhoneNumber:
                 case DataType.None:
                     return val;

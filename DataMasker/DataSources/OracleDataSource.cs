@@ -2,6 +2,8 @@
 using DataMasker.Models;
 using Dapper;
 using Oracle.DataAccess.Client;
+//using Oracle.ManagedDataAccess.Client;
+//using Oracle.ManagedDataAccess.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -309,45 +311,57 @@ namespace DataMasker.DataSources
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                 //var values = Array();
                 //Randomizer randomizer = new Randomizer();
-                if (retainNull)
+                try
                 {
-                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
-                }
-                else
-                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
 
 
-                //var find = values.Count();
-                object value = Values[rnd.Next(Values.Count())];         
-                if (Values.Count() <= 1)
-                {
-                    o = o + 1;
-                    if (o == 1)
+                    if (retainNull)
                     {
-                        File.WriteAllText(_exceptionpath, "");
+                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
                     }
-                   
-                    if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                    else
+                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+
+
+                    //var find = values.Count();
+                    object value = Values[rnd.Next(Values.Count())];
+                    if (Values.Count() <= 1)
                     {
-                        exceptionBuilder.Add(table, column);
-                        File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                        o = o + 1;
+                        if (o == 1)
+                        {
+                            File.WriteAllText(_exceptionpath, "");
+                        }
+
+                        if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                        {
+                            exceptionBuilder.Add(table, column);
+                            File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                        }
+                        //o = o + 1;
+                        //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                        return value;
                     }
-                    //o = o + 1;
-                    //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                    if (compareLogic.Compare(value, null).AreEqual && retainNull)
+                    {
+                        //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
+                        return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
+                    }
+                    while (compareLogic.Compare(value, existingValue).AreEqual)
+                    {
+
+                        value = Values[rnd.Next(0, Values.Count())];
+                    }
                     return value;
                 }
-                if (compareLogic.Compare(value, null).AreEqual && retainNull)
-                {
-                    //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
-                    return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
-                }
-                while (compareLogic.Compare(value, existingValue).AreEqual)
+                catch (Exception ex)
                 {
 
-                    value = Values[rnd.Next(0,Values.Count())];
+                    Console.WriteLine(ex.ToString());
+                    File.AppendAllText(_exceptionpath, ex.ToString() + Environment.NewLine);
+                    return null;
                 }
-
-                return value;
+               
 
             }
 
@@ -608,6 +622,34 @@ namespace DataMasker.DataSources
         public IEnumerable<T> CreateObjecttst<T>(DataTable dataTable)
         {
             throw new NotImplementedException();
+        }
+
+        public DataTable GetDataTable(string table, string connection)
+        {
+            DataTable dataTable = new DataTable();
+            using (OracleConnection oracleConnection = new OracleConnection(connection))
+            {
+                string squery = "Select * from " + table;
+                oracleConnection.Open();
+
+                using (OracleDataAdapter oda = new OracleDataAdapter(squery, oracleConnection))
+                {
+                    try
+                    {
+                        //Fill the data table with select statement's query results:
+                        int recordsAffectedSubscriber = 0;
+
+                        recordsAffectedSubscriber = oda.Fill(dataTable);
+
+                    }
+                    catch (Exception ex)
+                    {
+
+                        Console.WriteLine(ex.Message);
+                    }
+                }
+            }
+            return dataTable;
         }
     }
 }

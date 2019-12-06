@@ -37,6 +37,7 @@ namespace DataMasker.Examples
         public bool ignore { get; set; }
         public string Operator { get; set; }
         public bool? retainNullValues { get; set; }
+        public bool? RetainEmptyStringValues { get; set; }
         public string useGenderColumn { get; set; }
         public string StringFormatPattern { get; set; }
     }

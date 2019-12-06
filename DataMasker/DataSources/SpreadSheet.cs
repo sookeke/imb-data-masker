@@ -368,24 +368,7 @@ namespace DataMasker.DataSources
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
-
-                var o = value is DBNull;
-                if (value == DBNull.Value)
-                {
-                    var k = ex.ToString();
-                }
-                if (value.Equals(DBNull.Value))
-                {
-
-                }
-                Console.WriteLine(ex.Message);
-
-                // Get stack trace for the exception with source file information
-                var st = new StackTrace(ex, true);
-                // Get the top stack frame
-                var frame = st.GetFrame(0);
-                // Get the line number from the stack frame
-                var line = frame.GetFileLineNumber();
+                File.AppendAllText(_exceptionpath, ex.ToString() + Environment.NewLine);
                 return null;
 
             }
@@ -514,6 +497,11 @@ namespace DataMasker.DataSources
         }
 
         public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DataTable GetDataTable(string table, string connection)
         {
             throw new NotImplementedException();
         }

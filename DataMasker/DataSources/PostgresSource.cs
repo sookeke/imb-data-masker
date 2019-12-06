@@ -248,49 +248,60 @@ namespace DataMasker.DataSources
             string sql = "SELECT " + column + " FROM " + " " + table;
             using (var connection = new NpgsqlConnection(_connectionString))
             {
-                connection.Open();
-                var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
-                //Randomizer randomizer = new Randomizer();
-
-                if (retainNull)
+                try
                 {
-                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
-                }
-                else
-                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
 
 
-                //var find = values.Count();
-                object value = Values[rnd.Next(Values.Count())];
-                if (Values.Count() <= 1)
-                {
-                    o = o + 1;
-                    if (o == 1)
+                    connection.Open();
+                    var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
+                    //Randomizer randomizer = new Randomizer();
+
+                    if (retainNull)
                     {
-                        File.WriteAllText(_exceptionpath, "");
+                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
+                    }
+                    else
+                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+
+
+                    //var find = values.Count();
+                    object value = Values[rnd.Next(Values.Count())];
+                    if (Values.Count() <= 1)
+                    {
+                        o = o + 1;
+                        if (o == 1)
+                        {
+                            File.WriteAllText(_exceptionpath, "");
+                        }
+
+                        if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                        {
+                            exceptionBuilder.Add(table, column);
+                            File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                        }
+                        //o = o + 1;
+                        //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                        return value;
+                    }
+                    if (compareLogic.Compare(value, null).AreEqual && retainNull)
+                    {
+                        //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
+                        return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
+                    }
+                    while (compareLogic.Compare(value, existingValue).AreEqual)
+                    {
+
+                        value = Values[rnd.Next(0, Values.Count())];
                     }
 
-                    if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
-                    {
-                        exceptionBuilder.Add(table, column);
-                        File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
-                    }
-                    //o = o + 1;
-                    //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
                     return value;
                 }
-                if (compareLogic.Compare(value, null).AreEqual && retainNull)
+                catch (Exception ex)
                 {
-                    //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
-                    return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
+                    Console.WriteLine(ex.ToString());
+                    File.AppendAllText(_exceptionpath, ex.ToString() + Environment.NewLine);
+                    return null;
                 }
-                while (compareLogic.Compare(value, existingValue).AreEqual)
-                {
-
-                    value = Values[rnd.Next(0, Values.Count())];
-                }
-
-                return value;
             }
 
             //return list;
@@ -506,6 +517,34 @@ namespace DataMasker.DataSources
         {
             var ss = $"SELECT COUNT(*) FROM  \"{tableConfig.Schema}\".{tableConfig.Name}";
             return $"SELECT COUNT(*) FROM {tableConfig.Schema}.{tableConfig.Name}";
+        }
+
+        public DataTable GetDataTable(string table, string connection)
+        {
+            DataTable dataTable = new DataTable();
+            using (NpgsqlConnection oracleConnection = new NpgsqlConnection(connection))
+            {
+                string squery = "Select * from " + table;
+                oracleConnection.Open();
+
+                using (NpgsqlDataAdapter oda = new NpgsqlDataAdapter(squery, oracleConnection))
+                {
+                    try
+                    {
+                        //Fill the data table with select statement's query results:
+                        int recordsAffectedSubscriber = 0;
+
+                        recordsAffectedSubscriber = oda.Fill(dataTable);
+
+                    }
+                    catch (Exception ex)
+                    {
+
+                        Console.WriteLine(ex.Message);
+                    }
+                }
+            }
+            return dataTable;
         }
     }
 }

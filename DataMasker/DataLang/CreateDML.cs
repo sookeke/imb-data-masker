@@ -17,6 +17,7 @@ namespace DataMasker.DataLang
 
     public static class SqlDML
     {
+        public static string colnameToString { get; private set; }
         #region Public Methods
 
         /// <summary>
@@ -474,6 +475,7 @@ namespace DataMasker.DataLang
         public static void DataTableToExcelSheet(DataTable dataTable, string path, TableConfig tableConfig)
         {
             //HttpContext.Current.Response.Clear();
+            Dictionary<string, string> colInfo = new Dictionary<string, string>();
             if (dataTable.Columns.Count == 0 && tableConfig.Columns.Count() != 0)
             {
                 foreach (var col in tableConfig.Columns)
@@ -492,8 +494,13 @@ namespace DataMasker.DataLang
 
                 if (dataTable.Columns[i].DataType == typeof(SdoGeometry))
                 {
-                    DataColumn dcolColumn = new DataColumn("GeometryToString".ToUpper(), typeof(string));
+                    var colname = dataTable.Columns[i].ColumnName;
+                    colnameToString = colname + "Tostring";
+
+
+                    DataColumn dcolColumn = new DataColumn(colnameToString.ToUpper(), typeof(string));
                     dataTable.Columns.Add(dcolColumn);
+                    colInfo.Add(colname, colnameToString);
                     //dataTable.AcceptChanges();
                     //dataTable.Columns["GeometryToString"].DataType = typeof(SdoGeometry);
                 }
@@ -504,8 +511,12 @@ namespace DataMasker.DataLang
 
                 foreach (DataRow dataRow in dataTable.Rows)
                 {
+
                     if (dataColumn.DataType == typeof(SdoGeometry))
                     {
+
+                        //delete and replace sdo type and replace with string
+
                         //dataColumn.DataType = typeof(string);
                         var value = (SdoGeometry)dataRow[dataColumn.ColumnName];
                         var Z = "NULL"; var Y = "NULL"; var X = "NULL";
@@ -536,11 +547,29 @@ namespace DataMasker.DataLang
                         //var sdo_geometry_command_text = "MDSYS.SDO_GEOMETRY(" + value.Sdo_Gtype + "," + value.Sdo_Srid + ",NULL,MDSYS.SDO_ELEM_INFO_ARRAY(" + info + "),MDSYS.SDO_ORDINATE_ARRAY(" + arry_tostring + "))";
                         var sdo_geometry_command_text = string.Format("MDSYS.SDO_GEOMETRY({0},{1},{2},{3},{4})", value.Sdo_Gtype, value.Sdo_Srid, SDO_POINT, INFO_ARRAY, ORDINATE_ARRAY);
                         string output = sdo_geometry_command_text;
-                        dataRow["GeometryToString".ToUpper()] = output;
+                        dataRow[colnameToString.ToUpper()] = output;
+                      
+
+
                     }
                 }
             }
+            //remove sdo shape object from table and replace with string equivalent
+            foreach (var dataColumn in dataTable.Columns.Cast<DataColumn>().Select(n=>n.ColumnName).ToList())
+            {
+                foreach (KeyValuePair<string,string> item in colInfo)
+                {
 
+                    if (dataColumn == item.Key)
+                    {
+                        //delete SDOGEOMETRY COLUMN
+                        dataTable.Columns.Remove(item.Key);
+                        //rename colnametostring to colname
+                        dataTable.Columns[item.Value].ColumnName = item.Key;
+                        dataTable.AcceptChanges();
+                    }
+                }
+            }
             using (ExcelPackage pack = new ExcelPackage())
             {
                 ExcelWorksheet ws = pack.Workbook.Worksheets.Add(dataTable.TableName);
@@ -550,9 +579,9 @@ namespace DataMasker.DataLang
                     dataTable.TableName = dataTable.TableName + "_";
                 }
 
-                ws.Cells["A1"].LoadFromDataTable(dataTable,true,OfficeOpenXml.Table.TableStyles.Medium28);              
+                ws.Cells["A1"].LoadFromDataTable(dataTable, true, OfficeOpenXml.Table.TableStyles.Medium28);
                 pack.SaveAs(new FileInfo(path));
-                
+
             }
 
            

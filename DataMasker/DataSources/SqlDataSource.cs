@@ -224,68 +224,71 @@ namespace DataMasker.DataSources
             string sql = "SELECT " + column + " FROM " + " " + table;
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
-                var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
-                //var values = Array();
-                //Randomizer randomizer = new Randomizer();
-                if (retainNull)
+                try
                 {
-                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
-                }
-                else
-                    Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
 
 
-                //var find = values.Count();
-                object value = Values[rnd.Next(Values.Count())];
-                if (Values.Count() <= 1)
-                {
-                    o = o + 1;
-                    if (o == 1)
+                    connection.Open();
+                    var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
+                    //var values = Array();
+                    //Randomizer randomizer = new Randomizer();
+                    if (retainNull)
                     {
-                        File.WriteAllText(_exceptionpath, "");
+                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
+                    }
+                    else
+                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+
+
+                    //var find = values.Count();
+                    object value = Values[rnd.Next(Values.Count())];
+                    if (Values.Count() <= 1)
+                    {
+                        o = o + 1;
+                        if (o == 1)
+                        {
+                            File.WriteAllText(_exceptionpath, "");
+                        }
+
+                        if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                        {
+                            exceptionBuilder.Add(table, column);
+                            File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                        }
+                        //o = o + 1;
+                        //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                        return value;
                     }
 
-                    if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                    if (compareLogic.Compare(value, null).AreEqual && retainNull)
                     {
-                        exceptionBuilder.Add(table, column);
-                        File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
-                    }
-                    //o = o + 1;
-                    //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
-                    return value;
-                }
-                
-                if (compareLogic.Compare(value,null).AreEqual && retainNull)
-                {
-                    
-                    //var tt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
-                    //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
-                    return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
-                }
-                else
-                {
-                    
-                  
 
-                    try
+                        //var tt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
+                        //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
+                        return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
+                    }
+                    else
                     {
-                        while (compareLogic.Compare(value,existingValue).AreEqual)
+
+
+
+                        while (compareLogic.Compare(value, existingValue).AreEqual)
                         {
 
                             value = Values[rnd.Next(0, Values.Count())];
                         }
                         return value;
+
+
                     }
-                    catch (Exception)
-                    {
-                        throw;
-                      
-                    } 
-                   
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                    File.AppendAllText(_exceptionpath, ex.ToString() + Environment.NewLine);
+                    return null;
                 }
 
-                
 
             }
         }
@@ -544,6 +547,36 @@ namespace DataMasker.DataSources
         public IEnumerable<T> CreateObjecttst<T>(DataTable dataTable)
         {
             throw new NotImplementedException();
+        }
+
+        public DataTable GetDataTable(string table, string connection)
+        {
+            DataTable dataTable = new DataTable();
+            using (SqlConnection sqlConnection = new SqlConnection(connection))
+            {
+
+                string squery = "Select * from " + table;
+                sqlConnection.Open();
+                using (SqlDataAdapter adapter = new SqlDataAdapter(squery, sqlConnection))
+                {
+
+                    try
+                    {
+                        //Fill the data table with select statement's query results:
+                        int recordsAffectedSubscriber = 0;
+
+                        recordsAffectedSubscriber = adapter.Fill(dataTable);
+
+                    }
+                    catch (Exception ex)
+                    {
+
+                        Console.WriteLine(ex.Message);
+                    }
+
+                }
+                return dataTable;
+            }
         }
     }
 }

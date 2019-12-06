@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using DataMasker.Models;
@@ -28,6 +27,7 @@ namespace DataMasker.Interfaces
         IEnumerable<T> CreateObjecttst<T>(DataTable dataTable);
 
         DataTable CreateTable(IEnumerable<IDictionary<string, object>> obj);
+        DataTable GetDataTable(string table, string connection);
         DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig tableConfig);
 
 
