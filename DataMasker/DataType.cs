@@ -77,7 +77,7 @@
         Longitude,
         Latitude,
         RandomSeason,
-
+        FullName,
         File,
         Filename,
         Blob,

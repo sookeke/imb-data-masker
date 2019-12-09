@@ -1,7 +1,7 @@
 ﻿Usage:
 StringFormatPattern = "{{stringFormatPattern List}}" or a combination "{{stringFormatPattern List}} {{stringFormatPattern List}}" e.g "{{RANDOMIZER.INT}} {{NAME.FULLNAME}}" = 2334455 Stanley Okeke
 
-StringFormatPattern List are below:
+Bogus data type StringFormatPattern List are below:
 
 RANDOMIZER.NUMBER
 RANDOMIZER.DIGITS

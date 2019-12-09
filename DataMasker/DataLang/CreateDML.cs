@@ -125,29 +125,42 @@ namespace DataMasker.DataLang
             if (config.DataSource.Type == DataSourceType.OracleServer)
             {
 
-                output.AppendFormat("REM INSERTING into {0}\n", table.TableName);
+                output.AppendFormat("REM INSERTING into {0}\n", $"{tableConfig.Schema}." + $"{tableConfig.Name}");
                 output.AppendFormat("SET DEFINE OFF\n\t");
             }
             else if (config.DataSource.Type == DataSourceType.PostgresServer)
             {
-               
+                if (table.Rows.Count == 0)
+                {
+                    output.AppendFormat("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nDEFAULT VALUES ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
+                }
+                else
                     output.AppendFormat("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
-
             }
-            else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
+            else if (config.DataSource.Type == DataSourceType.SqlServer)
             {
-                
+                if (table.Rows.Count > 1000)
+                {
                     output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
                     output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
-
-
-              
+                }
+                else if (table.Rows.Count == 0)
+                {
+                    //insert default value to solve invalid sql error.
+                    output.AppendFormat("INSERT INTO {0}\n\t({1})\nDEFAULT VALUES", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
+                }
+                else
+                    output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
+                          
             }
             else if (config.DataSource.Type == DataSourceType.MySqlServer)
             {
-                //output.AppendFormat("INSERT INTO `{0}`\n\t({1})\nVALUES ", table.TableName, string.Join(", ", names.ToArray()));
-                output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
-
+                if (table.Rows.Count == 0)
+                {
+                    output.AppendFormat("INSERT INTO {0}\n\t({1})\nDEFAULT VALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
+                }
+                else
+                    output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
             }
             else
             {
@@ -188,7 +201,7 @@ namespace DataMasker.DataLang
                 //oracle does not allow multi insert
                 if (config.DataSource.Type == DataSourceType.OracleServer)
                 {
-                    output.AppendFormat("INSERT INTO {0}({1}) VALUES ", table.TableName, string.Join(", ", names.ToArray()));
+                    output.AppendFormat("INSERT INTO {0}({1}) VALUES ", $"{tableConfig.Schema}."+ $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
                     output.Append("(");
                     output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
 
@@ -196,7 +209,7 @@ namespace DataMasker.DataLang
                 }
                 else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
                 {
-                    output.AppendFormat("INSERT INTO [{0}]({1}) VALUES ", table.TableName, string.Join(", ", names.ToArray()));
+                    output.AppendFormat("INSERT INTO {0}({1}) VALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
                     output.Append("(");
                     output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
                     output.Append(")");

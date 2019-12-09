@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -32,14 +34,17 @@ namespace DataMasker.Examples
     {
         public string name { get; set; }
         public string type { get; set; }
-        public object min { get; set; }
-        public object max { get; set; }
+        public string min { get; set; }
+        public string max { get; set; }
         public bool ignore { get; set; }
         public string Operator { get; set; }
         public bool? retainNullValues { get; set; }
         public bool? RetainEmptyStringValues { get; set; }
         public string useGenderColumn { get; set; }
         public string StringFormatPattern { get; set; }
+        [DefaultValue(null)]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        public string UseValue { get; set; }
     }
 
     public class Table

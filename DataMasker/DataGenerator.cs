@@ -306,6 +306,8 @@ namespace DataMasker
                     return _faker.Name.FirstName(gender);
                 case DataType.LastName:
                     return _faker.Name.LastName(gender);
+                case DataType.FullName:
+                    return _faker.Name.FullName(gender);
                 case DataType.DateOfBirth:
                     return _faker.Date.Between(
                         ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
@@ -511,6 +513,7 @@ namespace DataMasker
                 case DataType.Lorem:
                 case DataType.StringFormat:
                 case DataType.Company:
+                case DataType.FullName:
                 case DataType.CompanyPersonName:
                 case DataType.PostalCode:
                 case DataType.RandomUsername:
@@ -530,7 +533,7 @@ namespace DataMasker
                     return DateTime.Parse(val);
             }
 
-            throw new ArgumentOutOfRangeException(nameof(dataType), dataType, null);
+            throw new ArgumentOutOfRangeException(nameof(dataType) + " not implemented for UseValue", dataType, null);
         }
 
         class HazSqlGeo
@@ -572,6 +575,10 @@ namespace DataMasker
         public object GetValueShuffle(ColumnConfig columnConfig, string table, string column, IDataSource dataSources, DataTable dataTable,
             object existingValue, Name.Gender? gender = null)
         {
+            if (!string.IsNullOrEmpty(columnConfig.UseValue))
+            {
+                return ConvertValue(columnConfig.Type, columnConfig.UseValue);
+            }
             if (columnConfig.RetainNullValues &&
                existingValue == null)
             {
@@ -951,6 +958,11 @@ namespace DataMasker
             {
                 return null;
             }
+            if (columnConfig.RetainEmptyStringValues &&
+          (existingValue is string && string.IsNullOrWhiteSpace((string)existingValue)))
+            {
+                return existingValue;
+            }
             switch (columnConfig.Type)
             {
                 case DataType.math:
@@ -973,6 +985,9 @@ namespace DataMasker
                             return _value;
                         case nameof(Operation.avarage):
                             return source.Sum(n=>Convert.ToDouble(n))/source.Count();
+                        case nameof(Operation.division):
+                            var k =  Convert.ToDouble(source.FirstOrDefault()) / factor;
+                            return k;
                         default:
                             break;
                     }

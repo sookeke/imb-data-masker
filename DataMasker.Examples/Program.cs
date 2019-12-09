@@ -91,8 +91,9 @@ namespace DataMasker.Examples
             //generate list of words for comments like columns
             List<string> _comment = new List<string> { "Description", "DESCRIPTION", "TEXT", "MEMO", "describing", "Descr", "COMMENT", "comment", "NOTE", "Comment", "REMARK", "remark", "DESC" };
             List<string> _fullName = new List<string> { "full name", "AGENT_NAME", "OFFICER_NAME", "FULL_NAME", "CONTACT_NAME", "MANAGER_NAME" };
-            List<string> MaskingRules = new List<string>() { "No Masking required", "Replace Value with fake data","Shuffle", "Flagged", "Scramble" };
+            List<string> MaskingRules = new List<string>() { "No Masking required", "Replace Value with fake data","Shuffle", "Flagged" };
             List<string> maskingoutString = new List<string>() { "char", "nchar","string","varchar", "nvarchar", "binary", "varbinary" , "character varying" };
+            List<string> ScrableList = new List<string>() { "char", "nchar", "string", "varchar", "nvarchar", "binary", "varbinary", "character varying", "numeric", "decimal", "double", "int","Number"};
             List<Table> tableList = new List<Table>();
             DataGeneration dataGeneration = new DataGeneration
             {
@@ -182,13 +183,21 @@ namespace DataMasker.Examples
                     }
                     else if (col.MaskingRule.ToUpper().Contains("MATH"))
                     {
+                        if (maskingoutString.Any(n => col.DataType.ToUpper().Contains(n.ToUpper())))
+                        {
+                            throw new ArgumentException("Math Operation apply only on Numeric Datatype", col.DataType + " on " + col.ColumnName);
+                        }
                         column.type = DataType.math.ToString();
-                        column.max = col.Max.ToString();
-                        column.min = col.Min.ToString();
+                        column.max = col.Max.ToString(); ;
+                        column.min = col.Min;
+                        if (string.IsNullOrEmpty(col.StringFormat))
+                        {
+                            throw new ArgumentException("Math Operation requires a stringFormat", col.StringFormat + " on " + col.ColumnName);
+                        }
                         column.StringFormatPattern = col.StringFormat;
-                        column.Operator = "";
-                        column.ignore = true;
                         column.useGenderColumn = "";
+                        column.ignore = true;
+                        column.Operator = col.RuleReasoning;
                     }
                     else if (!MaskingRules.Any(n => col.MaskingRule.ToUpper().Contains(n.ToUpper())))
                     {
@@ -207,20 +216,30 @@ namespace DataMasker.Examples
                                 //datatype must be string 
                                 if (!maskingoutString.Any(n=>col.DataType.ToUpper().Contains(n.ToUpper())))
                                 {
-                                    throw new ArgumentException("MaskingOut type apply only on Strings", col.DataType);
+                                    throw new ArgumentException("MaskingOut type apply only on String dataType", col.DataType + " on " + col.ColumnName);
                                 }
                                 column.type = DataType.MaskingOut.ToString();                             
                                 column.min = col.Min;
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
-                                    throw new ArgumentException("MaskingOut type requires a StringFormatPattern value", col.StringFormat);
+                                    throw new ArgumentException("MaskingOut type requires a StringFormatPattern value", nameof(col.StringFormat) + " on " + col.ColumnName);
 
                                 }
-                                column.StringFormatPattern = col.StringFormat.Split('(').FirstOrDefault(); //StringFormatpattern = MaskingRight(4) , MaskingLeft(ChunkSize)
+                                column.StringFormatPattern = col.StringFormat.Split('(').FirstOrDefault(); //StringFormatpattern = MaskingRight(4) , MaskingLeft(ChunkSize), MaskigMiddle(chunkSize)
                                 column.max = string.Join("", col.StringFormat.Where(char.IsDigit));
                                 column.useGenderColumn = "";
                                 break;
                             case nameof(DataType.Scramble):
+                                //datatype must be string 
+                                if (!ScrableList.Any(n => col.DataType.ToUpper().Contains(n.ToUpper())))
+                                {
+                                    throw new ArgumentException("Scramble type apply only on Strings and Numeric Datatype", col.DataType + " on " + col.ColumnName);
+                                }
+                                column.type = DataType.Scramble.ToString();
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min;
+                                column.StringFormatPattern = "";
+                                column.useGenderColumn = "";
                                 break;
                             case nameof(DataType.Company):
                                 column.type = DataType.Company.ToString();
@@ -244,7 +263,7 @@ namespace DataMasker.Examples
                                 column.min = col.Min;
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
-                                    throw new ArgumentException("StringFormat type requires a StringFormatPattern value", col.StringFormat);
+                                    throw new ArgumentException("StringFormat type requires a StringFormatPattern value", nameof(col.StringFormat) + " on " + col.ColumnName);
                                 }
                                 column.StringFormatPattern = col.StringFormat;
                                 column.useGenderColumn = "";
@@ -271,6 +290,10 @@ namespace DataMasker.Examples
                                 column.ignore = true;
                                 break;
                             case nameof(DataType.math):
+                                if (maskingoutString.Any(n => col.DataType.ToUpper().Contains(n.ToUpper())))
+                                {
+                                    throw new ArgumentException("Math Operation apply only on Numeric Datatype", col.DataType + " on " + col.ColumnName);
+                                }
                                 column.type = DataType.math.ToString();
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min;
@@ -294,7 +317,7 @@ namespace DataMasker.Examples
                                 column.min = col.Min;
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
-                                    throw new ArgumentException("Bogus type requires a StringFormatPattern value", col.StringFormat);
+                                    throw new ArgumentException("Bogus type requires a StringFormatPattern value", nameof(col.StringFormat) + " on " + col.ColumnName);
                                     
                                 }
                                 column.StringFormatPattern = col.StringFormat;
@@ -314,6 +337,13 @@ namespace DataMasker.Examples
                                 column.StringFormatPattern = "";
                                 column.useGenderColumn = "";
                                 break;
+                            case nameof(DataType.FullName):
+                                column.type = DataType.FullName.ToString();
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min;
+                                column.StringFormatPattern = "";
+                                column.useGenderColumn = "";
+                                break;
                             case nameof(DataType.LastName):
                                 column.type = DataType.LastName.ToString();
                                 column.max = col.Max.ToString(); ;
@@ -325,7 +355,7 @@ namespace DataMasker.Examples
                                 column.type = DataType.DateOfBirth.ToString();
                                 if (string.IsNullOrEmpty(col.Max.ToString()) || string.IsNullOrEmpty(col.Min.ToString()))
                                 {
-                                    throw new ArgumentException("DateOfBirth type requires a Min and Max value", col.Min + col.Max);
+                                    throw new ArgumentException("DateOfBirth type requires MinMax value", nameof(col.Min) + nameof(col.Max) + " on " + col.ColumnName);
                                 }
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min;
@@ -336,7 +366,7 @@ namespace DataMasker.Examples
                                 column.type = DataType.PickRandom.ToString();
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
-                                    throw new ArgumentException("PickRandom type requires a StringFormatPattern of a list of random variable seperated with a comma", col.StringFormat);
+                                    throw new ArgumentException("PickRandom type requires a StringFormatPattern of a list of random variable seperated with a comma", col.StringFormat + " on" + col.ColumnName);
 
                                 }
                                 column.max = col.Max.ToString(); ;
@@ -348,7 +378,7 @@ namespace DataMasker.Examples
                                 column.type = DataType.RandomString2.ToString();
                                 if (string.IsNullOrEmpty(col.Max.ToString()) || string.IsNullOrEmpty(col.Min.ToString()))
                                 {
-                                    throw new ArgumentException("RandomString2 type requires a Min and Max value", col.Min + col.Max);
+                                    throw new ArgumentException("RandomString2 type requires a Min and Max value", nameof(col.Min) + nameof(col.Max) + " on " + col.ColumnName);
                                 }
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min;
@@ -360,7 +390,7 @@ namespace DataMasker.Examples
                                 column.type = DataType.Rant.ToString();
                                 if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
-                                    throw new ArgumentException("Rant type requires a Max value",  col.Max);
+                                    throw new ArgumentException("Rant type requires a Max value",  nameof(col.Max) + " on " + col.ColumnName);
                                 }
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min;
@@ -383,9 +413,9 @@ namespace DataMasker.Examples
                                 break;
                             case nameof(DataType.Lorem):
                                 column.type = DataType.Lorem.ToString();
-                                if (string.IsNullOrEmpty(col.Max.ToString()) || string.IsNullOrEmpty(col.Min.ToString()))
+                                if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
-                                    throw new ArgumentException("Lorem type requires a Min and Max value", col.Min + col.Max);
+                                    throw new ArgumentException("Lorem type requires a Min and Max value", nameof(col.Max) + " on " + col.ColumnName);
                                 }
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min;
@@ -475,7 +505,7 @@ namespace DataMasker.Examples
                                 column.type = DataType.RandomDec.ToString();
                                 if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
-                                    throw new ArgumentException("RandomDec type requires a Max value",  col.Max);
+                                    throw new ArgumentException("RandomDec type requires a Max value",  nameof(col.Max) + " on " + col.ColumnName);
                                 }
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
@@ -500,7 +530,7 @@ namespace DataMasker.Examples
                                 column.type = DataType.RandomInt.ToString();
                                 if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
-                                    throw new ArgumentException("RandomInt type requires a Max value", col.Max);
+                                    throw new ArgumentException("RandomInt type requires a Max value", nameof(col.Max) + " on " + col.ColumnName);
                                 }
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
@@ -512,6 +542,7 @@ namespace DataMasker.Examples
                             case nameof(DataType.RandomHexa):
                                 break;
                             default:
+                                column.ignore = true;   
                                 break;
                         }
                     }
@@ -620,7 +651,7 @@ namespace DataMasker.Examples
                             if (!string.IsNullOrEmpty(sizze))
                             {
                                 column.type = DataType.Rant.ToString();
-                                column.max = Convert.ToInt32(sizze);
+                                column.max = Convert.ToString(sizze);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "DESCRIPTION";
                                 column.useGenderColumn = "";
@@ -675,7 +706,7 @@ namespace DataMasker.Examples
                             column.type = DataType.PhoneNumber.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
-                            column.StringFormatPattern = "(###)-###-####";
+                            column.StringFormatPattern = "##########";
                             column.useGenderColumn = "";
                         }
                     }
@@ -712,7 +743,7 @@ namespace DataMasker.Examples
                             if (!string.IsNullOrEmpty(charSize))
                             {
                                 column.type = DataType.PickRandom.ToString();
-                                column.max = Convert.ToInt32(charSize);
+                                column.max = Convert.ToString(charSize);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "";
                                 column.useGenderColumn = "";
@@ -746,7 +777,7 @@ namespace DataMasker.Examples
                             if (!string.IsNullOrEmpty(sizze))
                             {
                                 column.type = DataType.FullAddress.ToString();
-                                column.max = Convert.ToInt32(sizze);
+                                column.max = Convert.ToString(sizze);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
                                 column.useGenderColumn = "Canada";
@@ -770,7 +801,7 @@ namespace DataMasker.Examples
                             column.useGenderColumn = "Canada";
                         }
                     }
-                    else if (col.ColumnName.ToUpper().Contains("USERID"))
+                    else if (col.ColumnName.ToUpper().Contains("USERID") || col.ColumnName.ToUpper().Contains("USERNAME"))
                     {
                         column.type = DataType.RandomUsername.ToString();
                         column.max = col.Max.ToString(); ;
@@ -1110,7 +1141,7 @@ namespace DataMasker.Examples
             [JsonProperty("Min", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string Min { get; set; }
             [DefaultValue("")]
-            [JsonProperty("Max", DefaultValueHandling = DefaultValueHandling.Populate)]
+            [JsonProperty("max", DefaultValueHandling = DefaultValueHandling.Populate)]
             public string Max { get; set; }
 
             [JsonProperty("Sensitive")]
@@ -1360,7 +1391,7 @@ namespace DataMasker.Examples
             }
             catch (Exception e)
             {
-                File.WriteAllText(_exceptionpath, e.ToString() + Environment.NewLine + Environment.NewLine);
+                File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
                 Console.WriteLine(e.Message);
                 Console.WriteLine("Program will exit: Press ENTER to exist..");
                 Console.ReadLine();

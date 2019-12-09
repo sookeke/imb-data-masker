@@ -41,6 +41,7 @@ namespace DataMasker
         /// </summary>
         private readonly ConcurrentDictionary<string, HashSet<object>> _uniqueValues = new ConcurrentDictionary<string, HashSet<object>>();
         private readonly DataTable _location = new DataTable() { Columns = { "Country", "States", "Province", "City", "Address"} };
+        private static readonly List<KeyValuePair<object, object>> uniquevalue = new List<KeyValuePair<object, object>>();
         //private readonly IDataSource _dataSource;
 
 
@@ -113,64 +114,78 @@ namespace DataMasker
                 }
                 else if (columnConfig.Type == DataType.math)
                 {
-                    try
+                    if (!string.IsNullOrEmpty(columnConfig.UseValue))
                     {
-                        List<object> source = new List<object>();
-                        if (string.IsNullOrEmpty(columnConfig.StringFormatPattern) && columnConfig.Max  == null && columnConfig.StringFormatPattern.Contains(","))
+                        existingValue = ConvertValue(columnConfig.Type, columnConfig.UseValue);
+                    }
+                    else
+                    {
+                        try
                         {
-                            throw new InvalidOperationException("StringFormatPattern and Max Cannot be empty");
-                        }
-                        //check position of stringformat pattern objects
-                        var columnPosition = tableConfig.Columns.Select(n=>n.Name).ToList();
-                        foreach (var item in columnConfig.StringFormatPattern.Split(','))
-                        {
-                            //column A should have been masked alongside column B to apply operation: Col A + Col B = Col C
-                            if (!(columnPosition.IndexOf(columnConfig.Name) > columnPosition.IndexOf(item)))
+                            List<object> source = new List<object>();
+                            if (string.IsNullOrEmpty(columnConfig.StringFormatPattern) && columnConfig.Max == null && columnConfig.StringFormatPattern.Contains(","))
                             {
-                                throw new InvalidOperationException(columnConfig.Name + " Index must be Greater than " + item);
+                                throw new InvalidOperationException("StringFormatPattern and Max Cannot be empty");
                             }
-                            else
+                            //check position of stringformat pattern objects
+                            var columnPosition = tableConfig.Columns.Select(n => n.Name).ToList();
+                            foreach (var item in columnConfig.StringFormatPattern.Split(','))
                             {
-                                //only number objects
-                                if (IsNumeric(obj[item]))
+                                //column A should have been masked alongside column B to apply operation: Col A + Col B = Col C
+                                if (!(columnPosition.IndexOf(columnConfig.Name) > columnPosition.IndexOf(item)))
                                 {
-                                    source.Add(obj[item]);
+                                    throw new InvalidOperationException(columnConfig.Name + " Index must be Greater than " + item);
                                 }
                                 else
-                                    throw new InvalidOperationException(item + " must be Numeric for " + columnConfig.Operator);
+                                {
+                                    //only number objects
+                                    if (IsNumeric(obj[item]))
+                                    {
+                                        source.Add(obj[item]);
+                                    }
+                                    else
+                                        throw new InvalidOperationException(item + " must be Numeric type for " + columnConfig.Operator);
+
+                                }
 
                             }
-                            
+                            existingValue = _dataGenerator.MathOperation(columnConfig, existingValue, source.ToArray(), columnConfig.Operator, Convert.ToInt32(Math.Round(Convert.ToDecimal(columnConfig.Max))));
+
                         }
-                        existingValue = _dataGenerator.MathOperation(columnConfig, existingValue, source.ToArray(), columnConfig.Operator, Convert.ToInt32(columnConfig.Max));
-                        
+                        catch (Exception ex)
+                        {
+                            File.AppendAllText(_exceptionpath, "Masking Operation InvalidOperationException: " + ex.Message + Environment.NewLine);
+                            // throw;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        File.WriteAllText(_exceptionpath, "Masking Operation InvalidOperationException: " + ex.Message  + Environment.NewLine);
-                       // throw;
-                    }                                     
                 }
                 else if (columnConfig.Type == DataType.MaskingOut)
                 {
-                    if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingRight".ToUpper()))
+                    if (!string.IsNullOrEmpty(columnConfig.UseValue))
                     {
-                        existingValue = MaskingRight(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
-                    }
-                   else if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingLeft".ToUpper()))
-                    {
-                        existingValue = MaskingLeft(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
-                    }
-                   else if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingMiddle".ToUpper()))
-                    {
-                        existingValue = MaskingMiddle(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
+                        existingValue = ConvertValue(columnConfig.Type, columnConfig.UseValue);
                     }
                     else
-                        throw new ArgumentException("Invalid MaskingOut Operation", columnConfig.StringFormatPattern);
+                    {
+                        if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingRight".ToUpper()))
+                        {
+                            existingValue = MaskingRight(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
+                        }
+                        else if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingLeft".ToUpper()))
+                        {
+                            existingValue = MaskingLeft(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
+                        }
+                        else if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingMiddle".ToUpper()))
+                        {
+                            existingValue = MaskingMiddle(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
+                        }
+                        else
+                            throw new ArgumentException("Invalid MaskingOut Operation", columnConfig.StringFormatPattern);
+                    }
                 }
                 else if (columnConfig.Type == DataType.Scramble)
                 {
-                    existingValue = DataScramble(existingValue, columnConfig);
+                    existingValue = DataScramble(existingValue,tableConfig.Name, columnConfig);
                 }
                 else if (columnConfig.Type == DataType.exception)
                 {
@@ -188,6 +203,7 @@ namespace DataMasker
                 }
                 else if (_location.Columns.Cast<DataColumn>().Where(s=>columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1 || _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Type.ToString().ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1)
                 {
+                    //
                     var cname = _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).ToList().FirstOrDefault();
                     try
                     {
@@ -202,8 +218,9 @@ namespace DataMasker
                         else
                             existingValue = null;
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        File.AppendAllText(_exceptionpath, "Could not Generate addresses and will return null: " + ex.Message + Environment.NewLine);
                         existingValue = null;
                     }
 
@@ -272,7 +289,7 @@ namespace DataMasker
             {
                 Expression = 0;
             }
-            bool isNum = Double.TryParse(Convert.ToString(Expression), System.Globalization.NumberStyles.Any, System.Globalization.NumberFormatInfo.InvariantInfo, out double retNum);
+            bool isNum = double.TryParse(Convert.ToString(Expression), System.Globalization.NumberStyles.Any, System.Globalization.NumberFormatInfo.InvariantInfo, out double retNum);
             return isNum;
         }
         public IDictionary<string, object> MaskBLOB(IDictionary<string, object> obj,
@@ -354,9 +371,15 @@ namespace DataMasker
             Array = ms.ToArray();
             return Array.Count();
         }
-        private object DataScramble(object o, ColumnConfig columnConfig)
+        private object DataScramble(object o, string tableName, ColumnConfig columnConfig)
         {
             _randomizer = new Randomizer();
+            int totalIterations = 0;
+            string uniqueCacheKey = $"{tableName}.{columnConfig.Name}";
+            if (!string.IsNullOrEmpty(columnConfig.UseValue))
+            {
+                return ConvertValue(columnConfig.Type, columnConfig.UseValue);
+            }
             if (columnConfig.RetainNullValues &&
               o == null)
             {
@@ -369,28 +392,110 @@ namespace DataMasker
             }
             if (o is string)
             {
+                if (Convert.ToString(o).Length > 1)
+                {
+                    object newValue = Convert.ToString(string.Join("", _randomizer.Shuffle(Convert.ToString(o).ToArray()).ToArray()));
+                    while (Convert.ToString(newValue).Equals(Convert.ToString(o)))
+                    {
+                        totalIterations++;
+                        if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
+                        {
+                            if (!(uniquevalue.Where(n => n.Key.Equals(tableName)).Count() > 0 && uniquevalue.Where(n => n.Value.Equals(columnConfig.Name)).Count() > 0))
+                            {
+                                File.AppendAllText(_exceptionpath, $"Unable to generate Scramble value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                                uniquevalue.Add(new KeyValuePair<object, object>(tableName, columnConfig.Name));
+                                //break;
+                            }
+                            //File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                            break;
+                        }
+                        newValue = Convert.ToString(string.Join("", _randomizer.Shuffle(Convert.ToString(o).ToArray()).ToArray()));
+                    }
+                    return newValue;
+                }
+                else
+                {
                
-                return string.Join("", _randomizer.Shuffle(Convert.ToString(o)).ToArray());
+                    //throw new ArgumentException("cannot scramble string of lenght less than 2", columnConfig.Name);
+                    if (!(uniquevalue.Where(n => n.Key.Equals(tableName)).Count() > 0 && uniquevalue.Where(n => n.Value.Equals(columnConfig.Name)).Count() > 0))
+                    {
+                        File.AppendAllText(_exceptionpath, "cannot scramble string "+ Convert.ToString(o) + " of lenght less than 2 on " + uniqueCacheKey + Environment.NewLine);
+                        uniquevalue.Add(new KeyValuePair<object, object>(tableName, columnConfig.Name));
+                        //break;
+                    }
+                    
+                    return o;
+                }
             }
             else if (o is decimal)
             {
-                //_randomizer = new Randomizer();
-                return Convert.ToDecimal(string.Join("", _randomizer.Shuffle(Convert.ToString(o)).ToArray()));
+
+                if (Convert.ToString(o).Contains(".") && Convert.ToString(o).Split('.').FirstOrDefault().Length != 0)
+                {
+                    var s = Convert.ToString(o).Split('.');
+
+                    ;                    //_randomizer = new Randomizer();
+                    return Convert.ToDecimal(string.Join("", _randomizer.Shuffle(Convert.ToString(s.FirstOrDefault()).ToArray()).ToArray())) + "." + s.LastOrDefault().ToString();
+                }
+                else
+                {
+                    File.AppendAllText(_exceptionpath, "cannot scramble decimal " + Convert.ToString(o) + " of left lenght less than 2 on " + uniqueCacheKey + Environment.NewLine);
+                    return Convert.ToDecimal(string.Join("", _randomizer.Shuffle(Convert.ToString(o)).ToArray()));
+                }
             }
             else if (o is double)
             {
-               // _randomizer = new Randomizer();
-                return Convert.ToDouble(string.Join("", _randomizer.Shuffle(Convert.ToString(o)).ToArray()));
+                if (Convert.ToString(o).Contains(".") && Convert.ToString(o).Split('.').FirstOrDefault().Length != 0)
+                {
+                    var s = Convert.ToString(o).Split('.');
+
+                    //_randomizer = new Randomizer();
+                    return Convert.ToDouble(string.Join("", _randomizer.Shuffle(Convert.ToString(s.FirstOrDefault()).ToArray()).ToArray())) + "." + s.LastOrDefault().ToString();
+                }
+                else
+                {
+                    File.AppendAllText(_exceptionpath, "cannot scramble double " + Convert.ToString(o) + " of left lenght less than 2 on " + uniqueCacheKey + Environment.NewLine);
+                    return Convert.ToDouble(string.Join("", _randomizer.Shuffle(Convert.ToString(o)).ToArray()));
+
+                }// _randomizer = new Randomizer();
+
             }
             else if (o is int)
             {
                 //_randomizer = new Randomizer();
-                return Convert.ToInt32(string.Join("", _randomizer.Shuffle(Convert.ToString(o)).ToArray()));
+               
+                if (Convert.ToString(o).Length > 1)
+                {
+                    object newValue = Convert.ToInt32(string.Join("", _randomizer.Shuffle(Convert.ToString(o).ToArray()).ToArray()));
+                    while (Convert.ToString(newValue).Equals(Convert.ToString(o)))
+                    {
+                        totalIterations++;
+                        if (totalIterations >= MAX_UNIQUE_VALUE_ITERATIONS)
+                        {
+                            if (!(uniquevalue.Where(n => n.Key.Equals(tableName)).Count() > 0 && uniquevalue.Where(n => n.Value.Equals(columnConfig.Name)).Count() > 0))
+                            {
+                                File.AppendAllText(_exceptionpath, $"Unable to generate Scramble value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                                uniquevalue.Add(new KeyValuePair<object, object>(tableName, columnConfig.Name));
+                                //break;
+                            }
+                            //File.AppendAllText(_exceptionpath, $"Unable to generate unique value for {uniqueCacheKey}, attempt to resolve value {totalIterations} times" + Environment.NewLine + Environment.NewLine);
+                            break;
+                        }
+                        newValue = Convert.ToInt32(string.Join("", _randomizer.Shuffle(Convert.ToString(o).ToArray()).ToArray()));
+                    }
+                    return newValue;
+                }
+                else
+                {
+                    File.AppendAllText(_exceptionpath, "cannot scramble Integer " + Convert.ToString(o) + " of lenght less than 2 on " + uniqueCacheKey + Environment.NewLine);
+                    return Convert.ToInt32(string.Join("", _randomizer.Shuffle(Convert.ToString(o).ToArray()).ToArray()));
+                }
+                
             }
             else if (o is long)
             {
                 //_randomizer = new Randomizer();
-                return Convert.ToInt64(string.Join("", _randomizer.Shuffle(Convert.ToString(o)).ToArray()));
+                return Convert.ToInt64(string.Join("", _randomizer.Shuffle(Convert.ToString(o).ToArray()).ToArray()));
             }
             else
                 throw new ArgumentException(columnConfig.Type.ToString() + " does not apply to " +  o.GetType().ToString());
@@ -409,7 +514,7 @@ namespace DataMasker
                 return o;
             }
             List<string> slist = new List<string>();
-            if (o is string && !string.IsNullOrWhiteSpace((string)o))
+            if (o is string && !string.IsNullOrWhiteSpace((string)o) && Convert.ToString(o).Length > position)
             {
                 int i = 0;
                 var s = Convert.ToString(o).Batch(position).Select(r => new String(r.ToArray())).ToList();
@@ -426,7 +531,8 @@ namespace DataMasker
                 });
                 return string.Join("", slist.ToArray());
             }
-            return string.Empty;
+            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than " + position + " in " + columnConfig.Name +Environment.NewLine);
+            return Convert.ToString(o);
         }
         private object MaskingRight(object o, int position, ColumnConfig columnConfig)
         {
@@ -441,7 +547,7 @@ namespace DataMasker
                 return o;
             }
             List<string> slist = new List<string>();
-            if (o is string && !string.IsNullOrWhiteSpace((string)o))
+            if (o is string && !string.IsNullOrWhiteSpace((string)o) && Convert.ToString(o).Length > position)
             {
                 int i = 0;
                 var s = Convert.ToString(o).Batch(position).Select(r => new String(r.ToArray())).ToList();
@@ -458,7 +564,8 @@ namespace DataMasker
                 });
                 return string.Join("", slist.ToArray());
             }
-            return string.Empty;
+            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than " + position + " in " + columnConfig.Name + Environment.NewLine);
+            return Convert.ToString(o);
         }
         private object  MaskingMiddle(object o, int position, ColumnConfig columnConfig)
         {
@@ -473,7 +580,7 @@ namespace DataMasker
             {
                 return o;
             }
-            if (o is string && !string.IsNullOrWhiteSpace((string)o))
+            if (o is string && !string.IsNullOrWhiteSpace((string)o) && Convert.ToString(o).Length > (position * 2))
             {
                 int i = 0;
                 var s = Convert.ToString(o).Batch(position).Select(r => new String(r.ToArray())).ToList();
@@ -492,7 +599,8 @@ namespace DataMasker
                 });
                 return string.Join("", slist.ToArray());
             }
-            return string.Empty;
+            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than 2X " + position + " in " + columnConfig.Name + Environment.NewLine);
+            return Convert.ToString(o);
         }
         private object GetUniqueValue(string tableName,
             ColumnConfig columnConfig,
@@ -525,6 +633,41 @@ namespace DataMasker
 
             uniqueValues.Add(existingValue);
             return existingValue;
+        }
+        private static object ConvertValue(
+        DataType dataType,
+        string val)
+        {
+            switch (dataType)
+            {
+                case DataType.FirstName:
+                case DataType.LastName:
+                case DataType.Rant:
+                case DataType.Lorem:
+                case DataType.StringFormat:
+                case DataType.Company:
+                case DataType.FullName:
+                case DataType.CompanyPersonName:
+                case DataType.PostalCode:
+                case DataType.RandomUsername:
+                case DataType.RandomYear:
+                case DataType.RandomSeason:
+                case DataType.math:
+                case DataType.RandomInt:
+                case DataType.RandomDec:
+                case DataType.PickRandom:
+                case DataType.FullAddress:
+                case DataType.State:
+                case DataType.City:
+                case DataType.StringConcat:
+                case DataType.PhoneNumber:
+                case DataType.None:
+                    return val;
+                case DataType.DateOfBirth:
+                    return DateTime.Parse(val);
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(dataType) + " not implemented for UseValue", dataType, null);
         }
         private string Serialize<T>(T value)
         {
