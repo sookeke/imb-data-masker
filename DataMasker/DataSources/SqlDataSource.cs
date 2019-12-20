@@ -11,6 +11,7 @@ using System.Collections;
 using System.Configuration;
 using System.IO;
 using KellermanSoftware.CompareNetObjects;
+using System.Security;
 
 namespace DataMasker.DataSources
 {
@@ -69,7 +70,8 @@ namespace DataMasker.DataSources
         public IEnumerable<IDictionary<string, object>> GetData(
             TableConfig tableConfig, Config config)
         {
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            //SqlCredential credentials = new SqlCredential(UserName, ReadPassword());
+            using (SqlConnection connection = new SqlConnection(_connectionStringPrd))
             {
                 connection.Open();
                 rawData = new List<IDictionary<string, object>>();
@@ -115,7 +117,20 @@ namespace DataMasker.DataSources
         {
             return $"SELECT COUNT(*) FROM [{tableConfig.Schema}].[{tableConfig.Name}]";
         }
+        private static SecureString ReadPassword()
+        {
+            var secured = new SecureString();
+            ConsoleKeyInfo keyInfo = Console.ReadKey(true);
 
+            while (keyInfo.Key != ConsoleKey.Enter)
+            {
+                secured.AppendChar(keyInfo.KeyChar);
+                keyInfo = Console.ReadKey(true);
+            }
+
+            secured.MakeReadOnly();
+            return secured;
+        }
         /// <inheritdoc/>
         public void UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
@@ -222,7 +237,7 @@ namespace DataMasker.DataSources
             //ArrayList list = new ArrayList();
             Random rnd = new Random();
             string sql = "SELECT " + column + " FROM " + " " + table;
-            using (var connection = new SqlConnection(_connectionString))
+            using (var connection = new SqlConnection(_connectionStringPrd))
             {
                 try
                 {
@@ -276,6 +291,10 @@ namespace DataMasker.DataSources
                         {
 
                             value = Values[rnd.Next(0, Values.Count())];
+                        }
+                        if (value == existingValue)
+                        {
+
                         }
                         return value;
 

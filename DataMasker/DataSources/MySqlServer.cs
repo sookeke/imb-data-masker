@@ -219,7 +219,7 @@ namespace DataMasker.DataSources
             //ArrayList list = new ArrayList();
             Random rnd = new Random();
             string sql = "SELECT " + column + " FROM " + " " + table;
-            using (var connection = new MySqlConnection(_connectionString))
+            using (var connection = new MySqlConnection(_connectionStringPrd))
             {
                 try
                 {

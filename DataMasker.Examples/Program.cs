@@ -23,6 +23,7 @@ using DataMasker.MaskingValidation;
 using ChoETL;
 using DataMasker.DataSources;
 using KellermanSoftware.CompareNetObjects;
+using System.Security;
 
 /*
     Author: Stanley Okeke
@@ -37,8 +38,8 @@ namespace DataMasker.Examples
     {
         #region system declarations
         #region read-only and const app config
-        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + $@"\Output\MaskExceptions.txt";
-        private static readonly string path = Directory.GetCurrentDirectory() + $@"\Output\Validation\ValidationResult.txt";
+        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + $@"\output\MaskExceptions.txt";
+        private static readonly string path = Directory.GetCurrentDirectory() + $@"\output\Validation\ValidationResult.txt";
         private static string copyjsonPath;
         private static readonly string fromEmail = ConfigurationManager.AppSettings["fromEmail"];
         private static readonly string Recipients = ConfigurationManager.AppSettings["RecipientEmail"];
@@ -180,7 +181,7 @@ namespace DataMasker.Examples
                         column.min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
                         column.useGenderColumn = "";
-                    }
+                    }                
                     else if (col.MaskingRule.ToUpper().Contains("MATH"))
                     {
                         if (maskingoutString.Any(n => col.DataType.ToUpper().Contains(n.ToUpper())))
@@ -393,7 +394,7 @@ namespace DataMasker.Examples
                                     throw new ArgumentException("Rant type requires a Max value",  nameof(col.Max) + " on " + col.ColumnName);
                                 }
                                 column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.min = Convert.ToString(1);
                                 column.StringFormatPattern = "";
                                 column.useGenderColumn = "";
                                 break;
@@ -435,14 +436,25 @@ namespace DataMasker.Examples
                                 column.type = DataType.PhoneNumber.ToString();
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min;
-                                column.StringFormatPattern = "##########";
+                                if (string.IsNullOrEmpty(col.StringFormat))
+                                {
+                                    column.StringFormatPattern = "##########";
+                                }
+                                else
+                                    column.StringFormatPattern = col.StringFormat;
+
                                 column.useGenderColumn = "";
                                 break;
                             case nameof(DataType.PhoneNumberInt):
                                 column.type = DataType.PhoneNumberInt.ToString();
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min;
-                                column.StringFormatPattern = "##########";
+                                if (string.IsNullOrEmpty(col.StringFormat))
+                                {
+                                    column.StringFormatPattern = "##########";
+                                }
+                                else
+                                    column.StringFormatPattern = col.StringFormat;
                                 column.useGenderColumn = "";
                                 break;
                             case nameof(DataType.Longitude):
@@ -652,7 +664,7 @@ namespace DataMasker.Examples
                             {
                                 column.type = DataType.Rant.ToString();
                                 column.max = Convert.ToString(sizze);
-                                column.min = col.Min.ToString(); ;
+                                column.min = Convert.ToString(1); ;
                                 column.StringFormatPattern = "DESCRIPTION";
                                 column.useGenderColumn = "";
                             }
@@ -660,7 +672,7 @@ namespace DataMasker.Examples
                             {
                                 column.type = DataType.Rant.ToString();
                                 column.max = col.Max.ToString(); ;
-                                column.min = col.Min.ToString(); ;
+                                column.min = Convert.ToString(1) ;
                                 column.StringFormatPattern = "DESCRIPTION";
                                 column.useGenderColumn = "";
                             }
@@ -669,7 +681,7 @@ namespace DataMasker.Examples
                         {
                             column.type = DataType.Rant.ToString();
                             column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
+                            column.min = Convert.ToString(1);
                             column.StringFormatPattern = "DESCRIPTION";
                             column.useGenderColumn = "";
                         }//split varchar(20 byte) and get max number
@@ -698,7 +710,12 @@ namespace DataMasker.Examples
                             column.type = DataType.PhoneNumberInt.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
-                            column.StringFormatPattern = "##########";
+                            if (string.IsNullOrEmpty(col.StringFormat))
+                            {
+                                column.StringFormatPattern = "##########";
+                            }
+                            else
+                                column.StringFormatPattern = col.StringFormat;
                             column.useGenderColumn = "";
                         }
                         else
@@ -706,7 +723,12 @@ namespace DataMasker.Examples
                             column.type = DataType.PhoneNumber.ToString();
                             column.max = col.Max.ToString(); ;
                             column.min = col.Min.ToString(); ;
-                            column.StringFormatPattern = "##########";
+                            if (string.IsNullOrEmpty(col.StringFormat))
+                            {
+                                column.StringFormatPattern = "##########";
+                            }
+                            else
+                                column.StringFormatPattern = col.StringFormat;
                             column.useGenderColumn = "";
                         }
                     }
@@ -847,6 +869,14 @@ namespace DataMasker.Examples
                             column.min = col.Min.ToString(); ;
                             column.useGenderColumn = "";
                         }
+                        else if ((col.ColumnName.ToUpper().Contains("AUTHOR") || col.ColumnName.ToUpper().Contains("EDITOR")) && col.DataType.ToUpper().Contains("VARCHAR"))
+                        {
+                            column.type = DataType.FullName.ToString();
+                            column.max = col.Max.ToString(); ;
+                            column.min = col.Min;
+                            column.StringFormatPattern = "";
+                            column.useGenderColumn = "";
+                        }
                         else if (col.DataType.ToUpper().Contains("NUMBER"))
                         {
                             //var size = col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ')[1].Split(',')[0].ToString();
@@ -882,7 +912,7 @@ namespace DataMasker.Examples
 
                         }
                     }
-                    if (!col.ColumnName.Equals(table.primaryKeyColumn))
+                    if (!col.ColumnName.Equals(table.primaryKeyColumn) && !col.MaskingRule.ToUpper().Contains("FLAGGED"))
                     {
                         colList.Add(column);
                     }
@@ -947,7 +977,10 @@ namespace DataMasker.Examples
             }
             Jsonpath = ConfigurationManager.AppSettings[jsonMapPath];
             string jsonresult = JsonConvert.SerializeObject(rootObject1,Formatting.Indented);
-
+            if (!Directory.Exists(@"output\Validation"))
+            {
+                Directory.CreateDirectory(@"output\Validation");
+            }
 
             #region compare original jsonconfig for datatype errors
             if (File.Exists(Jsonpath) && new FileInfo(Jsonpath).Length != 0)
@@ -995,9 +1028,9 @@ namespace DataMasker.Examples
                     }
                     if (_allNull.Count() != 0)
                     {
-                        if (!Directory.Exists(@"output"))
+                        if (!Directory.Exists(@"output\Validation"))
                         {
-                            Directory.CreateDirectory(@"output");
+                            Directory.CreateDirectory(@"output\Validation");
                         }
                         int notmasked = 1;
                         _colError.Add("Table_name contains column with ignore datatype Column_name :type" + Environment.NewLine + Environment.NewLine);
@@ -1046,9 +1079,9 @@ namespace DataMasker.Examples
             else
             {
                 //write json file to path
-                if (!Directory.Exists(@"output"))
+                if (!Directory.Exists(@"output\Validation"))
                 {
-                    Directory.CreateDirectory(@"output");
+                    Directory.CreateDirectory(@"output\Validation");
                 }
 
                 using (var tw = new StreamWriter(Jsonpath, false))
@@ -1172,9 +1205,9 @@ namespace DataMasker.Examples
             File.Create(path).Close();
             if (allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
             {
-                if (!Directory.Exists(@"output"))
+                if (!Directory.Exists(@"output\Validation"))
                 {
-                    Directory.CreateDirectory(@"output");
+                    Directory.CreateDirectory(@"output\Validation");
                 }
                 return Config.Load(_testJson);
             }
@@ -1182,6 +1215,32 @@ namespace DataMasker.Examples
                 return Config.Load(Jsonpath);
 
             //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_TAP_config.json");
+        }
+        private static string ReadPassword()
+        {
+            string secured = "";
+            ConsoleKeyInfo keyInfo;
+           
+
+            do
+            {
+                keyInfo = Console.ReadKey(true);
+                // Backspace Should Not Work
+                if (keyInfo.Key != ConsoleKey.Backspace)
+                {
+                    secured += keyInfo.KeyChar;
+                    Console.Write("*");
+                }
+                else
+                {
+                    Console.Write("\b");
+                }
+            }
+            while (keyInfo.Key != ConsoleKey.Enter);
+          
+
+           
+            return secured;
         }
 
         public static void Run()
@@ -1214,6 +1273,20 @@ namespace DataMasker.Examples
 
                 Console.Title = "Data Masker";
                 Config config = LoadConfig(1);
+                if (Convert.ToString(config.DataSource.Config.connectionString.ToString()).Contains("{0}"))
+                {
+                    Console.WriteLine("");
+                    Console.WriteLine("Type your database user password for non-prd and press enter");
+                    config.DataSource.Config.connectionString = string.Format(config.DataSource.Config.connectionString.ToString(), ReadPassword());
+                }
+                if (Convert.ToString(config.DataSource.Config.connectionStringPrd.ToString()).Contains("{0}"))
+                {
+                    Console.WriteLine("");
+                    Console.WriteLine("Type your database user password for prd and press enter");
+                    config.DataSource.Config.connectionStringPrd = string.Format(config.DataSource.Config.connectionStringPrd.ToString(), ReadPassword());
+                }
+               
+                
                 _nameDatabase = config.DataSource.Config.Databasename.ToString();
                 if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }
                 IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
@@ -1712,9 +1785,9 @@ namespace DataMasker.Examples
         private static void Reportvalidation(DataTable _prdTable, DataTable _maskedTable, DataSourceConfig dataSourceConfig, TableConfig tableConfig)
         {
             CompareLogic compareLogic = new CompareLogic();
-            if (!Directory.Exists($@"Output\Validation"))
+            if (!Directory.Exists($@"output\Validation"))
             {
-                Directory.CreateDirectory($@"Output\Validation");
+                Directory.CreateDirectory($@"output\Validation");
             }
            
             var _columndatamask = new List<object>();
@@ -1761,7 +1834,7 @@ namespace DataMasker.Examples
                     rownumber = i;
 
 
-                    if (!_columndatamask[i].IsNullOrDbNull())
+                    if (!_columndatamask[i].IsNullOrDbNull() && !_columndataUnmask[i].IsNullOrDbNull() && !string.IsNullOrWhiteSpace(_columndataUnmask[i].ToString()))
                     {
                         try
                         {

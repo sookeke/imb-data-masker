@@ -21,6 +21,7 @@
         NoMasking,
         math,
         Shufflegeometry,
+        ShufflePolygon,
         exception,
 
         /// <summary>

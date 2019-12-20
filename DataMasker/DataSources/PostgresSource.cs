@@ -246,7 +246,7 @@ namespace DataMasker.DataSources
             CompareLogic compareLogic = new CompareLogic();
             Random rnd = new Random();
             string sql = "SELECT " + column + " FROM " + " " + table;
-            using (var connection = new NpgsqlConnection(_connectionString))
+            using (var connection = new NpgsqlConnection(_connectionStringPrd))
             {
                 try
                 {

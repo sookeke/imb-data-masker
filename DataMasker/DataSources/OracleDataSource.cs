@@ -352,6 +352,10 @@ namespace DataMasker.DataSources
 
                         value = Values[rnd.Next(0, Values.Count())];
                     }
+                    if (value is SdoGeometry)
+                    {
+                        return (SdoGeometry)value;
+                    }
                     return value;
                 }
                 catch (Exception ex)
@@ -458,7 +462,7 @@ namespace DataMasker.DataSources
                     {
                         foreach (ColumnConfig columnConfig in config.Columns.Where(n => n.Name.Equals(header.ColumnName)))
                         {
-                            if (columnConfig.Type == DataType.Geometry || columnConfig.Type == DataType.Shufflegeometry)
+                            if (columnConfig.Type == DataType.Geometry || columnConfig.Type == DataType.Shufflegeometry || columnConfig.Type == DataType.ShufflePolygon)
                             {
                                 header.DataType = typeof(SdoGeometry);
                             }

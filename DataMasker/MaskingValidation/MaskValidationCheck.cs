@@ -19,6 +19,7 @@ namespace DataMasker.MaskingValidation
     {
         private static readonly string TSchema = ConfigurationManager.AppSettings["APP_NAME"];
         private static readonly string Stype = ConfigurationManager.AppSettings["DataSourceType"];
+        private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
 
         public static string Jsonpath { get; private set; }
         public static string ZipName { get; private set; }
@@ -256,7 +257,7 @@ namespace DataMasker.MaskingValidation
                     {
                         rownumber = i;
                        
-                        if (!_columndatamask[i].IsNullOrDbNull())
+                        if (!_columndatamask[i].IsNullOrDbNull() && !_columndataUnmask[i].IsNullOrDbNull() && !string.IsNullOrWhiteSpace(_columndataUnmask[i].ToString()))
                         {
                             try
                             {
@@ -281,6 +282,8 @@ namespace DataMasker.MaskingValidation
                             {
 
                                 Console.WriteLine(ex.Message);
+                                Console.WriteLine(_columndatamask[i]);
+                                Console.WriteLine(_columndataUnmask[i]);
                             }
 
 
@@ -318,8 +321,18 @@ namespace DataMasker.MaskingValidation
                         }
                         else if (col.Type == DataType.Shuffle)
                         {
-                            result = "<b><font color='blue'>FAIL</font></b>";
-                            failure = "Cannot generate a unique shuffle value";
+                           
+                            if (!MatchString("Cannot generate unique shuffle value", _exceptionpath))
+                            {
+                                failure = "NULL";
+                                result = "<font color='green'>PASS</font>";
+                            }
+                            else
+                            {
+                               
+                                result = "<b><font color='blue'>FAIL</font></b>";
+                                failure = "Cannot generate a unique shuffle value";
+                            }
                             //result = "<font color='red'>FAIL</font>";
                         }
                         else if (col.Type == DataType.exception && check.Contains("PASS"))
@@ -428,6 +441,23 @@ namespace DataMasker.MaskingValidation
 
 
 
+        }
+        private static bool MatchString(string search, string path)
+        {
+            using (var reader = new StreamReader(path))
+            {
+                string currentLine;
+                while ((currentLine = reader.ReadLine()) != null)
+                {
+                    if (currentLine.Contains(search))
+                    {
+                        // if you do not need multiple lines and just the first one
+                        // just break from the loop (break;)            
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
 }

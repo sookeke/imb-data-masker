@@ -87,7 +87,7 @@ namespace DataMasker
                 {
                   existingValue = GetUniqueValue(tableConfig.Name, columnConfig, existingValue, gender);
                 }
-                else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
+                else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry || columnConfig.Type == DataType.ShufflePolygon)
                 {
                     if (string.IsNullOrEmpty(tableConfig.Schema))
                     {
@@ -127,27 +127,41 @@ namespace DataMasker
                             {
                                 throw new InvalidOperationException("StringFormatPattern and Max Cannot be empty");
                             }
-                            //check position of stringformat pattern objects
-                            var columnPosition = tableConfig.Columns.Select(n => n.Name).ToList();
-                            foreach (var item in columnConfig.StringFormatPattern.Split(','))
+                            if (columnConfig.Name.ToUpper() == columnConfig.StringFormatPattern.ToUpper())
                             {
-                                //column A should have been masked alongside column B to apply operation: Col A + Col B = Col C
-                                if (!(columnPosition.IndexOf(columnConfig.Name) > columnPosition.IndexOf(item)))
+                                //only number objects
+                                if (IsNumeric(obj[columnConfig.Name]))
                                 {
-                                    throw new InvalidOperationException(columnConfig.Name + " Index must be Greater than " + item);
+                                    source.Add(obj[columnConfig.Name]);
                                 }
                                 else
+                                    throw new InvalidOperationException(columnConfig.Name + " must be Numeric type for " + columnConfig.Operator);
+
+                            }
+                            else
+                            {
+                                //check position of stringformat pattern objects
+                                var columnPosition = tableConfig.Columns.Select(n => n.Name).ToList();
+                                foreach (var item in columnConfig.StringFormatPattern.Split(','))
                                 {
-                                    //only number objects
-                                    if (IsNumeric(obj[item]))
+                                    //column A should have been masked alongside column B to apply operation: Col A + Col B = Col C
+                                    if (!(columnPosition.IndexOf(columnConfig.Name) > columnPosition.IndexOf(item)))
                                     {
-                                        source.Add(obj[item]);
+                                        throw new InvalidOperationException(columnConfig.Name + " Index must be Greater than " + item);
                                     }
                                     else
-                                        throw new InvalidOperationException(item + " must be Numeric type for " + columnConfig.Operator);
+                                    {
+                                        //only number objects
+                                        if (IsNumeric(obj[item]))
+                                        {
+                                            source.Add(obj[item]);
+                                        }
+                                        else
+                                            throw new InvalidOperationException(item + " must be Numeric type for " + columnConfig.Operator);
+
+                                    }
 
                                 }
-
                             }
                             existingValue = _dataGenerator.MathOperation(columnConfig, existingValue, source.ToArray(), columnConfig.Operator, Convert.ToInt32(Math.Round(Convert.ToDecimal(columnConfig.Max))));
 
@@ -162,22 +176,22 @@ namespace DataMasker
                 else if (columnConfig.Type == DataType.MaskingOut)
                 {
                     if (!string.IsNullOrEmpty(columnConfig.UseValue))
-                    {
+                    {                                              
                         existingValue = ConvertValue(columnConfig.Type, columnConfig.UseValue);
                     }
                     else
                     {
                         if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingRight".ToUpper()))
                         {
-                            existingValue = MaskingRight(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
+                            existingValue = MaskingRight(existingValue, Convert.ToInt32(columnConfig.Max), tableConfig.Name, columnConfig);
                         }
                         else if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingLeft".ToUpper()))
                         {
-                            existingValue = MaskingLeft(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
+                            existingValue = MaskingLeft(existingValue, Convert.ToInt32(columnConfig.Max), tableConfig.Name, columnConfig);
                         }
                         else if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingMiddle".ToUpper()))
                         {
-                            existingValue = MaskingMiddle(existingValue, Convert.ToInt32(columnConfig.Max), columnConfig);
+                            existingValue = MaskingMiddle(existingValue, Convert.ToInt32(columnConfig.Max), tableConfig.Name, columnConfig);
                         }
                         else
                             throw new ArgumentException("Invalid MaskingOut Operation", columnConfig.StringFormatPattern);
@@ -204,47 +218,38 @@ namespace DataMasker
                 else if (_location.Columns.Cast<DataColumn>().Where(s=>columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1 || _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Type.ToString().ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1)
                 {
                     //
+                    bool u;
                     var cname = _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).ToList().FirstOrDefault();
                     try
                     {
                         if (_location.Rows.Count == 0)
                         {
-                            addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location);
+                            u = tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("CITY")) && (tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("STATE")) || tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("PROVINCE")));
+                            addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location, u);
                         }
-                        if (_location.Rows.Count > 0)
+                        if (addr ==  null)
                         {
-                            existingValue = _location.Rows[0][cname.ColumnName];
+                            existingValue = null;
+                        }
+                       else if (_location.Rows.Count > 0)
+                        {
+                            for (int i = 0; i <_location.Rows.Count; i++)
+                            {
+                                var cc = _location.Rows[i].ItemArray.ToArray();
+                                existingValue = _location.Rows[i][cname.ColumnName];
+                            }
+                            
                         }
                         else
-                            existingValue = null;
+                            File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + " and will return original: "  + Environment.NewLine);
+
                     }
                     catch (Exception ex)
                     {
-                        File.AppendAllText(_exceptionpath, "Could not Generate addresses and will return null: " + ex.Message + Environment.NewLine);
-                        existingValue = null;
+                        File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + "  and will return original: " + ex.Message + Environment.NewLine);
+                       
                     }
 
-                }
-                else if (_location.Columns.Contains(columnConfig.Name) || _location.Columns.Contains(columnConfig.Type.ToString()))
-                {
-                    try
-                    {
-                        if (_location.Rows.Count == 0)
-                        {
-                            addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location);
-                        }
-                        if (_location.Rows.Count > 0)
-                        {
-                            existingValue = _location.Rows[0][columnConfig.Name]; 
-                        }
-                        else
-                            existingValue = null;
-                    }
-                    catch (Exception)
-                    {
-                        existingValue = null;
-                    }
-                   
                 }
                 else
                 {
@@ -499,9 +504,9 @@ namespace DataMasker
             }
             else
                 throw new ArgumentException(columnConfig.Type.ToString() + " does not apply to " +  o.GetType().ToString());
-            return null;
+          
         }
-        private object MaskingLeft(object o, int position, ColumnConfig columnConfig)
+        private object MaskingLeft(object o, int position, string tableName, ColumnConfig columnConfig)
         {
             if (columnConfig.RetainNullValues &&
               o == null)
@@ -531,10 +536,10 @@ namespace DataMasker
                 });
                 return string.Join("", slist.ToArray());
             }
-            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than " + position + " in " + columnConfig.Name +Environment.NewLine);
+            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than " + position + " in " + $"{tableName}.{columnConfig.Name}" + Environment.NewLine);
             return Convert.ToString(o);
         }
-        private object MaskingRight(object o, int position, ColumnConfig columnConfig)
+        private object MaskingRight(object o, int position, string tableName, ColumnConfig columnConfig)
         {
             if (columnConfig.RetainNullValues &&
            o == null)
@@ -564,10 +569,10 @@ namespace DataMasker
                 });
                 return string.Join("", slist.ToArray());
             }
-            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than " + position + " in " + columnConfig.Name + Environment.NewLine);
+            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than " + position + " in " + $"{tableName}.{columnConfig.Name}" + Environment.NewLine);
             return Convert.ToString(o);
         }
-        private object  MaskingMiddle(object o, int position, ColumnConfig columnConfig)
+        private object  MaskingMiddle(object o, int position, string tableName, ColumnConfig columnConfig)
         {
             List<string> slist = new List<string>();
             if (columnConfig.RetainNullValues &&
@@ -599,7 +604,7 @@ namespace DataMasker
                 });
                 return string.Join("", slist.ToArray());
             }
-            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than 2X " + position + " in " + columnConfig.Name + Environment.NewLine);
+            File.AppendAllText(_exceptionpath, "MaskingOut Lenght " + Convert.ToString(o) + " must be greater than 2X " + position + " in " + $"{tableName}.{columnConfig.Name}" + Environment.NewLine);
             return Convert.ToString(o);
         }
         private object GetUniqueValue(string tableName,
@@ -638,6 +643,10 @@ namespace DataMasker
         DataType dataType,
         string val)
         {
+            if (val.ToUpper() == "NULL")
+            {
+                return null;
+            }
             switch (dataType)
             {
                 case DataType.FirstName:
@@ -652,7 +661,6 @@ namespace DataMasker
                 case DataType.RandomUsername:
                 case DataType.RandomYear:
                 case DataType.RandomSeason:
-                case DataType.math:
                 case DataType.RandomInt:
                 case DataType.RandomDec:
                 case DataType.PickRandom:
@@ -665,6 +673,8 @@ namespace DataMasker
                     return val;
                 case DataType.DateOfBirth:
                     return DateTime.Parse(val);
+                case DataType.math:
+                    return Convert.ToDecimal(val);
             }
 
             throw new ArgumentOutOfRangeException(nameof(dataType) + " not implemented for UseValue", dataType, null);

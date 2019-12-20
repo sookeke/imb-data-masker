@@ -318,7 +318,7 @@ namespace DataMasker
                     return _faker.Address.Latitude();
                 case DataType.Rant:
                     //Random rnd = new Random();
-                    var rant = WaffleEngine.Text(rnd, 1, false);
+                    var rant = WaffleEngine.Text(rnd, ToInt32(columnConfig.Min), false);
                         //_faker.Rant.Review(columnConfig.StringFormatPattern);
                     int lenght = rant.Length;
 
@@ -436,7 +436,7 @@ namespace DataMasker
                     }
                     return _number;
                 case DataType.StringConcat:
-                    var _string = _faker.Parse(columnConfig.StringFormatPattern);
+                    var _string = _faker.Phone.PhoneNumber(columnConfig.StringFormatPattern);
                     if (!string.IsNullOrEmpty(columnConfig.Max) && _string.Length > ToInt32(columnConfig.Max))
                     {
                         var _shortString = _string.Substring(0, ToInt32(columnConfig.Max));
@@ -505,6 +505,10 @@ namespace DataMasker
             DataType dataType,
             string val)
         {
+            if (val.ToUpper() == ("NULL"))
+            {
+                return null;
+            }
             switch (dataType)
             {
                 case DataType.FirstName:
@@ -518,9 +522,7 @@ namespace DataMasker
                 case DataType.PostalCode:
                 case DataType.RandomUsername:
                 case DataType.RandomYear:
-                case DataType.RandomSeason:
-                case DataType.RandomInt:
-                case DataType.RandomDec:
+                case DataType.RandomSeason:                
                 case DataType.PickRandom:
                 case DataType.FullAddress:
                 case DataType.State:
@@ -531,6 +533,10 @@ namespace DataMasker
                     return val;
                 case DataType.DateOfBirth:
                     return DateTime.Parse(val);
+                case DataType.RandomInt:
+                    return Convert.ToInt32(val);
+                case DataType.RandomDec:
+                    return Convert.ToDecimal(val);
             }
 
             throw new ArgumentOutOfRangeException(nameof(dataType) + " not implemented for UseValue", dataType, null);
@@ -624,6 +630,10 @@ namespace DataMasker
                         var random = new Random();
                         var shuffle = dataSources.Shuffle(table, column, existingValue, columnConfig.RetainNullValues, dataTable);
                         return shuffle;
+                    case DataType.ShufflePolygon:
+                        var rand = new Random();
+                        var shufflePoly = dataSources.Shuffle(table, column, existingValue, columnConfig.RetainNullValues, dataTable);
+                        return shufflePoly;
                 }
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
@@ -981,7 +991,7 @@ namespace DataMasker
                             return _value;
                         case nameof(Operation.randomPercentage):
                             Random random = new Random();
-                            _value = random.Next(factor,100) / 100 * (Convert.ToDouble(source[0]));
+                            _value = (double)random.Next(factor,100) / 100 * (Convert.ToDouble(source[0]));
                             return _value;
                         case nameof(Operation.avarage):
                             return source.Sum(n=>Convert.ToDouble(n))/source.Count();
@@ -997,9 +1007,10 @@ namespace DataMasker
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
 
-        public object GetAddress(ColumnConfig columnConfig, object existingValue, DataTable dataTable)
+        public object GetAddress(ColumnConfig columnConfig, object existingValue, DataTable dataTable, bool isFulladdress)
         {
             var loader = CountryLoader.LoadCanadaLocationData();
+            var address = "";
             if (columnConfig.RetainNullValues &&
               existingValue == null)
             {
@@ -1022,11 +1033,17 @@ namespace DataMasker
                 default:
                     break;
             }
-
             var states = loader.States.Where(n => n.Provinces.Count > 1 && n.Name != null && !n.Name.ToString().Equals(existingValue.ToString())).Select(n => n).ToArray();
-            var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null && !n.Name.ToString().Equals(existingValue.ToString())).Where(x=>!x.Name.ToString().Equals(existingValue)).Select(n => n).ToArray();
-            var city = provinces[rnd.Next(0, provinces.Count())];         
-            var address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}") + " " + city.Name + ", " + city.State.Name;      
+            var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null && !n.Name.ToString().Equals(existingValue.ToString())).Where(x => !x.Name.ToString().Equals(existingValue)).Select(n => n).ToArray();
+            var city = provinces[rnd.Next(0, provinces.Count())];
+            if (isFulladdress)
+            {
+                address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}");
+            }
+            else
+                address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}") + " " + city.Name + ", " + city.State.Name;
+
+           
             dataTable.Rows.Add(CountryLoader.LoadCanadaLocationData().Name, city.State.Name, city.State.Name, city.Name, address);      
             return dataTable;
         }
@@ -1040,8 +1057,6 @@ namespace DataMasker
             division,
             percentage,
             randomPercentage
-
-
 
         }
         public enum CountryLoad

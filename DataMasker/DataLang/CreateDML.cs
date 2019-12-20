@@ -143,14 +143,23 @@ namespace DataMasker.DataLang
                 {
                     output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
                     output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
+                    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
                 }
                 else if (table.Rows.Count == 0)
                 {
                     //insert default value to solve invalid sql error.
+                    output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
+                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
+                    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
                     output.AppendFormat("INSERT INTO {0}\n\t({1})\nDEFAULT VALUES", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
                 }
                 else
+                {
+                    output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
+                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
+                    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
                     output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
+                }
                           
             }
             else if (config.DataSource.Type == DataSourceType.MySqlServer)
@@ -223,8 +232,19 @@ namespace DataMasker.DataLang
                 }
                
                 i = i + 1;
-               // var xuux = string.Join("", config.Tables.Select(n => n.Columns.ToArray().Select(x => x.Type + " ,").ToArray()));
-                if ( i == table.Rows.Count + 1)
+                // var xuux = string.Join("", config.Tables.Select(n => n.Columns.ToArray().Select(x => x.Type + " ,").ToArray()));
+                if (i == table.Rows.Count + 1 && config.DataSource.Type == DataSourceType.SqlServer)
+                {
+                 
+                    var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
+                    //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
+                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ").Replace("Bogus", "Fake Data");
+                    output.Append(Environment.NewLine);
+                    output.Append(_commentOut);
+                    output.Append(Environment.NewLine);
+                    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\n GO\n");
+                }
+                else if( i == table.Rows.Count + 1)
                 {
                     var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
                         //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
