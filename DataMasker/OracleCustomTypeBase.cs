@@ -98,6 +98,7 @@ namespace NetTopologySuite.IO.UdtBase
                 }
                 return default(TUser);
             }
+            var ch = OracleUdt.GetValue(_connection, _pUdt, oracleColumnId);
             return (TUser)OracleUdt.GetValue(_connection, _pUdt, oracleColumnId);
         }
     }

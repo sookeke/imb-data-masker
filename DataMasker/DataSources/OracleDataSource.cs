@@ -627,14 +627,46 @@ namespace DataMasker.DataSources
         {
             throw new NotImplementedException();
         }
-
+        class HazSqlGeo
+        {
+            //public int Id { get; set; }
+            public SdoDimArray Geo { get; set; }
+            
+        }
         public DataTable GetDataTable(string table, string connection)
         {
             DataTable dataTable = new DataTable();
+            List<object> geoInfoList = new List<object>();
             using (OracleConnection oracleConnection = new OracleConnection(connection))
             {
                 string squery = "Select * from " + table;
                 oracleConnection.Open();
+                var DD = (IEnumerable<IDictionary<string, object>>)oracleConnection.Query(squery, buffered: true);
+                //OracleCommand cmd = new OracleCommand();
+                //cmd.Connection = oracleConnection;
+                //cmd.CommandText = "Select * from " + table;
+                //using (OracleDataReader readerGeoInfo = cmd.ExecuteReader())
+                //{
+                //    while (readerGeoInfo.Read())
+                //    {
+                //        var oo = Enumerable.Range(0, readerGeoInfo.FieldCount).ToDictionary(readerGeoInfo.GetName, readerGeoInfo.GetValue);
+                //        HazSqlGeo geoInfo = new HazSqlGeo();
+                //        if (!readerGeoInfo.IsDBNull(0))
+                //        {
+                //            //geoInfo.Geo = ()readerGeoInfo.GetDecimal(0);
+                //        }
+                //        if (!readerGeoInfo.IsDBNull(0))
+                //        {
+                //            var o = Enumerable.Range(0, readerGeoInfo.FieldCount).ToDictionary(readerGeoInfo.GetName, readerGeoInfo.GetValue);
+                //        }
+                //        geoInfoList.Add(geoInfo);
+                //    }
+                //    readerGeoInfo.Close();
+                //}
+
+
+
+
 
                 using (OracleDataAdapter oda = new OracleDataAdapter(squery, oracleConnection))
                 {

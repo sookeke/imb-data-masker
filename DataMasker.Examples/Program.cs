@@ -1378,7 +1378,7 @@ namespace DataMasker.Examples
                         rawData = dataSource.RawData(null);                        
                         foreach (IDictionary<string, object> row in rows)
                         {
-                            Console.Title = "Data Generation";
+                            Console.Title = "Data Generation";                         
                             if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                             {
                                 dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));

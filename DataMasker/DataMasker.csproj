@@ -327,6 +327,8 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="SdoDimArray.cs" />
+    <Compile Include="SdoDimElement.cs" />
     <Compile Include="SdoGeometry.cs" />
     <Compile Include="SdoPoint.cs" />
     <Compile Include="SqlServerTypes\Loader.cs" />

@@ -1,4 +1,5 @@
-﻿using DataMasker.Models;
+﻿using DataMasker.Interfaces;
+using DataMasker.Models;
 using OfficeOpenXml;
 using OfficeOpenXml.FormulaParsing.ExcelUtilities;
 using System;
@@ -18,6 +19,7 @@ namespace DataMasker.DataLang
     public static class SqlDML
     {
         public static string colnameToString { get; private set; }
+        public static bool HasSpatial { get; private set; }
         #region Public Methods
 
         /// <summary>
@@ -250,7 +252,26 @@ namespace DataMasker.DataLang
                         //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
                     var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ").Replace("Bogus", "Fake Data");
                     output.Append(Environment.NewLine);
-                    output.Append(_commentOut);
+                   
+                    if (HasSpatial && config.DataSource.Type == DataSourceType.OracleServer)
+                    {
+                        //get spatial USER_SDO_GEOM_METADATA fro View
+                        output.Append(";");
+                        output.Append(_commentOut);
+                        IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
+                        var USER_SDO_GEOM_METADATA = dataSource.GetDataTable("MDSYS.USER_SDO_GEOM_METADATA", config.DataSource.Config.connectionStringPrd.ToString());
+                        var GeoMeTaData = SpatialInsert(USER_SDO_GEOM_METADATA);
+                       
+                        output.Append(Environment.NewLine);
+                        output.Append(Environment.NewLine);
+                        output.Append(GeoMeTaData);
+                        //Create Insert Statement
+                    }
+                    else
+                    {
+                        output.Append(_commentOut);
+                    }
+
                 }
 
             }
@@ -264,7 +285,53 @@ namespace DataMasker.DataLang
 
             return output.ToString();
         }
+        public static string AddSingleQuotes(this string value)
+        {
+            return "\'" + value + "\'";
+        }
+        public static string SpatialInsert(DataTable table)
+        {
+            var outputSpatial = new StringBuilder();
+            string DIM_ARRAY = string.Empty;
+            try
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    var DIMINFO = (SdoDimArray)row["DIMINFO"];
+                    //var DIM_ARRAY = string.Format("MDSYS.SDO_DIM_ARRAY(MDSYS.SDO_DIM_ELEMENT({0}, {1}, {2}, {3}), MDSYS.SDO_DIM_ELEMENT({4}, {5}, {6}, {7}))", null);
 
+                    var _xCordinate = DIMINFO.Values[0] ?? null;
+                    var _yCordinate = DIMINFO.Values[1] ?? null;
+                    var _zCordinate = DIMINFO.Values.Where(n => n.SDO_DIMNAME.Contains("Z")).FirstOrDefault() ?? null;
+                    if (_zCordinate != null)
+                    {
+                        DIM_ARRAY = string.Format("MDSYS.SDO_DIM_ARRAY(MDSYS.SDO_DIM_ELEMENT({0}, {1}, {2}, {3}), MDSYS.SDO_DIM_ELEMENT({4}, {5}, {6}, {7}, MDSYS.SDO_DIM_ELEMENT({8}, {9}, {10}, {11}))",
+                                    _xCordinate.SDO_DIMNAME.AddSingleQuotes(), _xCordinate.LB, _xCordinate.UB, _xCordinate.TOLERANCE,
+                                    _yCordinate.SDO_DIMNAME.AddSingleQuotes(), _yCordinate.LB, _yCordinate.UB, _yCordinate.TOLERANCE,
+                                    _zCordinate.SDO_DIMNAME.AddSingleQuotes(), _zCordinate.LB, _zCordinate.UB, _zCordinate.TOLERANCE
+                            );
+                    }
+                    else
+                    {
+                        DIM_ARRAY = string.Format("MDSYS.SDO_DIM_ARRAY(MDSYS.SDO_DIM_ELEMENT({0}, {1}, {2}, {3}), MDSYS.SDO_DIM_ELEMENT({4}, {5}, {6}, {7}))",
+                                    _xCordinate.SDO_DIMNAME.AddSingleQuotes(), _xCordinate.LB, _xCordinate.UB, _xCordinate.TOLERANCE,
+                                    _yCordinate.SDO_DIMNAME.AddSingleQuotes(), _yCordinate.LB, _yCordinate.UB, _yCordinate.TOLERANCE);
+                    }
+                    //var oy = string.Format("INSERT INTO MDSYS.USER_SDO_GEOM_METADATA(TABLE_NAME, COLUMN_NAME, DIMINFO, SRID) VALUES({0}, {1}, {2}, {3});", row["TABLE_NAME"].ToString().AddSingleQuotes(), row["COLUMN_NAME"].ToString().AddSingleQuotes(), DIM_ARRAY, row["SRID"]);
+                    //Console.WriteLine(oy);
+                    outputSpatial.Append(Environment.NewLine);
+                    outputSpatial.AppendFormat("INSERT INTO MDSYS.USER_SDO_GEOM_METADATA (TABLE_NAME,COLUMN_NAME,DIMINFO,SRID) VALUES ({0}, {1}, {2}, {3});", row["TABLE_NAME"].ToString().AddSingleQuotes(), row["COLUMN_NAME"].ToString().AddSingleQuotes(), DIM_ARRAY, row["SRID"]);
+                }
+                return outputSpatial.ToString();
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine(ex.Message);
+                throw new Exception(ex.Message);
+            }
+          
+        }
         /// <summary>
         /// Gets the column values list for an insert statement
         /// </summary>
@@ -412,6 +479,7 @@ namespace DataMasker.DataLang
                     }
                     else if (hasGeometry)
                     {
+                        HasSpatial = true;
                         switch (config.DataSource.Type)
                         {
                             case DataSourceType.InMemoryFake:

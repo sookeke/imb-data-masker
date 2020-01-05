@@ -12,7 +12,7 @@ namespace DataMasker
     [OracleCustomTypeMappingAttribute("MDSYS.SDO_GEOMETRY")]
     public class SdoGeometry: OracleCustomTypeBase<SdoGeometry>
     {
-        private enum OracleObjectColumns { SDO_GTYPE, SDO_SRID, SDO_POINT, SDO_ELEM_INFO, SDO_ORDINATES }
+        private enum OracleObjectColumns { SDO_GTYPE, SDO_SRID, SDO_POINT, SDO_ELEM_INFO, SDO_ORDINATES, SDO_DIM_ARRAY }
         private decimal? sdo_Gtype;
         [OracleObjectMappingAttribute(0)]
         public decimal? Sdo_Gtype
@@ -49,10 +49,12 @@ namespace DataMasker
             get { return ordinatesArray; }
             set { ordinatesArray = value; }
         }
+      
         [OracleCustomTypeMappingAttribute("MDSYS.SDO_ELEM_INFO_ARRAY")]
         public class ElemArrayFactory : OracleArrayTypeFactoryBase<decimal> { }
         [OracleCustomTypeMappingAttribute("MDSYS.SDO_ORDINATE_ARRAY")]
         public class OrdinatesArrayFactory : OracleArrayTypeFactoryBase<decimal> { }
+      
         public override void MapFromCustomObject()
         {
             SetValue((int)OracleObjectColumns.SDO_GTYPE, Sdo_Gtype);
@@ -60,6 +62,7 @@ namespace DataMasker
             SetValue((int)OracleObjectColumns.SDO_POINT, Point);
             SetValue((int)OracleObjectColumns.SDO_ELEM_INFO, ElemArray);
             SetValue((int)OracleObjectColumns.SDO_ORDINATES, OrdinatesArray);
+           // SetValue((int)OracleObjectColumns.SDO_DIM_ARRAY, DimArray);
         }
         public override void MapToCustomObject()
         {
@@ -68,6 +71,7 @@ namespace DataMasker
             Point = GetValue<SdoPoint>((int)OracleObjectColumns.SDO_POINT);
             ElemArray = GetValue<decimal[]>((int)OracleObjectColumns.SDO_ELEM_INFO);
             OrdinatesArray = GetValue<decimal[]>((int)OracleObjectColumns.SDO_ORDINATES);
+            //DimArray = GetValue<decimal[]>((int)OracleObjectColumns.SDO_DIM_ARRAY);
         }
     }
 }
