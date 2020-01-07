@@ -114,7 +114,7 @@ namespace DataMasker.DataSources
         }
         private string BuildCountSql(
             TableConfig tableConfig)
-        {
+        {            
             return $"SELECT COUNT(*) FROM [{tableConfig.Schema}].[{tableConfig.Name}]";
         }
         private static SecureString ReadPassword()
@@ -231,12 +231,13 @@ namespace DataMasker.DataSources
             return sql;
         }
        
-        public object Shuffle(string table, string column, object existingValue, bool retainNull, DataTable dataTable = null)
+        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, DataTable dataTable = null)
         {
             CompareLogic compareLogic = new CompareLogic();
             //ArrayList list = new ArrayList();
+          
             Random rnd = new Random();
-            string sql = "SELECT " + column + " FROM " + " " + table;
+            string sql = $"SELECT [{column}] FROM  [{schema}].[{table}]";
             using (var connection = new SqlConnection(_connectionStringPrd))
             {
                 try

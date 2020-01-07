@@ -13,7 +13,7 @@ namespace DataMasker.Interfaces
             string tableName,
             Name.Gender? gender);
         object GetValueShuffle(
-            ColumnConfig columnConfig, string table, string column, IDataSource dataSources, DataTable dataTable,
+            ColumnConfig columnConfig, string schema, string table, string column, IDataSource dataSources, DataTable dataTable,
             object existingValue,
             Name.Gender? gender);
         object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,string filename, string FileExtension, Name.Gender? gender);

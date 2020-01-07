@@ -240,12 +240,12 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object Shuffle(string table, string column, object existingValue, bool retainNull, DataTable dataTable = null)
+        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, DataTable dataTable = null)
         {
             //ArrayList list = new ArrayList();
             CompareLogic compareLogic = new CompareLogic();
             Random rnd = new Random();
-            string sql = "SELECT " + column + " FROM " + " " + table;
+            string sql = $"SELECT {column.AddDoubleQuotes()} FROM {schema.AddDoubleQuotes()}.{table.AddDoubleQuotes()}";
             using (var connection = new NpgsqlConnection(_connectionStringPrd))
             {
                 try

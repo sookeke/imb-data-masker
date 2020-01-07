@@ -578,7 +578,7 @@ namespace DataMasker
             return null;
         }
 
-        public object GetValueShuffle(ColumnConfig columnConfig, string table, string column, IDataSource dataSources, DataTable dataTable,
+        public object GetValueShuffle(ColumnConfig columnConfig, string schema, string table, string column, IDataSource dataSources, DataTable dataTable,
             object existingValue, Name.Gender? gender = null)
         {
             if (!string.IsNullOrEmpty(columnConfig.UseValue))
@@ -628,11 +628,11 @@ namespace DataMasker
                 {
                     case DataType.Shuffle:
                         var random = new Random();
-                        var shuffle = dataSources.Shuffle(table, column, existingValue, columnConfig.RetainNullValues, dataTable);
+                        var shuffle = dataSources.Shuffle(schema, table, column, existingValue, columnConfig.RetainNullValues, dataTable);
                         return shuffle;
                     case DataType.ShufflePolygon:
                         var rand = new Random();
-                        var shufflePoly = dataSources.Shuffle(table, column, existingValue, columnConfig.RetainNullValues, dataTable);
+                        var shufflePoly = dataSources.Shuffle(schema, table, column, existingValue, columnConfig.RetainNullValues, dataTable);
                         return shufflePoly;
                 }
             }

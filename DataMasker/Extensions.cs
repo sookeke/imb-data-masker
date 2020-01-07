@@ -44,8 +44,31 @@ namespace DataMasker
                     columnNames = new List<string>(columns.Select(x => $"[{x.Name}]"));
                     break;
             }
-           
-            columnNames.Insert(0, primaryKeyColumn);
+            switch (config.DataSource.Type)
+            {
+                case DataSourceType.InMemoryFake:
+                    columnNames.Insert(0, primaryKeyColumn);
+                    break;
+                case DataSourceType.SqlServer:
+                    columnNames.Insert(0, $"[{primaryKeyColumn}]");
+                    break;
+                case DataSourceType.OracleServer:
+                    columnNames.Insert(0, primaryKeyColumn);
+                    break;
+                case DataSourceType.SpreadSheet:
+                    columnNames.Insert(0, primaryKeyColumn);
+                    break;
+                case DataSourceType.PostgresServer:
+                    columnNames.Insert(0, primaryKeyColumn);
+                    break;
+                case DataSourceType.MySqlServer:
+                    columnNames.Insert(0, primaryKeyColumn);
+                    break;
+                default:
+                    columnNames.Insert(0, primaryKeyColumn);
+                    break;
+            }
+        
             return string.Join(", ", columnNames);
         }
         public static string AddDoubleQuotes(this string value)

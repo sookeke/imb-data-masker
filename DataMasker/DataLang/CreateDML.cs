@@ -145,6 +145,7 @@ namespace DataMasker.DataLang
                 {
                     output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
                     output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
+                    output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
                     output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
                 }
                 else if (table.Rows.Count == 0)
@@ -152,6 +153,7 @@ namespace DataMasker.DataLang
                     //insert default value to solve invalid sql error.
                     output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
                     output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
+                    output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
                     output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
                     output.AppendFormat("INSERT INTO {0}\n\t({1})\nDEFAULT VALUES", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
                 }
@@ -159,6 +161,7 @@ namespace DataMasker.DataLang
                 {
                     output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
                     output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
+                    output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
                     output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
                     output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
                 }
@@ -245,6 +248,7 @@ namespace DataMasker.DataLang
                     output.Append(_commentOut);
                     output.Append(Environment.NewLine);
                     output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\n GO\n");
+                    output.AppendFormat("SET ANSI_WARNINGS ON\n GO\n");
                 }
                 else if( i == table.Rows.Count + 1)
                 {

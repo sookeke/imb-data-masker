@@ -654,7 +654,7 @@ namespace DataMasker.Examples
                         column.StringFormatPattern = "{{COMPANY.COMPANYNAME}} {{COMPANY.COMPANYSUFFIX}}";
                         column.useGenderColumn = "";
                     }
-                    else if (_comment.Any(n => col.ColumnName.ToUpper().Contains(n)) || (col.DataType.ToUpper().Contains("CHAR") && Convert.ToInt32(col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ')[1]) > 1000) || _comment.Any(x => col.Comments.Contains(x)))
+                    else if (_comment.Any(n => col.ColumnName.ToUpper().Contains(n)) || col.DataType.ToUpper().Contains("CHAR") || _comment.Any(x => col.Comments.Contains(x)))
                     {
                         var size = col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ');
                         if (size.Count() > 1)
@@ -1270,7 +1270,7 @@ namespace DataMasker.Examples
                     copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
                     JsonConfig(copyjsonPath);
                 }
-
+                
                 Console.Title = "Data Masker";
                 Config config = LoadConfig(1);
                 if (Convert.ToString(config.DataSource.Config.connectionString.ToString()).Contains("{0}"))
@@ -1465,7 +1465,7 @@ namespace DataMasker.Examples
             catch (Exception e)
             {
                 File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
-                Console.WriteLine(e.Message);
+                Console.WriteLine(e.ToString());
                 Console.WriteLine("Program will exit: Press ENTER to exist..");
                 Console.ReadLine();
             }

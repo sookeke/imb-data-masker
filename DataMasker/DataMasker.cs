@@ -91,10 +91,10 @@ namespace DataMasker
                 {
                     if (string.IsNullOrEmpty(tableConfig.Schema))
                     {
-                        existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Name}", columnConfig.Name, dataSource, dataTable, existingValue, gender);
+                        existingValue = _dataGenerator.GetValueShuffle(columnConfig, "", $"{tableConfig.Name}", columnConfig.Name, dataSource, dataTable, existingValue, gender);
                     }
                     else
-                         existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Schema}.{tableConfig.Name}", columnConfig.Name, dataSource,dataTable, existingValue, gender);
+                         existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Schema}", $"{tableConfig.Name}", columnConfig.Name, dataSource,dataTable, existingValue, gender);
                 }          
                 else if (columnConfig.Type == DataType.File)
                 {
@@ -215,7 +215,7 @@ namespace DataMasker
                         //existingValue = existingValue;col
                     }
                 }
-                else if (_location.Columns.Cast<DataColumn>().Where(s=>columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1 || _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Type.ToString().ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1)
+                else if (_location.Columns.Cast<DataColumn>().Where(s=>columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1)
                 {
                     //
                     bool u;
@@ -232,13 +232,8 @@ namespace DataMasker
                             existingValue = null;
                         }
                        else if (_location.Rows.Count > 0)
-                        {
-                            for (int i = 0; i <_location.Rows.Count; i++)
-                            {
-                                var cc = _location.Rows[i].ItemArray.ToArray();
-                                existingValue = _location.Rows[i][cname.ColumnName];
-                            }
-                            
+                        {                      
+                            existingValue = _location.Rows[0][cname.ColumnName];                                                      
                         }
                         else
                             File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + " and will return original: "  + Environment.NewLine);
@@ -247,7 +242,8 @@ namespace DataMasker
                     catch (Exception ex)
                     {
                         File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + "  and will return original: " + ex.Message + Environment.NewLine);
-                       
+                        existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
+
                     }
 
                 }
@@ -330,7 +326,7 @@ namespace DataMasker
                 }
                else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
                 {
-                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, null, existingValue, gender);
+                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Schema, tableConfig.Name, columnConfig.Name, dataSource, null, existingValue, gender);
                 }
                 else
                 {

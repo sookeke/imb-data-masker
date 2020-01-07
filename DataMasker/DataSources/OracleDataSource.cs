@@ -299,12 +299,12 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object Shuffle(string table, string column, object existingValue, bool retainNull,DataTable dataTable = null)
+        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull,DataTable dataTable = null)
         {
             CompareLogic compareLogic = new CompareLogic();
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
             Random rnd = new Random();
-            string sql = "SELECT " + column + " FROM " + " " + table;
+            string sql = $"SELECT {column} FROM {table}";
             using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd))
             {
                 connection.Open();

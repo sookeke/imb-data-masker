@@ -298,7 +298,7 @@ namespace DataMasker.DataSources
             return rawData;
         }
 
-        public object Shuffle(string table, string column, object existingValue, bool retainNull, DataTable _dataTable)
+        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, DataTable _dataTable)
         {
             
             Random rnd = new Random();
