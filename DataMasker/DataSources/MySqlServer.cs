@@ -548,12 +548,12 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTable GetDataTable(string table, string connection)
+        public DataTable GetDataTable(string table, string schema, string connection)
         {
             DataTable dataTable = new DataTable();
             using (MySqlConnection mySqlConnection = new MySqlConnection(connection))
             {
-                string squery = "Select * from " + table;
+                string squery = $"Select * from `{schema}`.`{table}`";
                 mySqlConnection.Open();
                 using (MySqlDataAdapter oda = new MySqlDataAdapter(squery, mySqlConnection))
                 {

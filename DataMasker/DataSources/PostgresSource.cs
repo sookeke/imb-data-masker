@@ -514,16 +514,15 @@ namespace DataMasker.DataSources
         private string BuildCountSql(
          TableConfig tableConfig)
         {
-            var ss = $"SELECT COUNT(*) FROM  \"{tableConfig.Schema}\".{tableConfig.Name}";
             return $"SELECT COUNT(*) FROM {tableConfig.Schema}.{tableConfig.Name}";
         }
 
-        public DataTable GetDataTable(string table, string connection)
+        public DataTable GetDataTable(string table,string schema, string connection)
         {
             DataTable dataTable = new DataTable();
             using (NpgsqlConnection oracleConnection = new NpgsqlConnection(connection))
             {
-                string squery = "Select * from " + table;
+                string squery = $"Select * from {schema.AddDoubleQuotes()}.{table.AddDoubleQuotes()}";
                 oracleConnection.Open();
 
                 using (NpgsqlDataAdapter oda = new NpgsqlDataAdapter(squery, oracleConnection))

@@ -180,7 +180,7 @@ namespace DataMasker.MaskingValidation
 
             }
         }
-        private static DataTable GetdataTable(string connectionString1, string table, Config config)
+        private static DataTable GetdataTable(string connectionString1,string schema, string table, Config config)
         {
             // This is your table to hold the result set:
             DataTable dataTable = new DataTable();
@@ -190,15 +190,15 @@ namespace DataMasker.MaskingValidation
                 case DataSourceType.InMemoryFake:
                     break;
                 case DataSourceType.SqlServer:
-                    return dataSource.GetDataTable(table, connectionString1.ToString());
+                    return dataSource.GetDataTable(table,schema, connectionString1.ToString());
                 case DataSourceType.OracleServer:
-                    return dataSource.GetDataTable(table, connectionString1.ToString());                
+                    return dataSource.GetDataTable(table, schema,connectionString1.ToString());                
                 case DataSourceType.SpreadSheet:
                     break;
                 case DataSourceType.PostgresServer:
-                    return dataSource.GetDataTable(table, connectionString1.ToString());
+                    return dataSource.GetDataTable(table, schema, connectionString1.ToString());
                 case DataSourceType.MySqlServer:
-                    return dataSource.GetDataTable(table, connectionString1.ToString());
+                    return dataSource.GetDataTable(table, schema, connectionString1.ToString());
                 default:
                     break;
             }
@@ -231,8 +231,8 @@ namespace DataMasker.MaskingValidation
             {
                
 
-                var _dataTable = GetdataTable(connectionString, _tables.Name.ToString(), config);
-                var _dataTablePrd = GetdataTable(connectionStringPrd, _tables.Name, config);
+                var _dataTable = GetdataTable(connectionString, _tables.Schema, _tables.Name.ToString(), config);
+                var _dataTablePrd = GetdataTable(connectionStringPrd,_tables.Schema, _tables.Name, config);
                 if (_dataTable.Rows.Count == 0)
                 {
                     var _norecord = _tables.Name + " No record found for validation test in this table";

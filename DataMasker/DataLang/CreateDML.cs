@@ -146,7 +146,10 @@ namespace DataMasker.DataLang
                     output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
                     output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
                     output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
-                    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                    if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
+                    {
+                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                    }
                 }
                 else if (table.Rows.Count == 0)
                 {
@@ -154,7 +157,10 @@ namespace DataMasker.DataLang
                     output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
                     output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
                     output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
-                    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                    if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
+                    {
+                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                    }                  
                     output.AppendFormat("INSERT INTO {0}\n\t({1})\nDEFAULT VALUES", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
                 }
                 else
@@ -162,7 +168,10 @@ namespace DataMasker.DataLang
                     output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
                     output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
                     output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
-                    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                    if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
+                    {
+                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                    }
                     output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
                 }
                           
@@ -247,7 +256,12 @@ namespace DataMasker.DataLang
                     output.Append(Environment.NewLine);
                     output.Append(_commentOut);
                     output.Append(Environment.NewLine);
-                    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\n GO\n");
+                    //check Identity column
+                    if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
+                    {
+                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\n GO\n");
+                    }
+                  
                     output.AppendFormat("SET ANSI_WARNINGS ON\n GO\n");
                 }
                 else if( i == table.Rows.Count + 1)
@@ -263,7 +277,7 @@ namespace DataMasker.DataLang
                         output.Append(";");
                         output.Append(_commentOut);
                         IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
-                        var USER_SDO_GEOM_METADATA = dataSource.GetDataTable("MDSYS.USER_SDO_GEOM_METADATA", config.DataSource.Config.connectionStringPrd.ToString());
+                        var USER_SDO_GEOM_METADATA = dataSource.GetDataTable(tableConfig.Name, "MDSYS", config.DataSource.Config.connectionStringPrd.ToString());
                         var GeoMeTaData = SpatialInsert(USER_SDO_GEOM_METADATA);
                        
                         output.Append(Environment.NewLine);
@@ -292,6 +306,16 @@ namespace DataMasker.DataLang
         public static string AddSingleQuotes(this string value)
         {
             return "\'" + value + "\'";
+        }
+        public static bool TableHasIdentity(string table, string OBJECTPROPERTYCHECK, Config config)
+        {
+            IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
+            DataTable t = dataSource.GetDataTable(table.AddSingleQuotes(), OBJECTPROPERTYCHECK, config.DataSource.Config.connectionStringPrd.ToString());
+            if(t.Rows.Cast<DataRow>().Any(n => n.Field<int?>("IDENTITY") == 1))
+            {
+                return true;
+            }
+            return false;
         }
         public static string SpatialInsert(DataTable table)
         {

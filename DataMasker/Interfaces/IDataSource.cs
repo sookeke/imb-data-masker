@@ -27,7 +27,7 @@ namespace DataMasker.Interfaces
         IEnumerable<T> CreateObjecttst<T>(DataTable dataTable);
 
         DataTable CreateTable(IEnumerable<IDictionary<string, object>> obj);
-        DataTable GetDataTable(string table, string connection);
+        DataTable GetDataTable(string table, string schema, string connection);
         DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig tableConfig);
 
 

@@ -207,7 +207,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTable GetDataTable(string table, string connection)
+        public DataTable GetDataTable(string table, string schema, string connection)
         {
             throw new NotImplementedException();
         }

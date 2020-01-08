@@ -304,7 +304,7 @@ namespace DataMasker.DataSources
             CompareLogic compareLogic = new CompareLogic();
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
             Random rnd = new Random();
-            string sql = $"SELECT {column} FROM {table}";
+            string sql = $"SELECT {column} FROM {schema}.{table}";
             using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd))
             {
                 connection.Open();
@@ -633,13 +633,20 @@ namespace DataMasker.DataSources
             public SdoDimArray Geo { get; set; }
             
         }
-        public DataTable GetDataTable(string table, string connection)
+        public DataTable GetDataTable(string table,string schema, string connection)
         {
             DataTable dataTable = new DataTable();
             List<object> geoInfoList = new List<object>();
             using (OracleConnection oracleConnection = new OracleConnection(connection))
             {
-                string squery = "Select * from " + table;
+                string squery = "";
+                if (schema == "MDSYS")
+                {
+                    var view = "USER_SDO_GEOM_METADATA";
+                    squery = $"Select * from {schema}.{view} where TABLE_NAME = {table.AddSingleQuotes()}";
+                }
+                else
+                    squery = $"Select * from {schema}.{table}";
                 oracleConnection.Open();
                 var DD = (IEnumerable<IDictionary<string, object>>)oracleConnection.Query(squery, buffered: true);
                 //OracleCommand cmd = new OracleCommand();

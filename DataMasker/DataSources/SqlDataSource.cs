@@ -568,14 +568,19 @@ namespace DataMasker.DataSources
         {
             throw new NotImplementedException();
         }
-
-        public DataTable GetDataTable(string table, string connection)
+        public DataTable GetDataTable(string table,string schema, string connection)
         {
             DataTable dataTable = new DataTable();
             using (SqlConnection sqlConnection = new SqlConnection(connection))
             {
-
-                string squery = "Select * from " + table;
+                var obj = "OBJECTPROPERTYCHECK";
+                string squery = "";
+                if (schema == obj)
+                {
+                    squery = $"SELECT OBJECTPROPERTY(OBJECT_ID({table}), 'TableHasIdentity') AS 'IDENTITY'";
+                }
+                else
+                    squery = $"Select * from [{schema}].[{table}]";
                 sqlConnection.Open();
                 using (SqlDataAdapter adapter = new SqlDataAdapter(squery, sqlConnection))
                 {
