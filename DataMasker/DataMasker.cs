@@ -209,47 +209,48 @@ namespace DataMasker
                         columnConfig.Ignore = false;
                         existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
                     }
-                    else
-                    {
-                        //columnConfig.Ignore = true;
-                        //existingValue = existingValue;col
-                    }
                 }
                 else if (_location.Columns.Cast<DataColumn>().Where(s=>columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1)
                 {
-                    //
+                    //check if a column in the table contains 1 column in the location table column
+                    //check for multi line addressin the table 
+                    //var multiLine = tableConfig.Columns.Where(n => columnConfig.Name.Contains(n.Name)).ToList().Count > 2;
                     bool u;
-                    var cname = _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).ToList().FirstOrDefault();
+                    var cname = _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).ToList().FirstOrDefault();//get the exact column match
                     try
                     {
-                        if (_location.Rows.Count == 0)
+                        if (columnConfig.Type == DataType.SecondaryAddress || columnConfig.Type == DataType.StreetAddress)
                         {
-                            u = tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("CITY")) && (tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("STATE")) || tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("PROVINCE")));
-                            addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location, u);
-                        }
-                        if (addr ==  null)
-                        {
-                            existingValue = null;
-                        }
-                       else if (_location.Rows.Count > 0)
-                        {                      
-                            existingValue = _location.Rows[0][cname.ColumnName];                                                      
+                            existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
                         }
                         else
-                            File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + " and will return original: "  + Environment.NewLine);
+                        {
+                            if (_location.Rows.Count == 0)
+                            {
+                                u = tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("CITY")) && (tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("STATE")) || tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("PROVINCE")));
+                                addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location, u);
+                            }
+                            if (addr == null)
+                            {
+                                existingValue = null;
 
+                            }
+                            else if (_location.Rows.Count > 0)
+                            {
+                                existingValue = _location.Rows[0][cname.ColumnName];
+                            }
+                            else
+                                File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + " and will return original: " + Environment.NewLine);
+                        }
                     }
                     catch (Exception ex)
                     {
                         File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + "  and will return original: " + ex.Message + Environment.NewLine);
                         existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
-
                     }
-
                 }
                 else
-                {
-                   
+                {                   
                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);               
                 }
                 //replace the original value

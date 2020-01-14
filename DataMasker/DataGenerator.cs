@@ -337,11 +337,15 @@ namespace DataMasker
                     return _randomizer.Replace(columnConfig.StringFormatPattern);
                 case DataType.FullAddress:
                     return _faker.Address.FullAddress();
+                case DataType.StreetAddress:
+                    return _faker.Address.StreetAddress(false);
                 case DataType.File:
                     return _faker.System.FileName(columnConfig.StringFormatPattern);
                 case DataType.Filename:
                     var file = _faker.System.FileName("");
                     return file.Remove(file.Length - 1);
+                case DataType.SecondaryAddress:
+                    return _faker.Address.SecondaryAddress();
                 case DataType.State:
                     //rnd = new Random();
                     var state = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Name;
@@ -526,6 +530,7 @@ namespace DataMasker
                 case DataType.PickRandom:
                 case DataType.FullAddress:
                 case DataType.State:
+                case DataType.SecondaryAddress:
                 case DataType.City:
                 case DataType.StringConcat:
                 case DataType.PhoneNumber:
@@ -1038,12 +1043,34 @@ namespace DataMasker
             var city = provinces[rnd.Next(0, provinces.Count())];
             if (isFulladdress)
             {
-                address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}");
+                if (columnConfig.Name.ToUpper().Contains("ADDRESS"))
+                {
+
+                    if (columnConfig.Name.ToUpper().Contains("STREET") && (columnConfig.Name.ToUpper().Contains("2") || columnConfig.Name.ToUpper().Contains("3")))
+                    {
+                        address = _faker.Address.SecondaryAddress();
+                    }
+                    else
+                        address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}");
+                }
+                else
+                    address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}");
             }
             else
-                address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}") + " " + city.Name + ", " + city.State.Name;
+            {
+                if (columnConfig.Name.ToUpper().Contains("ADDRESS"))
+                {
 
-           
+                    if (columnConfig.Name.ToUpper().Contains("STREET") && (columnConfig.Name.ToUpper().Contains("2") || columnConfig.Name.ToUpper().Contains("3")))
+                    {
+                        address = _faker.Address.SecondaryAddress();
+                    }
+                    else
+                        address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}");                    
+                }
+                else
+                    address = _faker.Parse("{{ADDRESS.BUILDINGNUMBER}} {{ADDRESS.STREETNAME}}") + " " + city.Name + ", " + city.State.Name;
+            }
             dataTable.Rows.Add(CountryLoader.LoadCanadaLocationData().Name, city.State.Name, city.State.Name, city.Name, address);      
             return dataTable;
         }
@@ -1057,7 +1084,6 @@ namespace DataMasker
             division,
             percentage,
             randomPercentage
-
         }
         public enum CountryLoad
         {

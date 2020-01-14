@@ -432,6 +432,20 @@ namespace DataMasker.Examples
                                 column.StringFormatPattern = "";
                                 column.useGenderColumn = "Canada";
                                 break;
+                            case nameof(DataType.StreetAddress):
+                                column.type = DataType.StreetAddress.ToString();
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min;
+                                column.StringFormatPattern = "";
+                                column.useGenderColumn = "";
+                                break;
+                            case nameof(DataType.SecondaryAddress):
+                                column.type = DataType.SecondaryAddress.ToString();
+                                column.max = col.Max.ToString(); ;
+                                column.min = col.Min;
+                                column.StringFormatPattern = "";
+                                column.useGenderColumn = "";
+                                break;
                             case nameof(DataType.PhoneNumber):
                                 column.type = DataType.PhoneNumber.ToString();
                                 column.max = col.Max.ToString(); ;
@@ -790,7 +804,7 @@ namespace DataMasker.Examples
                             column.useGenderColumn = "";
                         }
                     }
-                    else if (col.ColumnName.ToUpper().Contains("ADDRESS") || col.Comments.Contains("address"))
+                    else if (col.ColumnName.ToUpper().Contains("ADDRESS"))
                     {
                         var size = col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ');
                         if (size.Count() > 1)
@@ -798,7 +812,17 @@ namespace DataMasker.Examples
                             var sizze = size[1].ToString();
                             if (!string.IsNullOrEmpty(sizze))
                             {
-                                column.type = DataType.FullAddress.ToString();
+                                if (col.ColumnName.ToUpper().Contains("ADDRESS") && (col.ColumnName.Contains("2") || col.ColumnName.Contains("3")))
+                                {
+                                    column.type = DataType.SecondaryAddress.ToString();
+                                }
+                                else if (col.ColumnName.ToUpper().Contains("STREET"))
+                                {
+                                    column.type = DataType.StreetAddress.ToString();
+                                }
+                                else
+                                    column.type = DataType.FullAddress.ToString();
+
                                 column.max = Convert.ToString(sizze);
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";

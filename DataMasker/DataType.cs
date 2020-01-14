@@ -69,6 +69,8 @@
         /// The full address
         /// </summary>
         FullAddress,
+        SecondaryAddress,
+        StreetAddress,
 
         /// <summary>
         /// The phone number
