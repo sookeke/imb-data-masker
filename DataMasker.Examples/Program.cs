@@ -16,14 +16,9 @@ using System.ComponentModel;
 using OfficeOpenXml;
 using Newtonsoft.Json.Linq;
 using DataMasker.DataLang;
-using static MoreLinq.Extensions.LagExtension;
-using static MoreLinq.Extensions.LeadExtension;
-using MoreEnumerable = MoreLinq.MoreEnumerable;
 using DataMasker.MaskingValidation;
 using ChoETL;
-using DataMasker.DataSources;
 using KellermanSoftware.CompareNetObjects;
-using System.Security;
 
 /*
     Author: Stanley Okeke
@@ -1225,18 +1220,26 @@ namespace DataMasker.Examples
         private static Config LoadConfig(
             int example)
         {
-            File.Create(exceptionPath).Close();
-            File.Create(path).Close();
+
             if (allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
             {
+                
                 if (!Directory.Exists(@"output\Validation"))
                 {
                     Directory.CreateDirectory(@"output\Validation");
                 }
+                File.Create(exceptionPath).Close();
+                File.Create(_exceptionpath).Close();
+                File.Create(path).Close();
                 return Config.Load(_testJson);
             }
             else
+            {
+                File.Create(exceptionPath).Close();
+                File.Create(_exceptionpath).Close();
+                File.Create(path).Close();
                 return Config.Load(Jsonpath);
+            }
 
             //return Config.Load($@"\\SFP.IDIR.BCGOV\U130\SOOKEKE$\Masking_sample\APP_TAP_config.json");
         }
@@ -1275,19 +1278,9 @@ namespace DataMasker.Examples
                 Console.WriteLine("Program will exit: Press ENTER to exist..");
                 Console.ReadLine();
                 System.Environment.Exit(1);
-            }
-            //{ throw new NullReferenceException("Referencing a null app key value"); }
-            //GetUserInfo.GetUserInfo getUserInfo = new GetUserInfo.GetUserInfo();
-            //////SoapHttpClient.SoapClient soapHttpClient = new SoapHttpClient.SoapClient();
-        
-            //var u = getUserInfo.GetUserbyName("stanley");
-          
-
+            }       
             try
-            {
-            
-
-                           
+            {                           
                 if (!allkey.Where(n => n.Key.ToUpper().Equals(RunTestJson.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
                 {
                     _SpreadSheetPath = ConfigurationManager.AppSettings[ExcelSheetPath];
@@ -1319,7 +1312,7 @@ namespace DataMasker.Examples
                 foreach (TableConfig tableConfig in config.Tables)
                 {
                     //checked if table contains blob column datatype and get column that is blob
-                   
+                    
                     var isblob = tableConfig.Columns.Where(x => !x.Ignore && x.Type == DataType.Blob);
                     object extension = null;
                     string[] extcolumn = null;
@@ -1330,6 +1323,7 @@ namespace DataMasker.Examples
                     if (config.DataSource.Type == DataSourceType.SpreadSheet)
                     {
                         //load spreadsheet to dataTable
+                        Console.WriteLine(string.Format("Data Generation for {0} started....", tableConfig.Name));
                         var SheetTable = dataSource.DataTableFromCsv(ConfigurationManager.AppSettings[ConnectionString]);
                         //convert DataTable to object
                         try
@@ -1340,9 +1334,10 @@ namespace DataMasker.Examples
 
 
                             rawData = dataSource.RawData(null);
+                            Console.Title = "Data Masking";
                             foreach (IDictionary<string, object> row in rows)
                             {
-                                Console.Title = "Data Generation";
+                               
                                 dataMasker.Mask(row, tableConfig, dataSource, rowCount, SheetTable[tableConfig.Name]);
                             }
                         }
@@ -1397,12 +1392,16 @@ namespace DataMasker.Examples
                     }
                     else
                     {
+                        Console.Title = "Data Generation";
+                        Console.WriteLine(string.Format("Data Generation for {0} has started....", tableConfig.Name));
                         rowCount = dataSource.GetCount(tableConfig);
                         rows = dataSource.GetData(tableConfig, config);
-                        rawData = dataSource.RawData(null);                        
+                        rawData = dataSource.RawData(null);
+                        Console.Title = "Data Masking";
+                        Console.WriteLine(string.Format("Data Masking for {0} has started....", tableConfig.Name));
                         foreach (IDictionary<string, object> row in rows)
                         {
-                            Console.Title = "Data Generation";                         
+                            
                             if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                             {
                                 dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
@@ -1410,20 +1409,10 @@ namespace DataMasker.Examples
                             else
                                 dataMasker.Mask(row, tableConfig, dataSource, rowCount);
                         }
-                        //rows = rows.ForEach(row =>
-                        //{
-                        //    if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
-                        //    {
-                        //        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
-                        //    }
-                        //    else
-                        //        dataMasker.Mask(row, tableConfig, dataSource);
-                        //});                      
-                        //update all rows
-                        Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
                         try
                         {
                             #region Create DML Script
+                            Console.WriteLine(string.Format("Generating DML and SpreadSheet for {0}....", tableConfig.Name));
                             _dmlTable = dataSource.SpreadSheetTable(rows, tableConfig); MaskTable = _dmlTable;//masked table
                             //var maskedObj = dataSource.CreateObject(_dmlTable); // masked object
                             PrdTable = dataSource.SpreadSheetTable(rawData, tableConfig); //PRD table
@@ -1446,11 +1435,13 @@ namespace DataMasker.Examples
                                 && PrdTable.Rows != null && MaskTable.Rows != null
                                 && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(false))
                             {
+                                Console.WriteLine(string.Format("Running Validation for {0}....", tableConfig.Name));
                                 Reportvalidation(PrdTable, _dmlTable, config.DataSource, tableConfig);
                             }
                             #endregion
                             if (allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
                             {
+                                Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
                                 dataSource.UpdateRows(rows, rowCount, tableConfig, config);
                             }
 

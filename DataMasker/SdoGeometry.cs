@@ -1,11 +1,6 @@
 ﻿using NetTopologySuite.IO.Sdo;
 using NetTopologySuite.IO.UdtBase;
 using Oracle.DataAccess.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DataMasker
 {
@@ -29,21 +24,21 @@ namespace DataMasker
             set { sdo_Srid = value; }
         }
         private SdoPoint point;
-        [OracleObjectMappingAttribute(2)]
+        [Oracle.DataAccess.Types.OracleObjectMappingAttribute(2)]
         public SdoPoint Point
         {
             get { return point; }
             set { point = value; }
         }
         private decimal[] elemArray;
-        [OracleObjectMappingAttribute(3)]
+        [Oracle.DataAccess.Types.OracleObjectMappingAttribute(3)]
         public decimal[] ElemArray
         {
             get { return elemArray; }
             set { elemArray = value; }
         }
         private decimal[] ordinatesArray;
-        [OracleObjectMappingAttribute(4)]
+        [Oracle.DataAccess.Types.OracleObjectMappingAttribute(4)]
         public decimal[] OrdinatesArray
         {
             get { return ordinatesArray; }
@@ -52,7 +47,7 @@ namespace DataMasker
       
         [OracleCustomTypeMappingAttribute("MDSYS.SDO_ELEM_INFO_ARRAY")]
         public class ElemArrayFactory : OracleArrayTypeFactoryBase<decimal> { }
-        [OracleCustomTypeMappingAttribute("MDSYS.SDO_ORDINATE_ARRAY")]
+        [Oracle.DataAccess.Types.OracleCustomTypeMappingAttribute("MDSYS.SDO_ORDINATE_ARRAY")]
         public class OrdinatesArrayFactory : OracleArrayTypeFactoryBase<decimal> { }
       
         public override void MapFromCustomObject()

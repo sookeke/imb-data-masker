@@ -123,9 +123,6 @@ namespace DataMasker.DataSources
                         rawData.Add(new Dictionary<string, object>(prd));
                     }
                     //rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
-
-
-
                     return _prdData;
                 }
 
@@ -305,7 +302,7 @@ namespace DataMasker.DataSources
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
             Random rnd = new Random();
             string sql = $"SELECT {column} FROM {schema}.{table}";
-            using (var connection = new Oracle.DataAccess.Client.OracleConnection(_connectionStringPrd))
+            using (var connection = new OracleConnection(_connectionStringPrd))
             {
                 connection.Open();
                 var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);

@@ -589,16 +589,12 @@ namespace DataMasker.DataSources
                     {
                         //Fill the data table with select statement's query results:
                         int recordsAffectedSubscriber = 0;
-
                         recordsAffectedSubscriber = adapter.Fill(dataTable);
-
                     }
                     catch (Exception ex)
                     {
-
                         Console.WriteLine(ex.Message);
                     }
-
                 }
                 return dataTable;
             }

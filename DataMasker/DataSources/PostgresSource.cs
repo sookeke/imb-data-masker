@@ -224,10 +224,10 @@ namespace DataMasker.DataSources
             string sql = "";
             if (int.TryParse(tableConfig.RowCount, out int n))
             {
-                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name} LIMIT {n}";
+                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema.AddDoubleQuotes()}.{tableConfig.Name.AddDoubleQuotes()} LIMIT {n}";
             }
             else
-                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name}";
+                sql = $"SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema.AddDoubleQuotes()}.{tableConfig.Name.AddDoubleQuotes()}";
             //return sql;
             //string sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)} FROM {tableConfig.Name}";
             if (sql.Contains("[") || sql.Contains("]"))
