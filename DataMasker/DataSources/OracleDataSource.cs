@@ -258,10 +258,10 @@ namespace DataMasker.DataSources
            TableConfig tableConfig, Config config)
         {
             var charsToRemove = new string[] { "[", "]" };
-            string sql = $"UPDATE [{tableConfig.Name}] SET ";
+            string sql = $"UPDATE {tableConfig.Schema}.{tableConfig.Name} SET ";
 
             sql += tableConfig.Columns.GetUpdateColumns(config);
-            sql += $" WHERE [{tableConfig.PrimaryKeyColumn}] = @{tableConfig.PrimaryKeyColumn}";
+            sql += $" WHERE {tableConfig.PrimaryKeyColumn} = @{tableConfig.PrimaryKeyColumn}";
             //thisis oracle replace @ WITH :
             var sqltOrc = new string[] { "@" };
             foreach (var c in charsToRemove)

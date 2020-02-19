@@ -9931,9 +9931,9 @@
         "Product"
         {
         "Name" = "8:Microsoft Visual Studio"
-        "ProductName" = "8:DataMaskerInstaller"
+        "ProductName" = "8:DataMasker"
         "ProductCode" = "8:{990A9819-CDA3-4856-9024-4DDAAB66BD88}"
-        "PackageCode" = "8:{71A3BA62-A94B-490B-986D-918ADA836544}"
+        "PackageCode" = "8:{B23A175D-C472-4811-9E05-35B1F42DBB58}"
         "UpgradeCode" = "8:{4A8E550A-DE75-4AA6-89C0-5F7B4922B496}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"

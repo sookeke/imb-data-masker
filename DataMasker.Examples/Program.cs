@@ -246,6 +246,14 @@ namespace DataMasker.Examples
                                 break;
                             case nameof(DataType.NULL):
                                 break;
+                            case nameof(DataType.TimeSpan):
+                                column.type = DataType.TimeSpan.ToString();
+                                if (string.IsNullOrEmpty(col.StringFormat))
+                                {
+                                    throw new ArgumentException("StringFormat type requires a StringFormatPattern value", nameof(col.StringFormat) + " on " + col.ColumnName);
+                                }
+                                column.StringFormatPattern = col.StringFormat;
+                                break;
                             case nameof(DataType.PostalCode):
                                 column.type = DataType.PostalCode.ToString();
                                 column.max = col.Max.ToString(); ;

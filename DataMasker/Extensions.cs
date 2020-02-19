@@ -59,10 +59,10 @@ namespace DataMasker
                     columnNames.Insert(0, primaryKeyColumn);
                     break;
                 case DataSourceType.PostgresServer:
-                    columnNames.Insert(0, primaryKeyColumn);
+                    columnNames.Insert(0, primaryKeyColumn.AddDoubleQuotes());
                     break;
                 case DataSourceType.MySqlServer:
-                    columnNames.Insert(0, primaryKeyColumn);
+                    columnNames.Insert(0, $"`{primaryKeyColumn}`");
                     break;
                 default:
                     columnNames.Insert(0, primaryKeyColumn);

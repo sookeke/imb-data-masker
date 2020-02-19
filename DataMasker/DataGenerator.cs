@@ -316,6 +316,10 @@ namespace DataMasker
                     return _faker.Address.Longitude();
                 case DataType.Latitude:
                     return _faker.Address.Latitude();
+                case DataType.TimeSpan:
+                    DateTime start_time = DateTime.Today.AddHours(rnd.Next(3600));
+                    DateTime span = start_time.AddMinutes(rnd.Next(241));
+                    return span.ToString(columnConfig.StringFormatPattern);
                 case DataType.Rant:
                     //Random rnd = new Random();
                     var rant = WaffleEngine.Text(rnd, ToInt32(columnConfig.Min), false);

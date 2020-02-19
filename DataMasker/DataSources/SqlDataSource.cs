@@ -7,7 +7,6 @@ using System.Linq;
 using DataMasker.Interfaces;
 using DataMasker.Models;
 using DataMasker.Utils;
-using System.Collections;
 using System.Configuration;
 using System.IO;
 using KellermanSoftware.CompareNetObjects;
@@ -205,7 +204,7 @@ namespace DataMasker.DataSources
         private string BuildUpdateSql(
             TableConfig tableConfig, Config config)
         {
-            string sql = $"UPDATE [{tableConfig.Name}] SET ";
+            string sql = $"UPDATE [{tableConfig.Schema}].[{tableConfig.Name}] SET ";
 
             sql += tableConfig.Columns.GetUpdateColumns(config);
             sql += $" WHERE [{tableConfig.PrimaryKeyColumn}] = @{tableConfig.PrimaryKeyColumn}";

@@ -59,6 +59,7 @@
         /// The lorem
         /// </summary>
         Lorem,
+        TimeSpan,
 
         /// <summary>
         /// The string format
