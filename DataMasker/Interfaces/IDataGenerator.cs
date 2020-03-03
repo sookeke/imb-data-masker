@@ -2,6 +2,7 @@
 using DataMasker.Models;
 using DataMasker.DataSources;
 using System.Data;
+using System.Collections.Generic;
 
 namespace DataMasker.Interfaces
 {
@@ -13,7 +14,7 @@ namespace DataMasker.Interfaces
             string tableName,
             Name.Gender? gender);
         object GetValueShuffle(
-            ColumnConfig columnConfig, string schema, string table, string column, IDataSource dataSources, DataTable dataTable,
+            ColumnConfig columnConfig, string schema, string table, string column, IDataSource dataSources, IEnumerable<IDictionary<string, object>> dataTable,
             object existingValue,
             Name.Gender? gender);
         object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,string filename, string FileExtension, Name.Gender? gender);

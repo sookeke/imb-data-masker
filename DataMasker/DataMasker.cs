@@ -65,7 +65,7 @@ namespace DataMasker
         /// <returns></returns>
         public IDictionary<string, object> Mask(
             IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource,int rowCount, DataTable dataTable)
+            TableConfig tableConfig, IDataSource dataSource,int rowCount, IEnumerable<IDictionary<string,object>> data, DataTable dataTable)
         {
             var addr = new DataTable();
             _location.Rows.Clear();
@@ -89,12 +89,13 @@ namespace DataMasker
                 }
                 else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry || columnConfig.Type == DataType.ShufflePolygon)
                 {
+                    var columndata = data.Select(n => n.Where(x => x.Key.Equals(columnConfig.Name)).ToDictionary());
                     if (string.IsNullOrEmpty(tableConfig.Schema))
                     {
-                        existingValue = _dataGenerator.GetValueShuffle(columnConfig, "", $"{tableConfig.Name}", columnConfig.Name, dataSource, dataTable, existingValue, gender);
+                        existingValue = _dataGenerator.GetValueShuffle(columnConfig, "", $"{tableConfig.Name}", columnConfig.Name, dataSource, columndata, existingValue, gender);
                     }
                     else
-                         existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Schema}", $"{tableConfig.Name}", columnConfig.Name, dataSource,dataTable, existingValue, gender);
+                         existingValue = _dataGenerator.GetValueShuffle(columnConfig, $"{tableConfig.Schema}", $"{tableConfig.Name}", columnConfig.Name, dataSource, columndata, existingValue, gender);
                 }          
                 else if (columnConfig.Type == DataType.File)
                 {
@@ -295,7 +296,7 @@ namespace DataMasker
             return isNum;
         }
         public IDictionary<string, object> MaskBLOB(IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource,string filename, string fileExtension)
+            TableConfig tableConfig, IDataSource dataSource, IEnumerable<IDictionary<string, object>> data, string filename, string fileExtension)
         {
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
@@ -327,7 +328,8 @@ namespace DataMasker
                 }
                else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
                 {
-                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Schema, tableConfig.Name, columnConfig.Name, dataSource, null, existingValue, gender);
+                    var columndata = data.Select(n => n.Where(x => x.Key.Equals(columnConfig.Name)).ToDictionary());
+                    existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Schema, tableConfig.Name, columnConfig.Name, dataSource, columndata, existingValue, gender);
                 }
                 else
                 {
@@ -660,6 +662,7 @@ namespace DataMasker
                 case DataType.RandomSeason:
                 case DataType.RandomInt:
                 case DataType.RandomDec:
+                case DataType.TimeSpan:
                 case DataType.PickRandom:
                 case DataType.FullAddress:
                 case DataType.State:
@@ -696,6 +699,118 @@ namespace DataMasker
             {
                 return string.Empty;
             }
+        }
+        public DataTable DictionaryToDataTable(IEnumerable<IDictionary<string, object>> parents, TableConfig config)
+        {
+            var table = new DataTable();
+
+
+
+            var c = parents.FirstOrDefault(x => x.Values
+                                           .OfType<IEnumerable<IDictionary<string, object>>>()
+                                           .Any());
+            var p = c ?? parents.FirstOrDefault();
+            if (p == null)
+                return table;
+
+            //var ccc = p.Where(x => x.Value is object)
+            //               .Select(x => x.Key);
+
+
+
+            //var headers1 = p.Where(x => x.Value is object)
+            //               .Select(x => x.Key)
+            //               .Concat(c == null ?
+            //                       Enumerable.Empty<object>() :
+            //                       c.Values
+            //                        .OfType<IEnumerable<IDictionary<string, object>>>()
+            //                        .First()
+            //                        .SelectMany(x => x.Keys)).ToArray();
+
+
+
+
+
+            foreach (var parent in parents)
+            {
+                var children = parent.Values
+                                     .OfType<IEnumerable<IDictionary<string, object>>>()
+                                     .ToArray();
+
+                var length = children.Any() ? children.Length : 1;
+                var parentEntries1 = parent.Where(x => x.Value is object).ToLookup(x => x.Key, x => x.Value);
+
+
+                var parentEntries = parent
+                                          .Repeat(length)
+                                          .ToLookup(x => x.Key, x => x.Value);
+
+                var childEntries = children.SelectMany(x => x.First())
+                                           .ToLookup(x => x.Key, x => x.Value);
+
+
+                var allEntries = parentEntries.Concat(childEntries)
+                                              .ToDictionary(x => x.Key, x => x.ToArray());
+
+                var headers = allEntries.Select(x => x.Key)
+                                        .Except(table.Columns
+                                                     .Cast<DataColumn>()
+                                                     .Select(x => x.ColumnName))
+                                        .Select(x => new DataColumn(x))
+                                        .ToArray();
+                foreach (var header in headers)
+                {
+                    if (config.Columns.Where(n => n.Name.Equals(header.ColumnName)).Count() != 0)
+                    {
+                        foreach (ColumnConfig columnConfig in config.Columns.Where(n => n.Name.Equals(header.ColumnName)))
+                        {
+                            if (columnConfig.Type == DataType.Geometry || columnConfig.Type == DataType.Shufflegeometry || columnConfig.Type == DataType.ShufflePolygon)
+                            {
+                                header.DataType = typeof(SdoGeometry);
+                            }
+                            else if (columnConfig.Type == DataType.Blob)
+                            {
+                                header.DataType = typeof(byte[]);
+                            }
+
+                        }
+                    }
+
+
+
+                    table.Columns.Add(header);
+                }
+
+
+                var addedRows = new int[length];
+                //var xxx = table.Rows.Add();
+                for (int i = 0; i < length; i++)
+                    addedRows[i] = table.Rows.IndexOf(table.Rows.Add());
+
+                foreach (DataColumn col in table.Columns)
+                {
+                    if (!allEntries.TryGetValue(col.ColumnName, out object[] columnRows))
+                        continue;
+
+                    for (int i = 0; i < addedRows.Length; i++)
+                    {
+                        if (columnRows[i] is SdoGeometry)
+                        {
+                            table.Rows[addedRows[i]][col] = (SdoGeometry)columnRows[i];
+                        }
+                        else if (columnRows[i] is byte[])
+                        {
+                            table.Rows[addedRows[i]][col] = (byte[])columnRows[i];
+                        }
+                        else
+                        {
+                            table.Rows[addedRows[i]][col] = columnRows[i];
+                        }
+                    }
+                }
+            }
+
+            return table;
         }
     }
 

@@ -21,7 +21,7 @@ namespace DataMasker.Interfaces
            IEnumerable<IDictionary<string, object>> PrdData);
 
         //For spreadshet
-        DataTableCollection DataTableFromCsv(string csvPath);
+        DataTableCollection DataTableFromCsv(string csvPath, TableConfig tableConfig);
         IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable);
 
         IEnumerable<T> CreateObjecttst<T>(DataTable dataTable);
@@ -42,7 +42,7 @@ namespace DataMasker.Interfaces
         object Shuffle(string schema,
             string table, string column,
             object existingValue, bool retainnull,
-            DataTable dataTable);
+            IEnumerable<IDictionary<string,object>> dataTable);
 
         /// <summary>
         /// Updates the rows.

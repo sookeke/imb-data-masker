@@ -103,7 +103,7 @@ namespace DataMasker.DataSources
             }
         }
 
-        public object Shuffle(string schema, string table, string column, object existingValue, bool retainnull, DataTable dataTable)
+        public object Shuffle(string schema, string table, string column, object existingValue, bool retainnull, IEnumerable<IDictionary<string,object>> dataTable)
         {
             throw new NotImplementedException();
         }
@@ -113,7 +113,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTableCollection DataTableFromCsv(string csvPath)
+        public DataTableCollection DataTableFromCsv(string csvPath, TableConfig tableConfig)
         {
             throw new NotImplementedException();
         }

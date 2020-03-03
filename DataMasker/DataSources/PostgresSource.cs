@@ -240,28 +240,28 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, DataTable dataTable = null)
+        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, IEnumerable<IDictionary<string, object>> dataTable)
         {
             //ArrayList list = new ArrayList();
             CompareLogic compareLogic = new CompareLogic();
             Random rnd = new Random();
-            string sql = $"SELECT {column.AddDoubleQuotes()} FROM {schema.AddDoubleQuotes()}.{table.AddDoubleQuotes()}";
-            using (var connection = new NpgsqlConnection(_connectionStringPrd))
-            {
+            //string sql = $"SELECT {column.AddDoubleQuotes()} FROM {schema.AddDoubleQuotes()}.{table.AddDoubleQuotes()}";
+            //using (var connection = new NpgsqlConnection(_connectionStringPrd))
+            //{
                 try
                 {
 
 
-                    connection.Open();
-                    var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
+                    //connection.Open();
+                    //var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                     //Randomizer randomizer = new Randomizer();
 
                     if (retainNull)
                     {
-                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
+                        Values = dataTable.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
                     }
                     else
-                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+                        Values = dataTable.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
 
 
                     //var find = values.Count();
@@ -302,7 +302,7 @@ namespace DataMasker.DataSources
                     File.AppendAllText(_exceptionpath, ex.ToString() + Environment.NewLine);
                     return null;
                 }
-            }
+           // }
 
             //return list;
         }
@@ -313,7 +313,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTableCollection DataTableFromCsv(string csvPath)
+        public DataTableCollection DataTableFromCsv(string csvPath, TableConfig tableConfig)
         {
             throw new NotImplementedException();
         }

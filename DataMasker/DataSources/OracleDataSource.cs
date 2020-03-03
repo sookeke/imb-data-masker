@@ -296,16 +296,16 @@ namespace DataMasker.DataSources
             }
             return sql;
         }
-        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull,DataTable dataTable = null)
+        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, IEnumerable<IDictionary<string,object>> dataTable)
         {
             CompareLogic compareLogic = new CompareLogic();
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
             Random rnd = new Random();
-            string sql = $"SELECT {column} FROM {schema}.{table}";
-            using (var connection = new OracleConnection(_connectionStringPrd))
-            {
-                connection.Open();
-                var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
+            //string sql = $"SELECT {column} FROM {schema}.{table}";
+            //using (var connection = new OracleConnection(_connectionStringPrd))
+            //{
+            //    connection.Open();
+            //    var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
                 //var values = Array();
                 //Randomizer randomizer = new Randomizer();
                 try
@@ -314,10 +314,10 @@ namespace DataMasker.DataSources
 
                     if (retainNull)
                     {
-                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
+                        Values = dataTable.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
                     }
                     else
-                        Values = result.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+                        Values = dataTable.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
 
 
                     //var find = values.Count();
@@ -341,7 +341,6 @@ namespace DataMasker.DataSources
                     }
                     if (compareLogic.Compare(value, null).AreEqual && retainNull)
                     {
-                        //var nt = values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, values.Where(n => n != null).ToArray().Count())];
                         return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
                     }
                     while (compareLogic.Compare(value, existingValue).AreEqual)
@@ -364,7 +363,7 @@ namespace DataMasker.DataSources
                 }
                
 
-            }
+            //}
 
             //return list;
         }
@@ -375,7 +374,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTableCollection DataTableFromCsv(string csvPath)
+        public DataTableCollection DataTableFromCsv(string csvPath, TableConfig tableConfig)
         {
             throw new NotImplementedException();
         }
@@ -630,7 +629,7 @@ namespace DataMasker.DataSources
             public SdoDimArray Geo { get; set; }
             
         }
-        public DataTable GetDataTable(string table,string schema, string connection)
+        public DataTable GetDataTable(string table, string schema, string connection)
         {
             DataTable dataTable = new DataTable();
             List<object> geoInfoList = new List<object>();
@@ -645,33 +644,6 @@ namespace DataMasker.DataSources
                 else
                     squery = $"Select * from {schema}.{table}";
                 oracleConnection.Open();
-                var DD = (IEnumerable<IDictionary<string, object>>)oracleConnection.Query(squery, buffered: true);
-                //OracleCommand cmd = new OracleCommand();
-                //cmd.Connection = oracleConnection;
-                //cmd.CommandText = "Select * from " + table;
-                //using (OracleDataReader readerGeoInfo = cmd.ExecuteReader())
-                //{
-                //    while (readerGeoInfo.Read())
-                //    {
-                //        var oo = Enumerable.Range(0, readerGeoInfo.FieldCount).ToDictionary(readerGeoInfo.GetName, readerGeoInfo.GetValue);
-                //        HazSqlGeo geoInfo = new HazSqlGeo();
-                //        if (!readerGeoInfo.IsDBNull(0))
-                //        {
-                //            //geoInfo.Geo = ()readerGeoInfo.GetDecimal(0);
-                //        }
-                //        if (!readerGeoInfo.IsDBNull(0))
-                //        {
-                //            var o = Enumerable.Range(0, readerGeoInfo.FieldCount).ToDictionary(readerGeoInfo.GetName, readerGeoInfo.GetValue);
-                //        }
-                //        geoInfoList.Add(geoInfo);
-                //    }
-                //    readerGeoInfo.Close();
-                //}
-
-
-
-
-
                 using (OracleDataAdapter oda = new OracleDataAdapter(squery, oracleConnection))
                 {
                     try

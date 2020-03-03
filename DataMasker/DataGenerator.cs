@@ -16,6 +16,7 @@ using System.Net.Http;
 using CountryData;
 using System.Globalization;
 using WaffleGenerator;
+using KellermanSoftware.CompareNetObjects;
 
 namespace DataMasker
 {
@@ -28,6 +29,8 @@ namespace DataMasker
         private static readonly DateTime DEFAULT_MIN_DATE = new DateTime(1900, 1, 1, 0, 0, 0, 0);
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
+        public static object[] Values { get; private set; }
+        private static Dictionary<string, string> exceptionBuilder = new Dictionary<string, string>();
         private static readonly List<string> shuffleList = new List<string>();
         private static readonly List<KeyValuePair<object, object>> uniquevalue = new List<KeyValuePair<object, object>>();
 
@@ -559,6 +562,8 @@ namespace DataMasker
         }
 
         private static Random rnd = new Random();
+        private static int o;
+
         private dynamic ParseMinMaxValue(
             ColumnConfig columnConfig,
             MinMax minMax,
@@ -587,7 +592,7 @@ namespace DataMasker
             return null;
         }
 
-        public object GetValueShuffle(ColumnConfig columnConfig, string schema, string table, string column, IDataSource dataSources, DataTable dataTable,
+        public object GetValueShuffle(ColumnConfig columnConfig, string schema, string table, string column, IDataSource dataSources, IEnumerable<IDictionary<string,object>> dataTable,
             object existingValue, Name.Gender? gender = null)
         {
             if (!string.IsNullOrEmpty(columnConfig.UseValue))
@@ -637,7 +642,7 @@ namespace DataMasker
                 {
                     case DataType.Shuffle:
                         var random = new Random();
-                        var shuffle = dataSources.Shuffle(schema, table, column, existingValue, columnConfig.RetainNullValues, dataTable);
+                        var shuffle = ShuffleData(table, column, existingValue, columnConfig.RetainNullValues, dataTable);
                         return shuffle;
                     case DataType.ShufflePolygon:
                         var rand = new Random();
@@ -648,6 +653,64 @@ namespace DataMasker
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
 
+        public static object ShuffleData(string table, string column, object existingValue, bool RetainNull, IEnumerable<IDictionary<string,object>> dataTable)
+        {
+            try
+            {
+
+                CompareLogic compareLogic = new CompareLogic();
+                if (RetainNull)
+                {
+                    Values = dataTable.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
+                }
+                else
+                    Values = dataTable.Select(n => n.Values).SelectMany(x => x).ToList().Distinct().ToArray();
+
+
+                //var find = values.Count();
+                object value = Values[rnd.Next(Values.Count())];
+                if (Values.Count() <= 1)
+                {
+                    o = o + 1;
+                    if (o == 1)
+                    {
+                        File.WriteAllText(_exceptionpath, "");
+                    }
+
+                    if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                    {
+                        exceptionBuilder.Add(table, column);
+                        File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                    }
+                    //o = o + 1;
+                    //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                    return value;
+                }
+                if (compareLogic.Compare(value, null).AreEqual && RetainNull)
+                {
+                    return Values.Where(n => n != null).Select(n => n).ToArray()[rnd.Next(0, Values.Where(n => n != null).ToArray().Count())];
+                }
+                while (compareLogic.Compare(value, existingValue).AreEqual)
+                {
+
+                    value = Values[rnd.Next(0, Values.Count())];
+                }
+                if (value is SdoGeometry)
+                {
+                    return (SdoGeometry)value;
+                }
+                return value;
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine(ex.ToString());
+                File.AppendAllText(_exceptionpath, ex.ToString() + Environment.NewLine);
+                return null;
+            }
+
+
+        }
         public object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,
             string fileName, string fileExtension, Name.Gender? gender = null)
         {

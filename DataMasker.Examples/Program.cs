@@ -19,6 +19,7 @@ using DataMasker.DataLang;
 using DataMasker.MaskingValidation;
 using ChoETL;
 using KellermanSoftware.CompareNetObjects;
+using System.Diagnostics;
 
 /*
     Author: Stanley Okeke
@@ -1332,7 +1333,8 @@ namespace DataMasker.Examples
                     {
                         //load spreadsheet to dataTable
                         Console.WriteLine(string.Format("Data Generation for {0} started....", tableConfig.Name));
-                        var SheetTable = dataSource.DataTableFromCsv(ConfigurationManager.AppSettings[ConnectionString]);
+                        var y = config.DataSource.Config.connectionString.ToString();
+                        var SheetTable = dataSource.DataTableFromCsv(config.DataSource.Config.connectionString.ToString(), tableConfig);
                         //convert DataTable to object
                         try
                         {
@@ -1346,7 +1348,7 @@ namespace DataMasker.Examples
                             foreach (IDictionary<string, object> row in rows)
                             {
                                
-                                dataMasker.Mask(row, tableConfig, dataSource, rowCount, SheetTable[tableConfig.Name]);
+                                dataMasker.Mask(row, tableConfig, dataSource, rowCount, rawData, SheetTable[tableConfig.Name]);
                             }
                         }
                         catch (Exception ex)
@@ -1407,16 +1409,50 @@ namespace DataMasker.Examples
                         rawData = dataSource.RawData(null);
                         Console.Title = "Data Masking";
                         Console.WriteLine(string.Format("Data Masking for {0} has started....", tableConfig.Name));
-                        foreach (IDictionary<string, object> row in rows)
+                        //Stopwatch stopwatch = new Stopwatch();
+                        //stopwatch.Start();
+                        for (int i = 0; i < rows.Count(); i++)
                         {
-                            
-                            if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
+                            //var to = rows.ElementAt(i);
+                            if (isblob.Count() == 1 && rows.ElementAt(i).Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                             {
-                                dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                                dataMasker.MaskBLOB(rows.ElementAt(i), tableConfig, dataSource, rawData, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
                             }
                             else
-                                dataMasker.Mask(row, tableConfig, dataSource, rowCount);
+                                dataMasker.Mask(rows.ElementAt(i), tableConfig, dataSource, rowCount, rawData);
                         }
+                        //stopwatch.Stop();
+                        //TimeSpan ts1 = stopwatch.Elapsed;
+                        //string elapsedTime = string.Format("{0:00}:{1:00}:{2:00}:{3:00}", ts1.Hours, ts1.Minutes, ts1.Seconds, ts1.TotalMilliseconds/10);
+
+
+                        //Stopwatch stopwatch1 = new Stopwatch();
+                        //stopwatch1.Start();
+                        //foreach (IDictionary<string, object> row in rows)
+                        //{
+                        //    //var to = rows.ElementAt(i);
+                        //    if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
+                        //    {
+                        //        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                        //    }
+                        //    else
+                        //        dataMasker.Mask(row, tableConfig, dataSource, rowCount, rawData);
+                        //}
+                        //stopwatch1.Stop();
+                        //TimeSpan ts = stopwatch1.Elapsed;
+                        //string elapsedTime2 = string.Format("{0:00}:{1:00}:{2:00}:{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.TotalMilliseconds / 10);
+
+
+                        //foreach (IDictionary<string, object> row in rows)
+                        //{
+
+                        //    if (isblob.Count() == 1 && row.Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
+                        //    {
+                        //        dataMasker.MaskBLOB(row, tableConfig, dataSource, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                        //    }
+                        //    else
+                        //        dataMasker.Mask(row, tableConfig, dataSource, rowCount, rawData);
+                        //}
                         try
                         {
                             #region Create DML Script
@@ -1492,10 +1528,7 @@ namespace DataMasker.Examples
                 Console.WriteLine("Program will exit: Press ENTER to exist..");
                 Console.ReadLine();
             }
-            finally
-            {
-               
-            }
+          
 
 
         }

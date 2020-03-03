@@ -131,78 +131,104 @@ namespace DataMasker.DataSources
             return table;
         }
 
-        public DataTableCollection DataTableFromCsv(string csvPath)
+        public DataTableCollection DataTableFromCsv(string csvPath, TableConfig tableConfig)
         {
             var t = Path.GetExtension(csvPath).ToUpper();
             if (csvPath == null) { throw new ArgumentException("spreadsheet path cannot is be null"); }
             DataTable dataTable = new DataTable();
             if (Path.GetExtension(csvPath).ToUpper().Equals(".CSV"))
             {
-
+                result = new DataSet();
                 dataTable.Columns.Clear();
                 dataTable.Rows.Clear();
                 dataTable.Clear();
-
+                dataTable.TableName = "SpreadSheet Table";
                 List<string> allEmails = new List<string>();
-
-
-                using (cvsReader = new TextFieldParser(csvPath))
+                using (FileStream fileStream = new FileStream(csvPath, FileMode.Open, FileAccess.Read))
                 {
-                    cvsReader.SetDelimiters(new string[] { "," });
-
-                    //cvsReader.HasFieldsEnclosedInQuotes = true;
-                    //read column
-                    string[] colfield = cvsReader.ReadFields();
-                    //colfield
-                    //specila chra string
-                    string specialChar = @"\|!#$%&/()=?»«@£§€{}.-;'<>,";
-                    string repclace = @"_";
-                    repclace.ToCharArray();
-                    foreach (string column in colfield)
+                    var reader = ExcelReaderFactory.CreateCsvReader(fileStream, new ExcelReaderConfiguration()
                     {
-                        foreach (var item in specialChar)
-                        {
-                            if (column.Contains(item))
-                            {
-                                column.Replace(item, repclace[0]);
-
-                            }
-                        }
-                        DataColumn datacolumn = new DataColumn(column)
-                        {
-                            AllowDBNull = true
-                        };
-                        var dcol = Regex.Replace(datacolumn.ColumnName, @"[^a-zA-Z0-9_.]+", "_");
-                        dataTable.Columns.Add(dcol);
-
-
-                    }
-
-                    while (!cvsReader.EndOfData)
+                        FallbackEncoding = Encoding.GetEncoding(1252),
+                        AutodetectSeparators = new char[] { ',', ';', '\t', '|', '#' }
+                    });
+                    if (reader != null)
                     {
-
-                        try
+                        result = reader.AsDataSet(new ExcelDataSetConfiguration()
                         {
-                            string[] fieldData = cvsReader.ReadFields();
-                            for (int i = 0; i < fieldData.Length; i++)
+                            ConfigureDataTable = (_) => new ExcelDataTableConfiguration()
                             {
-                                if (fieldData[i] == "")
-                                {
-                                    fieldData[i] = null;
-                                }
-
-
+                                UseHeaderRow = true,
+                                
                             }
-                            dataTable.Rows.Add(fieldData);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.Message);
-                            return null;
-                        }
+                        });
 
+
+                        //Set to Table
+                        //dataTable = result.Tables[0].AsDataView().ToTable();
                     }
+                    result.Tables[0].TableName = tableConfig.Name;
                 }
+
+                   
+
+                //using (cvsReader = new TextFieldParser(csvPath))
+                //{
+                //    cvsReader.SetDelimiters(new string[] { "," });
+
+                //    //cvsReader.HasFieldsEnclosedInQuotes = true;
+                //    //read column
+                //    string[] colfield = cvsReader.ReadFields();
+                //    //colfield
+                //    //specila chra string
+                //    string specialChar = @"\|!#$%&/()=?»«@£§€{}.-;'<>,";
+                //    string repclace = @"_";
+                //    repclace.ToCharArray();
+                //    foreach (string column in colfield)
+                //    {
+                //        foreach (var item in specialChar)
+                //        {
+                //            if (column.Contains(item))
+                //            {
+                //                column.Replace(item, repclace[0]);
+
+                //            }
+                //        }
+                //        DataColumn datacolumn = new DataColumn(column)
+                //        {
+                //            AllowDBNull = true
+                //        };
+                //        var dcol = Regex.Replace(datacolumn.ColumnName, @"[^a-zA-Z0-9_.]+", "_");
+                //        dataTable.Columns.Add(dcol);
+
+
+                //    }
+
+                //    while (!cvsReader.EndOfData)
+                //    {
+
+                //        try
+                //        {
+                //            string[] fieldData = cvsReader.ReadFields();
+                //            for (int i = 0; i < fieldData.Length; i++)
+                //            {
+                //                if (fieldData[i] == "")
+                //                {
+                //                    fieldData[i] = null;
+                //                }
+
+
+                //            }
+                //            dataTable.Rows.Add(fieldData);
+                //        }
+                //        catch (Exception ex)
+                //        {
+                //            Console.WriteLine(ex.Message);
+                //            return null;
+                //        }
+
+                //    }
+                //    result.Tables.Add(dataTable);
+                //}
             }
             else if (Path.GetExtension(csvPath).ToUpper().Equals(".XLXS") || Path.GetExtension(csvPath).ToUpper().Equals(".XLS") || t == ".XLSX")
             {
@@ -242,7 +268,10 @@ namespace DataMasker.DataSources
             }
             else
                 throw new ArgumentException("Invalid sheet extension", csvPath);
-            
+
+  
+             
+
             return result.Tables;
         }
 
@@ -298,12 +327,13 @@ namespace DataMasker.DataSources
             return rawData;
         }
 
-        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, DataTable _dataTable)
+        public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, IEnumerable<IDictionary<string, object>> _dataTable)
         {
             
             Random rnd = new Random();
-            
-                var result = new DataView(_dataTable).ToTable(false, new string[] { column}).AsEnumerable().Select(n => n[0]).ToList();
+            TableConfig config = new TableConfig();
+            var dTable = SpreadSheetTable(_dataTable, config);
+            var result = new DataView(dTable).ToTable(false, new string[] { column}).AsEnumerable().Select(n => n[0]).ToList();
             //Randomizer randomizer = new Randomizer();
 
             CompareLogic compareLogic = new CompareLogic();
@@ -438,21 +468,25 @@ namespace DataMasker.DataSources
                                         .ToArray();
                 foreach (var header in headers)
                 {
-                    if (config.Columns.Where(n => n.Name.Equals(header.ColumnName)).Count() != 0)
+                    if (config.Columns != null)
                     {
-                        foreach (ColumnConfig columnConfig in config.Columns.Where(n => n.Name.Equals(header.ColumnName)))
+                        if (config.Columns.Where(n => n.Name.Equals(header.ColumnName)).Count() != 0)
                         {
-                            if (columnConfig.Type == DataType.Geometry || columnConfig.Type == DataType.Shufflegeometry)
+                            foreach (ColumnConfig columnConfig in config.Columns.Where(n => n.Name.Equals(header.ColumnName)))
                             {
-                                header.DataType = typeof(SdoGeometry);
-                            }
-                            else if (columnConfig.Type == DataType.Blob)
-                            {
-                                header.DataType = typeof(byte[]);
-                            }
+                                if (columnConfig.Type == DataType.Geometry || columnConfig.Type == DataType.Shufflegeometry)
+                                {
+                                    header.DataType = typeof(SdoGeometry);
+                                }
+                                else if (columnConfig.Type == DataType.Blob)
+                                {
+                                    header.DataType = typeof(byte[]);
+                                }
 
+                            }
                         }
                     }
+                 
 
 
 

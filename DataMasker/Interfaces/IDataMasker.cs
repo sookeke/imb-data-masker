@@ -18,9 +18,9 @@ namespace DataMasker.Interfaces
         /// <returns></returns>
         IDictionary<string, object> Mask(
             IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource, int rowCount, DataTable _dataTable = null);
+            TableConfig tableConfig, IDataSource dataSource, int rowCount, IEnumerable<IDictionary<string,object>> data, DataTable _dataTable = null);
         IDictionary<string, object> MaskBLOB(
             IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource,string filename,string fileExtension);
+            TableConfig tableConfig, IDataSource dataSource, IEnumerable<IDictionary<string, object>> data, string filename,string fileExtension);
     }
 }

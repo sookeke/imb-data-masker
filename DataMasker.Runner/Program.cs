@@ -148,7 +148,7 @@ namespace DataMasker.Runner
                 foreach (IDictionary<string, object> row in rows)
                 {
                     //mask each row
-                    dataMasker.Mask(row, tableConfig, dataSource, rows.Count());
+                    dataMasker.Mask(row, tableConfig, dataSource, rows.Count(), rows);
                     rowIndex++;
 
                     //update per row, or see below,
