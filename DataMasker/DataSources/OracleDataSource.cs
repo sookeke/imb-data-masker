@@ -466,6 +466,10 @@ namespace DataMasker.DataSources
                             {
                                 header.DataType = typeof(byte[]);
                             }
+                            else if (columnConfig.Type == DataType.DateOfBirth)
+                            {
+                                header.DataType = typeof(DateTime);
+                            }
                             
                         }
                     }

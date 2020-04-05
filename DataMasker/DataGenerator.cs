@@ -347,9 +347,20 @@ namespace DataMasker
                 case DataType.StreetAddress:
                     return _faker.Address.StreetAddress(false);
                 case DataType.File:
-                    return _faker.System.FileName(columnConfig.StringFormatPattern);
+                    var f = _faker.System.FileName(columnConfig.StringFormatPattern);
+                    if (!string.IsNullOrEmpty(columnConfig.Max) && f.Length > ToInt32(columnConfig.Max))
+                    {
+                        var _shortnum = f.Substring(f.Length - ToInt32(columnConfig.Max), ToInt32(columnConfig.Max));
+                        return _shortnum;
+                    }
+                    return f;
                 case DataType.Filename:
                     var file = _faker.System.FileName("");
+                    if (!string.IsNullOrEmpty(columnConfig.Max) && file.Length > ToInt32(columnConfig.Max))
+                    {
+                        var _shortnum = file.Substring(file.Length - ToInt32(columnConfig.Max), ToInt32(columnConfig.Max));
+                        return _shortnum.Remove(_shortnum.Length - 1 );
+                    }
                     return file.Remove(file.Length - 1);
                 case DataType.SecondaryAddress:
                     return _faker.Address.SecondaryAddress();
@@ -712,7 +723,7 @@ namespace DataMasker
 
         }
         public object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,
-            string fileName, string fileExtension, Name.Gender? gender = null)
+            string fileName, string fileExtension, string blobLocation, Name.Gender? gender = null)
         {
             if (columnConfig.RetainNullValues &&
                existingValue == null)
@@ -728,7 +739,8 @@ namespace DataMasker
                     {
                         case nameof(FileTypes.PDF):
                             //generate pdf
-                            fileName = fileType.GeneratePDF(@"\output\" + fileName, "").ToString();
+                            //@"output\" + confi + @"\BinaryFiles\" + tableConfig.Name
+                            fileName = fileType.GeneratePDF("\\"+blobLocation + fileName, "").ToString();
                             byte[] byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -740,10 +752,10 @@ namespace DataMasker
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
                             //delete the file from location
-                            File.Delete(fileName);
+                           // File.Delete(fileName);
                             return byteArray;
                         case nameof(FileTypes.TXT):
-                            fileName = fileType.GenerateTXT(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            fileName = fileType.GenerateTXT(Environment.CurrentDirectory + "\\" +  blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -754,11 +766,11 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                           // File.Delete(fileName);
                             return byteArray;
 
                         case nameof(FileTypes.DOCX):
-                            fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -769,11 +781,11 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
                         // return fileType.GenerateDOCX(@"\", "");
                         case nameof(FileTypes.DOC):
-                            fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -784,10 +796,10 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
                         case nameof(FileTypes.RTF):
-                            fileName = fileType.GenerateRTF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            fileName = fileType.GenerateRTF(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -798,7 +810,7 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
                         //return fileType.GenerateRTF(@"\", "");
                         case nameof(FileTypes.JPG):
@@ -812,13 +824,14 @@ namespace DataMasker
                                 {
 
                                     byte[] imageBytes = WebClient.DownloadData(someUrl);
+                                    File.WriteAllBytes(Environment.CurrentDirectory + "\\" + blobLocation + fileName, imageBytes);
                                     return imageBytes;
                                     
                                 }
                             }
                             else
                             {
-                                fileName = fileType.GenerateJPEG(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                                fileName = fileType.GenerateJPEG(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                                 byteArray = null;
 
                                 using (FileStream fs = new FileStream
@@ -829,13 +842,44 @@ namespace DataMasker
 
                                     int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                                 }
-                                File.Delete(fileName);
+                               // File.Delete(fileName);
                                 return byteArray;
                             }
+                        case nameof(FileTypes.PNG):
+                            fileUrl = _faker.Image.PicsumUrl();
+                            someUrl = fileUrl;
+                            //check if URL is valid
+                            _validUrl = IsValidUri(new Uri(someUrl));
+                            if (_validUrl)
+                            {
+                                using (var WebClient = new WebClient())
+                                {
 
+                                    byte[] imageBytes = WebClient.DownloadData(someUrl);
+                                    File.WriteAllBytes(Environment.CurrentDirectory + "\\" + blobLocation + fileName, imageBytes);
+                                    return imageBytes;
+
+                                }
+                            }
+                            else
+                            {
+                                fileName = fileType.GenerateJPEG(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
+                                byteArray = null;
+
+                                using (FileStream fs = new FileStream
+                                    (fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+
+                                    byteArray = new byte[fs.Length];
+
+                                    int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
+                                }
+                                // File.Delete(fileName);
+                                return byteArray;
+                            }
                         case nameof(FileTypes.MSG):
                             //generate pdf
-                            fileName = fileType.GenerateMSG(@"\output\" + fileName, "").ToString();
+                            fileName = fileType.GenerateMSG("\\" +  blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -846,11 +890,11 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
                         //return fileType.GenerateMSG(@"\", "");
                         case nameof(FileTypes.HTM):
-                            fileName = fileType.GenerateHTML(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            fileName = fileType.GenerateHTML(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -861,11 +905,11 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
-                        // return fileType.GenerateHTML(@"\", "");
+                        // return fileType.GenerateHTML(@"\" "");
                         case nameof(FileTypes.TIF):
-                            fileName = fileType.GenerateTIF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            fileName = fileType.GenerateTIF(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -876,10 +920,10 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
                         case nameof(FileTypes.HTML):
-                            fileName = fileType.GenerateHTML(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                            fileName = fileType.GenerateHTML(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -890,10 +934,10 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
-                        case nameof(FileTypes.TIIF):
-                            fileName = fileType.GenerateTIF(Environment.CurrentDirectory + @"\output\" + fileName, "").ToString();
+                        case nameof(FileTypes.TIFF):
+                            fileName = fileType.GenerateTIF(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -904,11 +948,11 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
                         case nameof(FileTypes.XLSX):
 
-                            fileName = fileType.GenerateXLSX(Environment.CurrentDirectory + @"\output\" + fileName, string.Join(" ", _faker.Rant.Reviews(" ", 10).ToArray())).ToString();
+                            fileName = fileType.GenerateXLSX(Environment.CurrentDirectory + "\\" + blobLocation + fileName, string.Join(" ", _faker.Rant.Reviews(" ", 10).ToArray())).ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -919,11 +963,11 @@ namespace DataMasker
 
                                 int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                             }
-                            File.Delete(fileName);
+                            //File.Delete(fileName);
                             return byteArray;
                         default:
                             {
-                                fileName = fileType.GenerateRandom(Environment.CurrentDirectory + @"\output\" + fileName).ToString();
+                                fileName = fileType.GenerateRandom(Environment.CurrentDirectory + "\\" + blobLocation + fileName).ToString();
                                 byteArray = null;
 
                                 using (FileStream fs = new FileStream
@@ -934,20 +978,14 @@ namespace DataMasker
 
                                     int iBytesRead = fs.Read(byteArray, 0, (int)fs.Length);
                                 }
-                                File.Delete(fileName);
+                                //File.Delete(fileName);
                                 return byteArray;
                                 //return fileType.GenerateRandom(@"\");
                                 //break;
                             }
                     }
-
-
-                //return fileType.GenerateRandom(@"\");
                 case DataType.Filename:
-                    //var filename3 = _faker.System.FileName(fileExtension);
-
-
-                    return _faker.System.FileName(fileExtension);
+                       return _faker.System.FileName(fileExtension);
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, "not implemented");
         }
@@ -991,7 +1029,7 @@ namespace DataMasker
             XLSX,
             DOC,
             DOCX,
-            TIIF,
+            TIFF,
             TIF,
             HTML,
             HTM,
@@ -999,7 +1037,8 @@ namespace DataMasker
             JPEG,
             TXT,
             MSG,
-            RTF
+            RTF,
+            PNG
         }
 
         public bool IsValidUri(Uri uri)

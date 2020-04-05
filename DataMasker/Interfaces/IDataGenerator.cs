@@ -17,7 +17,7 @@ namespace DataMasker.Interfaces
             ColumnConfig columnConfig, string schema, string table, string column, IDataSource dataSources, IEnumerable<IDictionary<string, object>> dataTable,
             object existingValue,
             Name.Gender? gender);
-        object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,string filename, string FileExtension, Name.Gender? gender);
+        object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,string filename, string FileExtension, string blobLocation, Name.Gender? gender);
         object MathOperation(ColumnConfig columnConfig, object existingValue, object[] source, string operation, int factor);
         object GetAddress(ColumnConfig columnConfig, object existingValue, DataTable dataTable, bool isFulladdress = false);
     }

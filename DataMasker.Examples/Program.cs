@@ -20,6 +20,7 @@ using DataMasker.MaskingValidation;
 using ChoETL;
 using KellermanSoftware.CompareNetObjects;
 using System.Diagnostics;
+using System.Reflection;
 
 /*
     Author: Stanley Okeke
@@ -65,6 +66,7 @@ namespace DataMasker.Examples
         private static List<KeyValuePair<string, Dictionary<string, string>>> copyJsTable = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static List<KeyValuePair<string, Dictionary<string, string>>> _allNull = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static int rowCount;
+        private static bool isBinary;
         private static readonly Dictionary<ProgressType, ProgressbarUpdate> _progressBars = new Dictionary<ProgressType, ProgressbarUpdate>();
         private static readonly Dictionary<string, object> allkey = new Dictionary<string, object>();
 
@@ -1281,7 +1283,6 @@ namespace DataMasker.Examples
 
         public static void Run()
         {
-            
             if (!CheckAppConfig())
             {
                 Console.WriteLine("Program will exit: Press ENTER to exist..");
@@ -1377,7 +1378,7 @@ namespace DataMasker.Examples
                                     Directory.CreateDirectory(CreateDir);
                                 }
                                 string writePath = CreateDir + @"\" + tableConfig.Name + ".sql";
-                                var insertSQL = SqlDML.GenerateInsert(_dmlTable, extcolumn, null, null, writePath, config, tableConfig);
+                                var insertSQL = SqlDML.GenerateInsert(_dmlTable,null,isBinary, extcolumn, null, null, writePath, config, tableConfig);
                                 if (allkey.Where(n => n.Key.ToUpper().Equals(MaskTabletoSpreadsheet.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                                 {
                                     SqlDML.DataTableToExcelSheet(_dmlTable, CreateDir + @"\" + tableConfig.Name + ".xlsx", tableConfig);
@@ -1416,7 +1417,14 @@ namespace DataMasker.Examples
                             //var to = rows.ElementAt(i);
                             if (isblob.Count() == 1 && rows.ElementAt(i).Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                             {
-                                dataMasker.MaskBLOB(rows.ElementAt(i), tableConfig, dataSource, rawData, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1));
+                                isBinary = isblob.Any();
+                                var blobLocation = @"output\" + _nameDatabase + @"\BinaryFiles\" + tableConfig.Name + @"\"; 
+                                if (!Directory.Exists(blobLocation))
+                                {
+                                    Directory.CreateDirectory(blobLocation);
+                                }
+                                extension = rows.ElementAt(i)[string.Join("", isblob.Select(n => n.StringFormatPattern))];
+                                dataMasker.MaskBLOB(rows.ElementAt(i), tableConfig, dataSource, rawData, extension.ToString(), extension.ToString().Substring(extension.ToString().LastIndexOf('.') + 1), blobLocation);                              
                             }
                             else
                                 dataMasker.Mask(rows.ElementAt(i), tableConfig, dataSource, rowCount, rawData);
@@ -1469,7 +1477,7 @@ namespace DataMasker.Examples
                                     Directory.CreateDirectory(CreateDir);
                                 }
                                 string writePath = CreateDir + @"\" + tableConfig.Name + ".sql";                                
-                                var insertSQL = SqlDML.GenerateInsert(_dmlTable, extcolumn, null, null, writePath, config, tableConfig);
+                                var insertSQL = SqlDML.GenerateInsert(_dmlTable, PrdTable, isBinary, extcolumn, null, null, writePath, config, tableConfig);
                                 if (allkey.Where(n => n.Key.ToUpper().Equals(MaskTabletoSpreadsheet.ToUpper())).Select(n => n.Value).Select(n => n).ToArray()[0].Equals(true))
                                 {
                                     SqlDML.DataTableToExcelSheet(_dmlTable, CreateDir + @"\" + tableConfig.Name + ".xlsx", tableConfig);
@@ -1496,6 +1504,7 @@ namespace DataMasker.Examples
                             Console.WriteLine(ex.Message);
                         }
                     }
+                    isBinary = false;
                 }
                 #endregion
                 //write mapped table and column with type in csv file
@@ -1710,6 +1719,7 @@ namespace DataMasker.Examples
         {
             bool flag = false;
             List<string> allKeys = new List<string>();
+
             foreach (string key in ConfigurationManager.AppSettings.AllKeys)
             {
                 switch (key)
@@ -1768,10 +1778,9 @@ namespace DataMasker.Examples
                     default:
                         break;
                 }
-
-                
+               
             }
-
+            var missingKey = Enum.GetNames(typeof(AppConfig)).ToList().Except(allkey.Keys.ToList());
             if (allkey.Values.Where(n=>n.Equals(string.Empty)).Count() != 0)
             {
                 //var xxx = allkey.Values.Where(n => n.Equals(string.Empty));
@@ -1792,6 +1801,13 @@ namespace DataMasker.Examples
                     Console.WriteLine("Sending validation email requires fromEmail AND RecipientEmail address to be set in the app.config");
                     return false;
                 }
+            }
+            if (missingKey.Count() != 0)
+            {
+                Console.WriteLine("Missing App Key in the App.config file" + Environment.NewLine);
+                Console.WriteLine("Keys: " + string.Join(" ", missingKey.ToArray()));
+                Console.Title = "Referencing a Null key";
+                flag = false;
             }
             return flag;
         }

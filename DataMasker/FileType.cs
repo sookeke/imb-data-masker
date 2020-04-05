@@ -21,6 +21,8 @@ using System.Windows.Media.Imaging;
 using System.Drawing;
 using Color = SautinSoft.Document.Color;
 using System.Drawing.Imaging;
+using WaffleGenerator;
+using System.Configuration;
 
 namespace DataMasker
 {
@@ -30,6 +32,7 @@ namespace DataMasker
         public object GenerateDOCX(string docPath, string text)
         {
             // Let's create a simple document.
+            var rant = WaffleEngine.Text(rnd, 2, false);
             DocumentCore dc = new DocumentCore();
 
             // Add new section.
@@ -58,11 +61,11 @@ namespace DataMasker
             par1.Inlines.Add(new SpecialCharacter(dc, SpecialCharacterType.LineBreak));
 
             Run text2 = text1.Clone();
-            text2.Text = "Property Information Management System.";
+            text2.Text = ConfigurationManager.AppSettings["DatabaseName"];
             par1.Inlines.Add(text2);
 
             // Way 2 (easy): Add 2nd paragraph using ContentRange.
-            dc.Content.End.Insert(string.Join("", faker.Rant.Reviews(text2.Text,5).ToArray()), new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
+            dc.Content.End.Insert(rant, new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
             SpecialCharacter lBr = new SpecialCharacter(dc, SpecialCharacterType.LineBreak);
             dc.Content.End.Insert(lBr.Content);
             dc.Content.End.Insert("Signed: Business SMEs.", new CharacterFormat() { Size = 20, FontColor = Color.DarkGreen, UnderlineStyle = UnderlineType.Single });
@@ -79,11 +82,11 @@ namespace DataMasker
         public object GenerateHTML(string htmlFixedPath, string text)
         {
             DocumentCore dc = new DocumentCore();
-
+            var rant = WaffleEngine.Text(rnd, 2, false);
             // Add new section.
             Section section = new Section(dc);
             dc.Sections.Add(section);
-            text = string.Join("", faker.Rant.Reviews("product", 5).ToArray());
+            text = rant;
 
             // Add two paragraphs using different ways:
             // Way 1: Add 1st paragraph.
@@ -187,6 +190,7 @@ namespace DataMasker
 
         public object GenerateMSG(string path, string table)
         {
+            var rant = WaffleEngine.Text(rnd, 2, false);
             using (var email = new Email(
           new Sender("peterpan@neverland.com", "Peter Pan"),
           new Representing("tinkerbell@neverland.com", "Tinkerbell"),
@@ -196,7 +200,7 @@ namespace DataMasker
                 email.Recipients.AddCc("crocodile@neverland.com", "The evil ticking crocodile");
                 email.Subject = "Property Information Management Systems";
                 email.BodyText = "Property Information Management Systems";
-                email.BodyHtml = "<html><head></head><body>MOTI: Welcome to the Property Information Management System "+ Environment.NewLine + string.Join("", faker.Rant.Reviews("Product", 20).ToArray()) + "  </body></html>";
+                email.BodyHtml = "<html><head></head><body>MOTI: Welcome to the Property Information Management System "+ Environment.NewLine + rant + "  </body></html>";
                 email.Importance = MessageImportance.IMPORTANCE_HIGH;
                 email.IconIndex = MessageIconIndex.ReadMail;
                 //email.Attachments.Add(@"d:\crocodile.jpg");
@@ -216,6 +220,7 @@ namespace DataMasker
         {
             //PdfDocument pdf = new PdfDocument();
             //PdfPage pdfPage = pdf.AddPage();
+            var rant = WaffleEngine.Text(rnd, 3, false);
 
 
             //XGraphics graph = XGraphics.FromPdfPage(pdfPage);
@@ -247,7 +252,7 @@ namespace DataMasker
             // Let's create a characterformat for text in the 1st paragraph.
             CharacterFormat cf = new CharacterFormat() { FontName = "Verdana", Size = 16, FontColor = Color.Orange };
 
-            Run text1 = new Run(dc, "Ministry of Transportation and Infrastruction!")
+            Run text1 = new Run(dc, "Ministry of Transportation and Infrastructure!")
             {
                 CharacterFormat = cf
             };
@@ -257,12 +262,12 @@ namespace DataMasker
             par1.Inlines.Add(new SpecialCharacter(dc, SpecialCharacterType.LineBreak));
 
             Run text2 = text1.Clone();
-            text2.Text = "Property Information Management System.";// + Environment.NewLine;
+            text2.Text = "Information Management Branch.";// + Environment.NewLine;
             par1.Inlines.Add(text2);
             //par1.Inlines.Add(Environment.NewLine)
 
             // Way 2 (easy): Add 2nd paragraph using ContentRange.
-            dc.Content.End.Insert(string.Join(Environment.NewLine, faker.Rant.Reviews("", 6).ToArray()), new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
+            dc.Content.End.Insert(rant, new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
             SpecialCharacter lBr = new SpecialCharacter(dc, SpecialCharacterType.LineBreak);
             dc.Content.End.Insert(lBr.Content);
             dc.Content.End.Insert("Signed: Business SMEs.", new CharacterFormat() { Size = 20, FontColor = Color.DarkGreen, UnderlineStyle = UnderlineType.Single });
@@ -283,12 +288,11 @@ namespace DataMasker
         {
             return MakeRandomImage(path);
         }
-
         public object GenerateRTF(string rtfPath, string text)
         {
             // Let's create a simple Rtf document.
             DocumentCore dc = new DocumentCore();
-
+            var rant = WaffleEngine.Text(rnd, 2, false);
             // Add new section.
             Section section = new Section(dc);
             dc.Sections.Add(section);
@@ -315,11 +319,11 @@ namespace DataMasker
             par1.Inlines.Add(new SpecialCharacter(dc, SpecialCharacterType.LineBreak));
 
             Run text2 = text1.Clone();
-            text2.Text = "Property Information Management System";
+            text2.Text = "Information Management Branch";
             par1.Inlines.Add(text2);
 
             // Way 2 (easy): Add 2nd paragraph using ContentRange.
-            dc.Content.End.Insert(string.Join("",faker.Rant.Reviews(text2.Text,5).ToArray()), new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
+            dc.Content.End.Insert(WaffleEngine.Text(rnd, 4, false), new CharacterFormat() { Size = 25, FontColor = Color.Blue, Bold = true });
             SpecialCharacter lBr = new SpecialCharacter(dc, SpecialCharacterType.LineBreak);
             dc.Content.End.Insert(lBr.Content);
             dc.Content.End.Insert("Signed: Business SMEs", new CharacterFormat() { Size = 20, FontColor = Color.DarkGreen, UnderlineStyle = UnderlineType.Single });
@@ -398,9 +402,20 @@ namespace DataMasker
                 }
             }
             var imgStream = new MemoryStream();
-            img.Save(imgStream, System.Drawing.Imaging.ImageFormat.Png);
-            img.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png);
-            imgStream.Position = 0;
+            if (Path.GetExtension(imagePath).ToUpper() == ".TIFF")
+            {
+
+                img.Save(imgStream, System.Drawing.Imaging.ImageFormat.Tiff);
+                img.Save(imagePath, System.Drawing.Imaging.ImageFormat.Tiff);
+                imgStream.Position = 0;
+            }
+            else
+            {
+                
+                img.Save(imgStream, System.Drawing.Imaging.ImageFormat.Png);
+                img.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png);
+                imgStream.Position = 0;
+            }
             if (File.Exists(imagePath))
             {
                 return imagePath;
@@ -421,6 +436,11 @@ namespace DataMasker
             int start = rnd.Next(0, 390);
             int end = rnd.Next(0, 390);
             return new Point(start, end);
+        }
+
+        public object GenerateTIFF(string path, string table)
+        {
+            throw new NotImplementedException();
         }
     }
 }

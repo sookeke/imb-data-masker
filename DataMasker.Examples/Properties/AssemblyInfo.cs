@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("DataMasker.Examples")]
-[assembly: AssemblyDescription("This is datamasking utitlity tool for IMB")]
+[assembly: AssemblyDescription("This is datamasking utility tool for IMB")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ministry of Transportation and Infrastructure - IMB")]
 [assembly: AssemblyProduct("DataMasker.Examples")]

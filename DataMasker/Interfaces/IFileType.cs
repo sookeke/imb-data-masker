@@ -17,6 +17,7 @@ namespace DataMasker.Interfaces
         object GenerateHTML(string path, string table);
         object GenerateXLSX(string path, string table);
         object GenerateTIF(string path, string table);
+        object GenerateTIFF(string path, string table);
         object GenerateRandom(string path);
     }
 }

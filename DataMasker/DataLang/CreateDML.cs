@@ -20,6 +20,9 @@ namespace DataMasker.DataLang
     {
         public static string colnameToString { get; private set; }
         public static bool HasSpatial { get; private set; }
+        public static string bdir { get; private set; }
+
+        public static List<string> PrdTable = new List<string>();
         #region Public Methods
 
         /// <summary>
@@ -28,7 +31,7 @@ namespace DataMasker.DataLang
         /// <param name="table">The table.</param>
         /// <param name="removeFields">a list of fields to be left out of the insert statement</param>
         /// <returns></returns>
-        public static string GenerateInsert(DataTable table, string[] removeFields, string fieldToReplace, string replacementValue, string writePath, Config config, TableConfig tableConfig)
+        public static string GenerateInsert(DataTable table, DataTable ProductionTable, bool isBinary, string[] removeFields, string fieldToReplace, string replacementValue, string writePath, Config config, TableConfig tableConfig)
         {
             if (table == null)
             {
@@ -49,14 +52,18 @@ namespace DataMasker.DataLang
             }
 
             var names = new List<string>();
-            if (table.Rows.Count == 0 && table.Columns.Count == 0 && config.DataSource.Type != DataSourceType.OracleServer)
+          
+            if (isBinary)
             {
-                
-
-
+                var blobCol = tableConfig.Columns.Where(n => n.Type == DataType.Blob).FirstOrDefault();
+                bdir = Environment.CurrentDirectory + @"\output\" + config.DataSource.Config.Databasename.ToString() + "\\BinaryFiles\\" + tableConfig.Name + "\\";
+                PrdTable = ProductionTable.Rows.OfType<DataRow>().Select(dr => dr.Field<string>(blobCol.StringFormatPattern)).ToList();
+            }
+            if (table.Rows.Count == 0 && table.Columns.Count == 0 && config.DataSource.Type != DataSourceType.OracleServer)
+            {                
                 if (config.DataSource.Type == DataSourceType.SqlServer)
                 {
-                    names.Add("[" + tableConfig.Name + "]");
+                    names.Add("[" + tableConfig.PrimaryKeyColumn + "]");
                     foreach (ColumnConfig col in tableConfig.Columns)
                     {
                         if (!excludeNames.ContainsKey(col.Name.ToUpper()))
@@ -67,7 +74,7 @@ namespace DataMasker.DataLang
                 }
                 if (config.DataSource.Type == DataSourceType.MySqlServer)
                 {
-                    names.Add("`" + tableConfig.Name + "`");
+                    names.Add("`" + tableConfig.PrimaryKeyColumn + "`");
                     foreach (ColumnConfig col in tableConfig.Columns)
                     {
                         if (!excludeNames.ContainsKey(col.Name.ToUpper()))
@@ -128,7 +135,23 @@ namespace DataMasker.DataLang
             {
 
                 output.AppendFormat("REM INSERTING into {0}\n", $"{tableConfig.Schema}." + $"{tableConfig.Name}");
-                output.AppendFormat("SET DEFINE OFF\n\t");
+                output.AppendFormat("SET DEFINE OFF\n");
+                output.Append(Environment.NewLine);
+                if (isBinary)
+                {
+                    output.AppendFormat("CREATE or REPLACE DIRECTORY BINARYFILE as {0}", bdir.AddSingleQuotes() + ";\n");
+                    output.Append("/\n");
+                    string[] lines = File.ReadAllLines(@"isBlob.sql");
+
+                    foreach (string line in lines)
+                    {
+                        //Console.WriteLine(line);
+                        output.AppendFormat(line + "\n");
+                    }
+                    output.Append("/\n");
+                    //output.Append(Environment.NewLine);
+                    //output.Append("-- Run the IsBlob SQL script first to create LOAD_BLOB_FROM_FILE Function");
+                }
             }
             else if (config.DataSource.Type == DataSourceType.PostgresServer)
             {
@@ -224,11 +247,19 @@ namespace DataMasker.DataLang
                 //oracle does not allow multi insert
                 if (config.DataSource.Type == DataSourceType.OracleServer)
                 {
-                    output.AppendFormat("INSERT INTO {0}({1}) VALUES ", $"{tableConfig.Schema}."+ $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
-                    output.Append("(");
-                    output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
+                  
+                    if (table.Rows.Count == 0)
+                    {
+                        output.AppendFormat("INSERT INTO {0} VALUES (DEFAULT)", $"{tableConfig.Schema}." + $"{tableConfig.Name}");
+                    }
+                    else
+                    {
+                        output.AppendFormat("INSERT INTO {0}({1}) VALUES ", $"{tableConfig.Schema}." + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
+                        output.Append("(");
+                        output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
 
-                    output.Append(")");
+                        output.Append(")");
+                    }
                 }
                 else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
                 {
@@ -252,7 +283,11 @@ namespace DataMasker.DataLang
                  
                     var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
                     //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
-                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ").Replace("Bogus", "Fake Data");
+                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ");
+                    if (table.Rows.Count > 1000)
+                    {
+                        output.Append(";");
+                    }
                     output.Append(Environment.NewLine);
                     output.Append(_commentOut);
                     output.Append(Environment.NewLine);
@@ -268,13 +303,14 @@ namespace DataMasker.DataLang
                 {
                     var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
                         //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
-                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ").Replace("Bogus", "Fake Data");
-                    output.Append(Environment.NewLine);
+                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ");
+                   
                    
                     if (HasSpatial && config.DataSource.Type == DataSourceType.OracleServer)
                     {
                         //get spatial USER_SDO_GEOM_METADATA fro View
                         output.Append(";");
+                        output.Append(Environment.NewLine);
                         output.Append(_commentOut);
                         IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
                         var USER_SDO_GEOM_METADATA = dataSource.GetDataTable(tableConfig.Name, "MDSYS", config.DataSource.Config.connectionStringPrd.ToString());
@@ -287,6 +323,8 @@ namespace DataMasker.DataLang
                     }
                     else
                     {
+                        output.Append(";");
+                        output.Append(Environment.NewLine);
                         output.Append(_commentOut);
                     }
 
@@ -372,7 +410,7 @@ namespace DataMasker.DataLang
             var output = new StringBuilder();
 
             bool firstColumn = true;
-
+            int rowIndex = table.Rows.IndexOf(row);
             foreach (DataColumn col in table.Columns)
             {
                 if (!excludeNames.ContainsKey(col.ColumnName.ToUpper()))
@@ -399,7 +437,7 @@ namespace DataMasker.DataLang
                     }
                     else
                     {
-                        output.Append(GetInsertColumnValue(row, col,config));
+                        output.Append(GetInsertColumnValue(row, col,config, rowIndex));
                         //output.
                     }
                 }
@@ -411,7 +449,32 @@ namespace DataMasker.DataLang
         {
             try
             {
-                if (DateTime.TryParse(date, out DateTime dateTime))
+                string[] formats = {"M/d/yyyy h:mm:ss tt", "M/d/yyyy h:mm tt",
+                     "MM/dd/yyyy hh:mm:ss", "M/d/yyyy h:mm:ss",
+                     "M/d/yyyy hh:mm tt", "M/d/yyyy hh tt",
+                     "M/d/yyyy h:mm", "M/d/yyyy h:mm",
+                     "MM/dd/yyyy hh:mm", "M/dd/yyyy hh:mm",
+
+                     "M-d-yyyy h:mm:ss tt", "M-d-yyyy h:mm tt",
+                     "MM-dd-yyyy hh:mm:ss", "M-d-yyyy h:mm:ss",
+                     "M-d-yyyy hh:mm tt", "M-d-yyyy hh tt",
+                     "M-d-yyyy h:mm", "M-d-yyyy h:mm",
+                     "MM-dd-yyyy hh:mm", "M-dd-yyyy hh:mm",
+
+                     "yyyy-d-M h:mm:ss tt", "yyyy-d-M h:mm tt",
+                     "yyyy-dd-MM hh:mm:ss", "yyyy-d-M h:mm:ss",
+                     "yyyy-d-M hh:mm tt", "yyyy-d-M hh tt",
+                     "yyyy-d-M h:mm", "yyyy-d-M h:mm",
+                     "yyyy-dd-MM hh:mm", "yyyy-dd-M hh:mm",
+
+                     "yyyy-M-d h:mm:ss tt", "yyyy-M-d h:mm tt",
+                     "yyyy-MM-dd hh:mm:ss", "yyyy-M-d h:mm:ss",
+                     "yyyy-M-d hh:mm tt", "yyyy-M-d hh tt",
+                     "yyyy-M-d h:mm", "yyyy-M-d h:mm",
+                     "yyyy-MM-dd hh:mm", "yyyy-M-dd hh:mm"
+
+            };
+                if (DateTime.TryParseExact(date, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dateTime))
                 {
                     return true;
                 }
@@ -432,9 +495,10 @@ namespace DataMasker.DataLang
         /// <param name="column">The column</param>
         /// <returns></returns>
         /// 
-        public static string GetInsertColumnValue(DataRow row, DataColumn column, Config config)
+        public static string GetInsertColumnValue(DataRow row, DataColumn column, Config config, int rowIndex)
         {
             string output = "";
+            string fileName = "";
 
             if (row[column.ColumnName] == DBNull.Value)
             {
@@ -570,9 +634,15 @@ namespace DataMasker.DataLang
                             case DataSourceType.InMemoryFake:
                                 break;
                             case DataSourceType.SqlServer:
+                                fileName = PrdTable[rowIndex];
+                                var j = bdir + "\\" + fileName;
+                                output = string.Format("(SELECT * FROM OPENROWSET(BULK N{0}, SINGLE_BLOB) as T1)", j.AddSingleQuotes());
                                 break;
                             case DataSourceType.OracleServer:
-                                output = "hextoraw('" + h +"')";
+                                
+                                fileName = PrdTable[rowIndex];                              
+                                output = "LOAD_BLOB_FROM_FILE(" + fileName.AddSingleQuotes()+ ", 'BINARYFILE')";
+                                //output = "hextoraw('" + h +"')";
                                 break;
                             case DataSourceType.SpreadSheet:
                                 break;

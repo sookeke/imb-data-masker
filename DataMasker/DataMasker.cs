@@ -296,8 +296,10 @@ namespace DataMasker
             return isNum;
         }
         public IDictionary<string, object> MaskBLOB(IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource, IEnumerable<IDictionary<string, object>> data, string filename, string fileExtension)
+            TableConfig tableConfig, IDataSource dataSource, IEnumerable<IDictionary<string, object>> data, string filename, string fileExtension, string blobLocation)
         {
+            var addr = new DataTable();
+            _location.Rows.Clear();
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
                 object existingValue = obj[columnConfig.Name];
@@ -320,16 +322,169 @@ namespace DataMasker
                 else if (columnConfig.Type == DataType.Filename && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
                 {
                     //   // existingValue = _dataGenerator.GetBlobValue(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
-                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue,filename, fileExtension, gender);
+                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue,filename, fileExtension,blobLocation, gender);
                 }
                 else if (columnConfig.Type == DataType.Blob)
                 {
-                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, gender);
+                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, blobLocation, gender);
                 }
                else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
                 {
                     var columndata = data.Select(n => n.Where(x => x.Key.Equals(columnConfig.Name)).ToDictionary());
                     existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Schema, tableConfig.Name, columnConfig.Name, dataSource, columndata, existingValue, gender);
+                }
+                else if (columnConfig.Type == DataType.File)
+                {
+                    if (existingValue.ToString().Contains("."))
+                    {
+                        columnConfig.StringFormatPattern = existingValue.ToString().Substring(existingValue.ToString().LastIndexOf('.') + 1);
+                    }
+                    else
+                    {
+                        //columnConfig.StringFormatPattern = "{{SYSTEM.FILENAME}}";
+                        columnConfig.Type = DataType.Filename;
+                    }
+
+                    existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
+
+                    // existingValue = _dataGenerator.get(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
+                }
+                else if (columnConfig.Type == DataType.math)
+                {
+                    if (!string.IsNullOrEmpty(columnConfig.UseValue))
+                    {
+                        existingValue = ConvertValue(columnConfig.Type, columnConfig.UseValue);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            List<object> source = new List<object>();
+                            if (string.IsNullOrEmpty(columnConfig.StringFormatPattern) && columnConfig.Max == null && columnConfig.StringFormatPattern.Contains(","))
+                            {
+                                throw new InvalidOperationException("StringFormatPattern and Max Cannot be empty");
+                            }
+                            if (columnConfig.Name.ToUpper() == columnConfig.StringFormatPattern.ToUpper())
+                            {
+                                //only number objects
+                                if (IsNumeric(obj[columnConfig.Name]))
+                                {
+                                    source.Add(obj[columnConfig.Name]);
+                                }
+                                else
+                                    throw new InvalidOperationException(columnConfig.Name + " must be Numeric type for " + columnConfig.Operator);
+
+                            }
+                            else
+                            {
+                                //check position of stringformat pattern objects
+                                var columnPosition = tableConfig.Columns.Select(n => n.Name).ToList();
+                                foreach (var item in columnConfig.StringFormatPattern.Split(','))
+                                {
+                                    //column A should have been masked alongside column B to apply operation: Col A + Col B = Col C
+                                    if (!(columnPosition.IndexOf(columnConfig.Name) > columnPosition.IndexOf(item)))
+                                    {
+                                        throw new InvalidOperationException(columnConfig.Name + " Index must be Greater than " + item);
+                                    }
+                                    else
+                                    {
+                                        //only number objects
+                                        if (IsNumeric(obj[item]))
+                                        {
+                                            source.Add(obj[item]);
+                                        }
+                                        else
+                                            throw new InvalidOperationException(item + " must be Numeric type for " + columnConfig.Operator);
+
+                                    }
+
+                                }
+                            }
+                            existingValue = _dataGenerator.MathOperation(columnConfig, existingValue, source.ToArray(), columnConfig.Operator, Convert.ToInt32(Math.Round(Convert.ToDecimal(columnConfig.Max))));
+
+                        }
+                        catch (Exception ex)
+                        {
+                            File.AppendAllText(_exceptionpath, "Masking Operation InvalidOperationException: " + ex.Message + Environment.NewLine);
+                            // throw;
+                        }
+                    }
+                }
+                else if (columnConfig.Type == DataType.MaskingOut)
+                {
+                    if (!string.IsNullOrEmpty(columnConfig.UseValue))
+                    {
+                        existingValue = ConvertValue(columnConfig.Type, columnConfig.UseValue);
+                    }
+                    else
+                    {
+                        if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingRight".ToUpper()))
+                        {
+                            existingValue = MaskingRight(existingValue, Convert.ToInt32(columnConfig.Max), tableConfig.Name, columnConfig);
+                        }
+                        else if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingLeft".ToUpper()))
+                        {
+                            existingValue = MaskingLeft(existingValue, Convert.ToInt32(columnConfig.Max), tableConfig.Name, columnConfig);
+                        }
+                        else if (columnConfig.StringFormatPattern.ToUpper().Contains("MaskingMiddle".ToUpper()))
+                        {
+                            existingValue = MaskingMiddle(existingValue, Convert.ToInt32(columnConfig.Max), tableConfig.Name, columnConfig);
+                        }
+                        else
+                            throw new ArgumentException("Invalid MaskingOut Operation", columnConfig.StringFormatPattern);
+                    }
+                }
+                else if (columnConfig.Type == DataType.Scramble)
+                {
+                    existingValue = DataScramble(existingValue, tableConfig.Name, columnConfig);
+                }
+                else if (columnConfig.Type == DataType.exception)
+                {
+                    var cc = existingValue.ToString().Length;
+                    if (existingValue.ToString().Length > Convert.ToInt32(columnConfig.StringFormatPattern))
+                    {
+                        columnConfig.Ignore = false;
+                        existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
+                    }
+                }
+                else if (_location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1)
+                {
+                    //check if a column in the table contains 1 column in the location table column
+                    //check for multi line addressin the table 
+                    //var multiLine = tableConfig.Columns.Where(n => columnConfig.Name.Contains(n.Name)).ToList().Count > 2;
+                    bool u;
+                    var cname = _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).ToList().FirstOrDefault();//get the exact column match
+                    try
+                    {
+                        if (columnConfig.Type == DataType.SecondaryAddress || columnConfig.Type == DataType.StreetAddress)
+                        {
+                            existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
+                        }
+                        else
+                        {
+                            if (_location.Rows.Count == 0)
+                            {
+                                u = tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("CITY")) && (tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("STATE")) || tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("PROVINCE")));
+                                addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location, u);
+                            }
+                            if (addr == null)
+                            {
+                                existingValue = null;
+
+                            }
+                            else if (_location.Rows.Count > 0)
+                            {
+                                existingValue = _location.Rows[0][cname.ColumnName];
+                            }
+                            else
+                                File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + " and will return original: " + Environment.NewLine);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        File.AppendAllText(_exceptionpath, "Could not Generate addresses on " + $"{tableConfig.Name}.{columnConfig.Name}" + "  and will return original: " + ex.Message + Environment.NewLine);
+                        existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
+                    }
                 }
                 else
                 {
