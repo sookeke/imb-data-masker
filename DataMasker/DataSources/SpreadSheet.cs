@@ -46,6 +46,10 @@ namespace DataMasker.DataSources
             }
 
         }
+        public string RemoveWhitespace(string str)
+        {
+            return string.Join("", str.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+        }
         public IEnumerable<IDictionary<string, object>> CreateObject(DataTable dataTable)
         {
             List<Dictionary<string, object>> _sheetObject = new List<Dictionary<string, object>>();

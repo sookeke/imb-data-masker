@@ -500,8 +500,23 @@ namespace DataMasker.DataSources
                         {
                             table.Rows[addedRows[i]][col] = (byte[])columnRows[i];
                         }
+                       else if (col.DataType == typeof(DateTime))
+                        {
+                            if (columnRows[i] is string && string.IsNullOrWhiteSpace(columnRows[i].ToString()))
+                            {
+
+                                columnRows[i] = RemoveWhitespace(columnRows[i].ToString());
+                                //columnRows[i] = DateTime.Parse(columnRows[i].ToString());
+                                //Clear nullspace date record;
+                                columnRows[i] = DateTime.TryParse(columnRows[i].ToString(), out DateTime temp) ? temp : DateTime.MinValue.AddHours(9);
+
+
+                            }
+                            table.Rows[addedRows[i]][col] = columnRows[i];
+                        }
                         else
                         {
+                          
                             table.Rows[addedRows[i]][col] = columnRows[i];
                         }
                     }
@@ -510,7 +525,10 @@ namespace DataMasker.DataSources
 
             return table;
         }
-
+        public string RemoveWhitespace(string str)
+        {
+            return string.Join("", str.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+        }
         public DataTable CreateTable(IEnumerable<IDictionary<string, object>> obj)
         {
             var table = new DataTable();

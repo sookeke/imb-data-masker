@@ -88,7 +88,10 @@ namespace DataMasker.DataSources
                 connection.Execute(BuildUpdateSql(tableConfig,config), row, null, commandType: System.Data.CommandType.Text);
             }
         }
-
+        public string RemoveWhitespace(string str)
+        {
+            return string.Join("", str.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+        }
         public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
         {
             SqlMapper.AddTypeHandler(new GeographyMapper());
@@ -393,7 +396,31 @@ namespace DataMasker.DataSources
                         continue;
 
                     for (int i = 0; i < addedRows.Length; i++)
-                        table.Rows[addedRows[i]][col] = columnRows[i];
+                    {
+                        if (columnRows[i] is byte[])
+                        {
+                            table.Rows[addedRows[i]][col] = (byte[])columnRows[i];
+                        }
+                        else if (col.DataType == typeof(DateTime))
+                        {
+                            if (columnRows[i] is string && string.IsNullOrWhiteSpace(columnRows[i].ToString()))
+                            {
+
+                                columnRows[i] = RemoveWhitespace(columnRows[i].ToString());
+                                //columnRows[i] = DateTime.Parse(columnRows[i].ToString());
+                                //Clear nullspace date record;
+                                columnRows[i] = DateTime.TryParse(columnRows[i].ToString(), out DateTime temp) ? temp : DateTime.MinValue.AddHours(9);
+
+
+                            }
+                            table.Rows[addedRows[i]][col] = columnRows[i];
+                        }
+                        else
+                        {
+
+                            table.Rows[addedRows[i]][col] = columnRows[i];
+                        }
+                    }
                 }
             }
 

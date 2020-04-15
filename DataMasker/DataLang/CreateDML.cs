@@ -21,6 +21,31 @@ namespace DataMasker.DataLang
         public static string colnameToString { get; private set; }
         public static bool HasSpatial { get; private set; }
         public static string bdir { get; private set; }
+        public static string[] format = {"M/d/yyyy h:mm:ss tt", "M/d/yyyy h:mm tt",
+                     "MM/dd/yyyy hh:mm:ss", "M/d/yyyy h:mm:ss",
+                     "M/d/yyyy hh:mm tt", "M/d/yyyy hh tt",
+                     "M/d/yyyy h:mm", "M/d/yyyy h:mm",
+                     "MM/dd/yyyy hh:mm", "M/dd/yyyy hh:mm",
+
+                     "M-d-yyyy h:mm:ss tt", "M-d-yyyy h:mm tt",
+                     "MM-dd-yyyy hh:mm:ss", "M-d-yyyy h:mm:ss",
+                     "M-d-yyyy hh:mm tt", "M-d-yyyy hh tt",
+                     "M-d-yyyy h:mm", "M-d-yyyy h:mm",
+                     "MM-dd-yyyy hh:mm", "M-dd-yyyy hh:mm",
+
+                     "yyyy-d-M h:mm:ss tt", "yyyy-d-M h:mm tt",
+                     "yyyy-dd-MM hh:mm:ss", "yyyy-d-M h:mm:ss",
+                     "yyyy-d-M hh:mm tt", "yyyy-d-M hh tt",
+                     "yyyy-d-M h:mm", "yyyy-d-M h:mm",
+                     "yyyy-dd-MM hh:mm", "yyyy-dd-M hh:mm",
+
+                     "yyyy-M-d h:mm:ss tt", "yyyy-M-d h:mm tt",
+                     "yyyy-MM-dd hh:mm:ss", "yyyy-M-d h:mm:ss",
+                     "yyyy-M-d hh:mm tt", "yyyy-M-d hh tt",
+                     "yyyy-M-d h:mm", "yyyy-M-d h:mm",
+                     "yyyy-MM-dd hh:mm", "yyyy-M-dd hh:mm"
+
+            };
 
         public static List<string> PrdTable = new List<string>();
         #region Public Methods
@@ -157,7 +182,8 @@ namespace DataMasker.DataLang
             {
                 if (table.Rows.Count == 0)
                 {
-                    output.AppendFormat("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nDEFAULT VALUES ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
+                    output.AppendFormat("--INSERT INTO " + "\"{0}\"" + "({1}) DEFAULT VALUES\n ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
+                    output.AppendFormat("-- EMPTY TABLE NOTHING TO INSERT");
                 }
                 else
                     output.AppendFormat("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
@@ -166,34 +192,35 @@ namespace DataMasker.DataLang
             {
                 if (table.Rows.Count > 1000)
                 {
-                    output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
-                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
-                    output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
+                    output.AppendFormat("SET ANSI_NULLS ON\nGO\n");
+                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\nGO\n");
+                    output.AppendFormat("SET ANSI_WARNINGS OFF\nGO\n");
                     if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
                     {
-                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\nGO\n");
                     }
                 }
                 else if (table.Rows.Count == 0)
                 {
                     //insert default value to solve invalid sql error.
-                    output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
-                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
-                    output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
-                    if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
-                    {
-                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
-                    }                  
-                    output.AppendFormat("INSERT INTO {0}\n\t({1})\nDEFAULT VALUES", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
+                    output.AppendFormat("SET ANSI_NULLS ON\nGO\n");
+                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\nGO\n");
+                    output.AppendFormat("SET ANSI_WARNINGS OFF\nGO\n");
+                    //if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
+                    //{
+                    //    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                    //}                  
+                    output.AppendFormat("--INSERT INTO {0}({1}) DEFAULT VALUES\n", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
+                    output.AppendFormat("-- EMPTY TABLE NOTHING TO INSERT");
                 }
                 else
                 {
-                    output.AppendFormat("SET ANSI_NULLS ON\n GO\n");
-                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\n GO\n");
-                    output.AppendFormat("SET ANSI_WARNINGS OFF\n GO\n");
+                    output.AppendFormat("SET ANSI_NULLS ON\nGO\n");
+                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\nGO\n");
+                    output.AppendFormat("SET ANSI_WARNINGS OFF\nGO\n");
                     if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
                     {
-                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
+                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\nGO\n");
                     }
                     output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
                 }
@@ -203,7 +230,8 @@ namespace DataMasker.DataLang
             {
                 if (table.Rows.Count == 0)
                 {
-                    output.AppendFormat("INSERT INTO {0}\n\t({1})\nDEFAULT VALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
+                    output.AppendFormat("--INSERT INTO {0}({1}) DEFAULT VALUES\n ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
+                    output.AppendFormat("-- EMPTY TABLE NOTHING TO INSERT");
                 }
                 else
                     output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
@@ -294,10 +322,10 @@ namespace DataMasker.DataLang
                     //check Identity column
                     if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
                     {
-                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\n GO\n");
+                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\nGO\n");
                     }
                   
-                    output.AppendFormat("SET ANSI_WARNINGS ON\n GO\n");
+                    output.AppendFormat("SET ANSI_WARNINGS ON\nGO\n");
                 }
                 else if( i == table.Rows.Count + 1)
                 {
@@ -537,7 +565,7 @@ namespace DataMasker.DataLang
                         {
                             if (column.DataType == typeof(DateTime))
                             {
-                                var data = DateTime.ParseExact(row[column.ColumnName].ToString(), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                                var data = DateTime.Parse(row[column.ColumnName].ToString());
                                 output = "To_DATE(" + "'" + data.ToString() + "," + "'YYYY-MM-DD HH:MI:SS'";
                             }
                             else if(CheckDate(row[column.ColumnName].ToString()))

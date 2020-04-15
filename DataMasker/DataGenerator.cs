@@ -347,7 +347,13 @@ namespace DataMasker
                 case DataType.StreetAddress:
                     return _faker.Address.StreetAddress(false);
                 case DataType.File:
+                    if (columnConfig.Max.Contains("."))
+                    {
+                        //return decimal
+                        columnConfig.Max = Math.Round(ToDecimal(columnConfig.Max)).ToString();
+                    }
                     var f = _faker.System.FileName(columnConfig.StringFormatPattern);
+                    //Console.WriteLine(f);
                     if (!string.IsNullOrEmpty(columnConfig.Max) && f.Length > ToInt32(columnConfig.Max))
                     {
                         var _shortnum = f.Substring(f.Length - ToInt32(columnConfig.Max), ToInt32(columnConfig.Max));
@@ -688,10 +694,14 @@ namespace DataMasker
                         File.WriteAllText(_exceptionpath, "");
                     }
 
-                    if (!(exceptionBuilder.ContainsKey(table) && exceptionBuilder.ContainsValue(column)))
+                    if (!exceptionBuilder.ContainsKey(table))
                     {
-                        exceptionBuilder.Add(table, column);
-                        File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+                        if (!exceptionBuilder.ContainsValue(column))
+                        {
+                            exceptionBuilder.Add(table, column);
+                            File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);
+
+                        }
                     }
                     //o = o + 1;
                     //File.AppendAllText(_exceptionpath, "Cannot generate unique shuffle value" + " on table " + table + " for column " + column + Environment.NewLine + Environment.NewLine);

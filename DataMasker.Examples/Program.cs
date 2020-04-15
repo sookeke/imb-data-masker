@@ -146,7 +146,7 @@ namespace DataMasker.Examples
                     table.Schema = col.Schema;
                     table.RowCount = col.RowCount;
                     bool o = col.RetainNull.ToUpper().Equals("TRUE") ? true : false;
-                    bool nullString = col.RetainEmptyString.ToUpper().Equals("FALSE") ? true : false;
+                    bool nullString = col.RetainEmptyString.ToUpper().Equals("FALSE") ? false : true;
                     Column column = new Column
                     {
                         name = col.ColumnName,
@@ -539,6 +539,10 @@ namespace DataMasker.Examples
                                 {
                                     throw new ArgumentException("RandomDec type requires a Max value",  nameof(col.Max) + " on " + col.ColumnName);
                                 }
+                                if (string.IsNullOrEmpty(col.Min.ToString()))
+                                {
+                                    throw new ArgumentException("RandomDec type requires a Max value", nameof(col.Min) + " on " + col.ColumnName);
+                                }
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "";
@@ -563,6 +567,10 @@ namespace DataMasker.Examples
                                 if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
                                     throw new ArgumentException("RandomInt type requires a Max value", nameof(col.Max) + " on " + col.ColumnName);
+                                }
+                                if (string.IsNullOrEmpty(col.Min.ToString()))
+                                {
+                                    throw new ArgumentException("RandomInt type requires a Max value", nameof(col.Min) + " on " + col.ColumnName);
                                 }
                                 column.max = col.Max.ToString(); ;
                                 column.min = col.Min.ToString(); ;
@@ -955,7 +963,22 @@ namespace DataMasker.Examples
 
                 tableList.Add(table);
                 //}
+                #region check for null type
+                var nullType = table.columns.Where(x => x.type == null);
+                if (nullType.Any())
+                {
+                    int autoNumber1 = 1;
+                    foreach (var type in nullType)
+                    {
+                        Console.WriteLine(autoNumber1++.ToString() + ". "+ $"Column {type.name} contains invalid masking rule type");
+                    }
+                    Console.WriteLine("The Program will exit. Hit Enter to exit..");
 
+
+                    Console.ReadLine();
+                    System.Environment.Exit(1);
+                }
+                #endregion
 
             }
             #endregion
@@ -971,6 +994,9 @@ namespace DataMasker.Examples
 
             };
             #endregion
+
+
+
             //check for Tables with no primary key or any Identifier and exit if true 
             #region Check for tables without Primary Key if true exit
             var noPrimaryKey = rootObj.Where(n => n.PKconstraintName == null || n.PKconstraintName == string.Empty).GroupBy(n => n.TableName);
@@ -999,6 +1025,8 @@ namespace DataMasker.Examples
                 System.Environment.Exit(1);
             }
             #endregion
+
+         
 
             //jsonpath = @"example-configs\jsconfigTables.json";
             if (!Directory.Exists(@"classification-configs"))
@@ -1145,6 +1173,7 @@ namespace DataMasker.Examples
 
             }
             #endregion
+
         }
         public class RootObject
         {
@@ -1299,7 +1328,7 @@ namespace DataMasker.Examples
                 }
                 
                 Console.Title = "Data Masker";
-                Config config = LoadConfig(1);
+                Config config = LoadConfig(1);               
                 if (Convert.ToString(config.DataSource.Config.connectionString.ToString()).Contains("{0}"))
                 {
                     Console.WriteLine("");
@@ -1533,7 +1562,7 @@ namespace DataMasker.Examples
             catch (Exception e)
             {
                 File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
-                Console.WriteLine(e.ToString());
+                Console.WriteLine(e.Message);
                 Console.WriteLine("Program will exit: Press ENTER to exist..");
                 Console.ReadLine();
             }
