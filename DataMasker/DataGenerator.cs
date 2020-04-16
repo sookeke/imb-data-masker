@@ -411,12 +411,22 @@ namespace DataMasker
                     var money = _faker.Parse(columnConfig.StringFormatPattern);
                     return ToDecimal(money);
                 case DataType.RandomYear:
+
                     DateTime start = new DateTime(1999, 1, 1);
-                    Random gen = new Random();
-                    int range = ((TimeSpan)(DateTime.Today - start)).Days;
-                    var randomYear = start.AddDays(gen.Next(range)).ToString("yyyy");
-                    //object vv = Convert.ToInt32(randomYear);
-                    return randomYear;
+                    var ranYear = _faker.Date.Between(start, DateTime.Now).ToString("yyyy");
+                    //Random gen = new Random();
+                    //int range = ((TimeSpan)(DateTime.Today - start)).Days;
+                    //var randomYear = start.AddDays(gen.Next(range)).ToString("yyyy");
+                    ////object vv = Convert.ToInt32(randomYear);
+                    return ranYear;
+                case DataType.RandomMonth:
+                    if (columnConfig.StringFormatPattern.Contains("string"))
+                    {
+                        return _faker.Date.Month();
+                    }
+                    DateTime startM = new DateTime(1999, 1, 1);
+                    var ranMonth = _faker.Date.Between(startM, DateTime.Now).ToString("MM");
+                    return ranMonth;
                 case DataType.RandomSeason:
                     DateTime _start = new DateTime(1995, 1, 1);
                     Random _genD = new Random();
@@ -430,7 +440,7 @@ namespace DataMasker
                     if (min.Contains(".") || max.Contains("."))
                     {
                         //return decimal
-                        return Math.Round(_faker.Random.Decimal(ToDecimal(min), ToDecimal(max)), 2);
+                        return Math.Round(_faker.Random.Decimal(ToDecimal(min), ToDecimal(max)));
                     }
                     return _faker.Random.Int(ToInt32(min), ToInt32(max));
                 //return _faker.Random.Int(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));

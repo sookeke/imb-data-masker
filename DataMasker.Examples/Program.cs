@@ -562,6 +562,13 @@ namespace DataMasker.Examples
                                 column.StringFormatPattern = "";
                                 column.useGenderColumn = "";
                                 break;
+                            case nameof(DataType.RandomMonth):
+                                column.type = DataType.RandomMonth.ToString();
+                                column.max = col.Max.ToString();
+                                column.min = col.Min.ToString();
+                                column.StringFormatPattern = col.StringFormat;
+                                column.useGenderColumn = "";
+                                break;
                             case nameof(DataType.RandomInt):
                                 column.type = DataType.RandomInt.ToString();
                                 if (string.IsNullOrEmpty(col.Max.ToString()))

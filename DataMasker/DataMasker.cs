@@ -211,7 +211,7 @@ namespace DataMasker
                         existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
                     }
                 }
-                else if (_location.Columns.Cast<DataColumn>().Where(s=>columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).Count() == 1)
+                else if (_location.Columns.Cast<DataColumn>().Where(s=>columnConfig.Name.ToUpper().Equals(s.ColumnName.ToUpper())).Count() == 1)
                 {
                     //check if a column in the table contains 1 column in the location table column
                     //check for multi line addressin the table 
