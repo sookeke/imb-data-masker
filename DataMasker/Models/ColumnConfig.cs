@@ -112,7 +112,11 @@ namespace DataMasker.Models
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
     public string UseValue { get; set; }
 
-    [DefaultValue(null)]
+        [DefaultValue(null)]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        public bool? Preview { get; set; }
+
+        [DefaultValue(null)]
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
     public string Operator { get; set; }
     

@@ -44,7 +44,11 @@ namespace DataMasker.Examples
         public string StringFormatPattern { get; set; }
         [DefaultValue(null)]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
-        public string UseValue { get; set; }
+        public object UseValue { get; set; }
+
+        [DefaultValue(null)]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        public bool? Preview { get; set; }
     }
 
     public class Table

@@ -56,7 +56,7 @@ namespace DataMasker.DataLang
         /// <param name="table">The table.</param>
         /// <param name="removeFields">a list of fields to be left out of the insert statement</param>
         /// <returns></returns>
-        public static string GenerateInsert(DataTable table, DataTable ProductionTable, bool isBinary, string[] removeFields, string fieldToReplace, string replacementValue, string writePath, Config config, TableConfig tableConfig)
+        public static string GenerateInsert(DataTable table, DataTable ProductionTable, bool isBinary, string[] removeFields, string fieldToReplace, string replacementValue, string writePath, Config config, TableConfig tableConfig, bool printDML)
         {
             if (table == null)
             {
@@ -364,7 +364,10 @@ namespace DataMasker.DataLang
             {
                 tw.WriteLine(output.ToString());
                 tw.Close();
-                Console.WriteLine("{0}{1}", table.TableName + "DML" + Environment.NewLine, output.ToString());
+                if (printDML)
+                {
+                    Console.WriteLine("{0}{1}", table.TableName + "DML" + Environment.NewLine, output.ToString());
+                }
             }
 
             return output.ToString();
@@ -372,6 +375,10 @@ namespace DataMasker.DataLang
         public static string AddSingleQuotes(this string value)
         {
             return "\'" + value + "\'";
+        }
+        public static string ReplaceInvalidChars(this string filename)
+        {
+            return string.Join("_", filename.Split(Path.GetInvalidFileNameChars()));
         }
         public static bool TableHasIdentity(string table, string OBJECTPROPERTYCHECK, Config config)
         {

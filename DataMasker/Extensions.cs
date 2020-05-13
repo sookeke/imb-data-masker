@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using DataMasker.Models;
 
@@ -74,6 +75,14 @@ namespace DataMasker
         public static string AddDoubleQuotes(this string value)
         {
             return "\"" + value + "\"";
+        }
+        public static string ReplaceInvalidChars(this string filename)
+        {
+            return string.Join("_", filename.Split(Path.GetInvalidFileNameChars()));
+        }
+        public static string NullIfEmpty(this string value)
+        {
+            return string.IsNullOrEmpty(value) ? null : value;
         }
         /// <summary>
         /// Gets the update columns.

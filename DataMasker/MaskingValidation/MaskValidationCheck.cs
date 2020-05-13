@@ -23,6 +23,7 @@ namespace DataMasker.MaskingValidation
 
         public static string Jsonpath { get; private set; }
         public static string ZipName { get; private set; }
+        public static string DmlPath { get; private set; }
 
         public static string ToHTML(DataTable dt, IList ts)
         {
@@ -96,12 +97,13 @@ namespace DataMasker.MaskingValidation
                 var toEmail = ConfigurationManager.AppSettings["RecipientEmail"].Split(';').ToList();
                 var ccEmaill = ConfigurationManager.AppSettings["cCEmail"].Split(';').ToList();
                 var jsonPath = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["jsonMapPath"];
-                var TestJson = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["TestJson"];
+                var TestJson = ConfigurationManager.AppSettings["TestJson"];
                 var MaskedCopyDatabase = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["MaskedCopyDatabase"];
                 var _successfulCommit = Directory.GetCurrentDirectory() + @"\" + ConfigurationManager.AppSettings["_successfulCommit"];
                 ExchangeService service = new ExchangeService
                 {
                     UseDefaultCredentials = true
+                    
                 };
                 //service.Credentials = new NetworkCredential(user, decryptPassword);
                 service.AutodiscoverUrl(fromEmail);
@@ -124,10 +126,20 @@ namespace DataMasker.MaskingValidation
 
                 email.ToRecipients.AddRange(toEmail);
                 email.CcRecipients.AddRange(ccEmaill);
-                if (File.Exists(_appSpreadsheet)) { email.Attachments.AddFileAttachment(_appSpreadsheet); }  
-                if (File.Exists(ZipName)) { email.Attachments.AddFileAttachment(ZipName); }
+       
+                if (File.Exists(ZipName) && Directory.Exists(DmlPath)) {
+                    DirectoryInfo dInfo = new DirectoryInfo(DmlPath);
+                    long sizeOfDir = DirectorySize(dInfo, true);
+                    if (((double)sizeOfDir) / (1024 * 1024) < 100.00)
+                    {
+                        email.Attachments.AddFileAttachment(ZipName);
+                    }
+                   
+                }
                 if (File.Exists(exceptionPath)) { email.Attachments.AddFileAttachment(exceptionPath); }
 
+              
+              
 
                 if (tj)
                 {
@@ -139,6 +151,7 @@ namespace DataMasker.MaskingValidation
                 }
                 else
                 {
+                    if (File.Exists(_appSpreadsheet)) { email.Attachments.AddFileAttachment(_appSpreadsheet); }
                     if (File.Exists(jsonPath))
                     {
                         email.Attachments.AddFileAttachment(jsonPath);
@@ -180,6 +193,17 @@ namespace DataMasker.MaskingValidation
 
             }
         }
+        static long DirectorySize(DirectoryInfo dInfo, bool includeSubDir)
+        {
+            long totalSize = dInfo.EnumerateFiles()
+                         .Sum(file => file.Length);
+            if (includeSubDir)
+            {
+                totalSize += dInfo.EnumerateDirectories()
+                         .Sum(dir => DirectorySize(dir, true));
+            }
+            return totalSize;
+        }
         private static DataTable GetdataTable(string connectionString1,string schema, string table, Config config)
         {
             // This is your table to hold the result set:
@@ -206,7 +230,7 @@ namespace DataMasker.MaskingValidation
         }
         public static void Verification( DataSourceConfig dataSourceConfig, Config config, 
             string _appSpreadsheet, string _dmlpath, string database,
-            string exceptionPath, string columnMapping)
+            string exceptionPath, string columnMapping, string timeElapse)
         {
             CompareLogic compareLogic = new CompareLogic();
             if (!Directory.Exists($@"Output\Validation"))
@@ -226,170 +250,258 @@ namespace DataMasker.MaskingValidation
             DataTable report = new DataTable();
             //report.Columns.Add("Table"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
             report.Columns.Add("Table"); report.Columns.Add("Schema"); report.Columns.Add("Column"); report.Columns.Add("Hostname"); report.Columns.Add("DataSourceType"); report.Columns.Add("TimeStamp"); report.Columns.Add("Operator"); report.Columns.Add("Row count mask"); report.Columns.Add("Row count prd"); report.Columns.Add("Result"); report.Columns.Add("Result Comment");
-
-            foreach (TableConfig _tables in config.Tables)
+            try
             {
-               
 
-                var _dataTable = GetdataTable(connectionString, _tables.Schema, _tables.Name.ToString(), config);
-                var _dataTablePrd = GetdataTable(connectionStringPrd,_tables.Schema, _tables.Name, config);
-                if (_dataTable.Rows.Count == 0)
-                {
-                    var _norecord = _tables.Name + " No record found for validation test in this table";
-                    File.AppendAllText(path, _norecord + Environment.NewLine);
-                }
-                foreach (var col in _tables.Columns)
+
+                foreach (TableConfig _tables in config.Tables)
                 {
 
-                    _columndatamask = new DataView(_dataTable).ToTable(false, new string[] { col.Name }).AsEnumerable().Select(n => n[0]).ToList();
-                    _columndataUnmask = new DataView(_dataTablePrd).ToTable(false, new string[] { col.Name }).AsEnumerable().Select(n => n[0]).ToList();
+
+                    var _dataTable = GetdataTable(connectionString, _tables.Schema, _tables.Name.ToString(), config);
+                    var _dataTablePrd = GetdataTable(connectionStringPrd, _tables.Schema, _tables.Name, config);
 
 
-                    //check for intersect
-                    List<string> check = new List<string>();
-                    int rownumber = 0;
-                    if (_columndatamask.Count == 0)
+                    if (_dataTable.Rows.Count == 0)
                     {
-                        check.Add("PASS");
+                        var _norecord = _tables.Name + " No record found for validation test in this table";
+                        File.AppendAllText(path, _norecord + Environment.NewLine);
                     }
-
-                    for (int i = 0; i < _columndatamask.Count; i++)
+                    foreach (var col in _tables.Columns)
                     {
-                        rownumber = i;
-                       
-                        if (!_columndatamask[i].IsNullOrDbNull() && !_columndataUnmask[i].IsNullOrDbNull() && !string.IsNullOrWhiteSpace(_columndataUnmask[i].ToString()))
+
+                        _columndatamask = new DataView(_dataTable).ToTable(false, new string[] { col.Name }).AsEnumerable().Select(n => n[0]).ToList();
+                        _columndataUnmask = new DataView(_dataTablePrd).ToTable(false, new string[] { col.Name }).AsEnumerable().Select(n => n[0]).ToList();
+
+                        DataColumn[] primaryKeys = new DataColumn[1];
+                        primaryKeys[0] = _dataTable.Columns[_tables.PrimaryKeyColumn];
+                        _dataTable.PrimaryKey = primaryKeys;
+                        var PrimaryKey_Prd = new DataView(_dataTablePrd).ToTable(false, new string[] { _tables.PrimaryKeyColumn }).AsEnumerable().Select(n => n[0]).ToArray();
+                        //var matches = (from DataRow RowA in _dataTable.Rows
+                        //               where _dataTablePrd.Rows.Contains(RowA.ItemArray.Where((x, y) => primaryKeys.Contains(_dataTable.Columns[y].ColumnName)).ToArray())
+                        //               select RowA).CopyToDataTable();
+
+
+
+                        //second layer confirmation
+                        //var fo = (from  x in _columndataUnmask
+                        //             join  y in _columndatamask on x equals y
+                        //          where x != DBNull.Value
+                        //          select x).ToList();
+
+
+                        //check for intersect
+                        List<string> check = new List<string>();
+                        int rownumber = 0;
+                        if (_columndatamask.Count == 0)
                         {
-                            try
+                            check.Add("PASS");
+                        }
+
+                        for (int i = 0; i < _columndatamask.Count; i++)
+                        {
+                            rownumber = i;
+
+                            if (!_columndatamask[i].IsNullOrDbNull() && !_columndataUnmask[i].IsNullOrDbNull() && !string.IsNullOrWhiteSpace(_columndataUnmask[i].ToString()))
                             {
-                                if (compareLogic.Compare(_columndatamask[i], _columndataUnmask[i]).AreEqual && col.Ignore != true)
+                                try
+                                {
+                                    if (compareLogic.Compare(_columndatamask[i], _columndataUnmask[i]).AreEqual && col.Ignore != true)
+                                    {
+
+                                        check.Add("FAIL");
+
+                                    }
+                                    else
+                                    {
+                                        if (!col.Ignore)
+                                        {
+                                            //second layer confirmation
+                                            //var f = (from x in _columndataUnmask
+                                            //         join y in _columndatamask on x equals y
+                                            //         where x != DBNull.Value
+                                            //         select x).ToList();
+                                        }
+
+                                        check.Add("PASS");
+
+                                    }
+                                }
+                                catch (IndexOutOfRangeException es)
+                                {
+                                    Console.WriteLine(es.Message);
+                                }
+                                catch (Exception ex)
                                 {
 
-                                    check.Add("FAIL");
+                                    Console.WriteLine(ex.Message);
+                            
+                                }
 
+
+
+                            }
+
+
+
+                            //unmatch
+                        }
+
+                        //second check for any()
+
+
+
+
+                        if (check.Contains("FAIL"))
+                        {
+                            result = "<font color='red'>FAIL</font>";
+
+                            if (col.Ignore == true)
+                            {
+                                failure = "Masking not required";
+                                result = "<font color='green'>PASS</font>";
+                            }
+                            else if (col.Type == DataType.Shuffle && _columndatamask.Count() == 1)
+                            {
+                                result = "<b><font color='red'>FAIL</font></b>";
+                                failure = "row count must be > 1 for " + DataType.Shuffle.ToString();
+                                //result = "<font color='red'>FAIL</font>";
+                            }
+                            else if (col.Type == DataType.NoMasking)
+                            {
+                                result = "<font color='green'>PASS</font>";
+                                //result = "<b><font color='blue'>PASS</font></b>";
+                                failure = "Masking not required";
+                                //result = "<font color='red'>FAIL</font>";
+                            }
+                            else if (col.Type == DataType.Shuffle)
+                            {
+
+                                if (!MatchString("Cannot generate unique shuffle value", _exceptionpath))
+                                {
+                                    failure = "NULL";
+                                    result = "<font color='green'>PASS</font>";
                                 }
                                 else
                                 {
 
-                                    check.Add("PASS");
-
+                                    result = "<b><font color='blue'>FAIL</font></b>";
+                                    failure = "Cannot generate a unique shuffle value";
                                 }
+                                //result = "<font color='red'>FAIL</font>";
                             }
-                            catch (IndexOutOfRangeException es)
+                            else if (col.Type == DataType.exception && check.Contains("PASS"))
                             {
-                                Console.WriteLine(es.Message);
-                            }
-                            catch (Exception ex)
-                            {
-
-                                Console.WriteLine(ex.Message);
-                                Console.WriteLine(_columndatamask[i]);
-                                Console.WriteLine(_columndataUnmask[i]);
-                            }
-
-
-
-                        }
-
-
-
-                        //unmatch
-                    }
-
-
-
-                    if (check.Contains("FAIL"))
-                    {
-                        result = "<font color='red'>FAIL</font>";
-
-                        if (col.Ignore == true)
-                        {
-                            failure = "Masking not required";
-                            result = "<font color='green'>PASS</font>";
-                        }
-                        else if (col.Type == DataType.Shuffle && _columndatamask.Count() == 1)
-                        {
-                            result = "<b><font color='red'>FAIL</font></b>";
-                            failure = "row count must be > 1 for " + DataType.Shuffle.ToString();
-                            //result = "<font color='red'>FAIL</font>";
-                        }
-                        else if (col.Type == DataType.NoMasking)
-                        {
-                            result = "<font color='green'>PASS</font>";
-                            //result = "<b><font color='blue'>PASS</font></b>";
-                            failure = "Masking not required";
-                            //result = "<font color='red'>FAIL</font>";
-                        }
-                        else if (col.Type == DataType.Shuffle)
-                        {
-                           
-                            if (!MatchString("Cannot generate unique shuffle value", _exceptionpath))
-                            {
-                                failure = "NULL";
-                                result = "<font color='green'>PASS</font>";
+                                failure = "<font color='red'>Applied mask with " + col.Type.ToString() + "</ font >";
+                                result = "<b><font color='blue'>PASS</font></b>";
                             }
                             else
                             {
-                               
-                                result = "<b><font color='blue'>FAIL</font></b>";
-                                failure = "Cannot generate a unique shuffle value";
+                                result = "<font color='red'>FAIL</font>";
+                                failure = "<b><font color='red'>Found exact match " + col.Type.ToString() + " </font></b>";
                             }
-                            //result = "<font color='red'>FAIL</font>";
+
+                            Console.WriteLine(_tables.Name + " Failed Validation test on column " + col.Name + Environment.NewLine);
+                            File.AppendAllText(path, _tables.Name + " Failed Validation test on column " + col.Name + Environment.NewLine);
+
+                            report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+
                         }
-                        else if (col.Type == DataType.exception && check.Contains("PASS"))
+                        else if (check.Contains("IGNORE"))
                         {
-                            failure = "<font color='red'>Applied mask with " + col.Type.ToString() + "</ font >";
-                            result = "<b><font color='blue'>PASS</font></b>";
+                            result = "No Validation";
+                            failure = "Column not mask";
+                            report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
                         }
                         else
                         {
-                            result = "<font color='red'>FAIL</font>";
-                            failure = "<b><font color='red'>Found exact match " + col.Type.ToString() + " </font></b>";
-                        }
-
-                        Console.WriteLine(_tables.Name + " Failed Validation test on column " + col.Name + Environment.NewLine);
-                        File.AppendAllText(path, _tables.Name + " Failed Validation test on column " + _tables.Name + Environment.NewLine);
-
-                        report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
-
-                    }
-                    else if (check.Contains("IGNORE"))
-                    {
-                        result = "No Validation";
-                        failure = "Column not mask";
-                        report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
-                    }
-                    else
-                    {
-                        if (_columndatamask.Count == 0)
-                        {
-                            failure = "No record found";
-                        }
-                        else if (col.Ignore == true || col.Type == DataType.NoMasking)
-                        {
-                            failure = "Masking not required";
+                            if (_columndatamask.Count == 0)
+                            {
+                                failure = "No record found";
+                            }
+                            else if (col.Ignore == true || col.Type == DataType.NoMasking)
+                            {
+                                failure = "Masking not required";
+                                result = "<font color='green'>PASS</font>";
+                            }
+                            else
+                                failure = "NULL";
                             result = "<font color='green'>PASS</font>";
+                            Console.WriteLine(_tables.Name + " Pass Validation test on column " + col.Name);
+                            File.AppendAllText(path, _tables.Name + " Pass Validation test on column " + col.Name + Environment.NewLine);
+                            report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+
+
                         }
-                        else
-                            failure = "NULL";
-                        result = "<font color='green'>PASS</font>";
-                        Console.WriteLine(_tables.Name + " Pass Validation test on column " + col.Name);
-                        File.AppendAllText(path, _tables.Name + " Pass Validation test on column " + col.Name + Environment.NewLine);
-                        report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
 
                     }
-
-
                 }
             }
-            Analysis(report, dataSourceConfig, _appSpreadsheet, database, _dmlpath,exceptionPath,columnMapping);
+            catch (Exception ex)
+            {
 
+                Console.WriteLine(ex.Message);
+            }
+            Analysis(report, dataSourceConfig, _appSpreadsheet, database, _dmlpath,exceptionPath,columnMapping, timeElapse);
+
+        }
+
+        public static DataTable getDiffRecords(DataTable dtDataOne, DataTable dtDataTwo)
+        {
+            DataTable returnTable = new DataTable("returnTable");
+
+            using (DataSet ds = new DataSet())
+            {
+                ds.Tables.AddRange(new DataTable[] { dtDataOne.Copy(), dtDataTwo.Copy() });
+
+                DataColumn[] firstColumns = new DataColumn[ds.Tables[0].Columns.Count];
+                for (int i = 0; i < firstColumns.Length; i++)
+                {
+                    firstColumns[i] = ds.Tables[0].Columns[i];
+                }
+
+                DataColumn[] secondColumns = new DataColumn[ds.Tables[1].Columns.Count];
+                for (int i = 0; i < secondColumns.Length; i++)
+                {
+                    secondColumns[i] = ds.Tables[1].Columns[i];
+                }
+
+                DataRelation r1 = new DataRelation(string.Empty, firstColumns, secondColumns, false);
+                ds.Relations.Add(r1);
+
+                DataRelation r2 = new DataRelation(string.Empty, secondColumns, firstColumns, false);
+                ds.Relations.Add(r2);
+
+                for (int i = 0; i < dtDataOne.Columns.Count; i++)
+                {
+                    returnTable.Columns.Add(dtDataOne.Columns[i].ColumnName, dtDataOne.Columns[i].DataType);
+                }
+
+                returnTable.BeginLoadData();
+                foreach (DataRow parentrow in ds.Tables[0].Rows)
+                {
+                    DataRow[] childrows = parentrow.GetChildRows(r1);
+                    if (childrows == null || childrows.Length == 0)
+                        returnTable.LoadDataRow(parentrow.ItemArray, true);
+                }
+
+                foreach (DataRow parentrow in ds.Tables[1].Rows)
+                {
+                    DataRow[] childrows = parentrow.GetChildRows(r2);
+                    if (childrows == null || childrows.Length == 0)
+                        returnTable.LoadDataRow(parentrow.ItemArray, true);
+                }
+                returnTable.EndLoadData();
+            }
+            return returnTable;
         }
         public static void Analysis(DataTable report, DataSourceConfig dataSourceConfig, string _appSpreadsheet, 
             string database, string _dmlPath,
-            string exceptionPath, string columnMapping)
+            string exceptionPath, string columnMapping, string timeElapse)
         {
             List<string> analysis = new List<string>();
+            DmlPath = _dmlPath;
             if (!string.IsNullOrEmpty(_dmlPath))
             {
                 //add dml files to zip
@@ -434,6 +546,7 @@ namespace DataMasker.MaskingValidation
             analysis.Add("Total Pass = " + top);
             analysis.Add("Total Fail = " + _fail);
             analysis.Add("% Accuracy = " + dc);
+            analysis.Add("Time Elapse = " + timeElapse);
             string body = ToHTML(report, analysis);
             string sig = GetSignature();
 

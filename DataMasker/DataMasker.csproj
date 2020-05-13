@@ -320,6 +320,7 @@
     <Compile Include="Models\SpreadsheetObject.cs" />
     <Compile Include="OracleArrayTypeFactoryBase.cs" />
     <Compile Include="OracleCustomTypeBase.cs" />
+    <Compile Include="PrintDataExtensions.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>

@@ -54,8 +54,8 @@ namespace DataMasker.Models
 
 
                         //Set to Table
-                        var dataTable = result.Tables[0].AsDataView().ToTable();
-                        var json = JsonConvert.SerializeObject(dataTable, Formatting.Indented, new JsonSerializerSettings { ContractResolver = new SpecialContractResolver() });
+                        var dataTable = result.Tables[0].AsDataView().ToTable();                       
+                        var json = JsonConvert.SerializeObject(dataTable, Formatting.Indented, new JsonSerializerSettings { ContractResolver = new SpecialContractResolver() });                       
                         var o = json.Replace("null", "\"\"");
                         using (var tw = new StreamWriter(jsonPath, false))
                         {

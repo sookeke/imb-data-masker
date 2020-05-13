@@ -217,7 +217,7 @@ namespace DataMasker
                     //check for multi line addressin the table 
                     //var multiLine = tableConfig.Columns.Where(n => columnConfig.Name.Contains(n.Name)).ToList().Count > 2;
                     bool u;
-                    var cname = _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.ToUpper().Contains(s.ColumnName.ToUpper())).ToList().FirstOrDefault();//get the exact column match
+                    var cname = _location.Columns.Cast<DataColumn>().Where(s => columnConfig.Name.ToUpper().Equals(s.ColumnName.ToUpper())).ToList().FirstOrDefault();//get the exact column match
                     try
                     {
                         if (columnConfig.Type == DataType.SecondaryAddress || columnConfig.Type == DataType.StreetAddress)
@@ -228,7 +228,7 @@ namespace DataMasker
                         {
                             if (_location.Rows.Count == 0)
                             {
-                                u = tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("CITY")) && (tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("STATE")) || tableConfig.Columns.Any(n => n.Name.ToUpper().Contains("PROVINCE")));
+                                u = tableConfig.Columns.Any(n => n.Name.ToUpper().Equals("CITY")) && (tableConfig.Columns.Any(n => n.Name.ToUpper().Equals("STATE")) || tableConfig.Columns.Any(n => n.Name.ToUpper().Equals("PROVINCE")));
                                 addr = (DataTable)_dataGenerator.GetAddress(columnConfig, existingValue, _location, u);
                             }
                             if (addr == null)
@@ -822,6 +822,7 @@ namespace DataMasker
                 case DataType.FullAddress:
                 case DataType.State:
                 case DataType.City:
+                case DataType.Bogus:
                 case DataType.StringConcat:
                 case DataType.PhoneNumber:
                 case DataType.None:

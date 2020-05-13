@@ -215,7 +215,7 @@ namespace DataMasker
             {
                 AddValueMapping(columnConfig, existingValue, newValue);
             }
-
+            
             return newValue;
         }
 
@@ -411,14 +411,8 @@ namespace DataMasker
                     var money = _faker.Parse(columnConfig.StringFormatPattern);
                     return ToDecimal(money);
                 case DataType.RandomYear:
-
-                    DateTime start = new DateTime(1999, 1, 1);
-                    var ranYear = _faker.Date.Between(start, DateTime.Now).ToString("yyyy");
-                    //Random gen = new Random();
-                    //int range = ((TimeSpan)(DateTime.Today - start)).Days;
-                    //var randomYear = start.AddDays(gen.Next(range)).ToString("yyyy");
-                    ////object vv = Convert.ToInt32(randomYear);
-                    return ranYear;
+                    return _faker.Date.Between(ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
+                        ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_MAX_DATE)).ToString("yyyy");
                 case DataType.RandomMonth:
                     if (columnConfig.StringFormatPattern.Contains("string"))
                     {
@@ -432,8 +426,7 @@ namespace DataMasker
                     Random _genD = new Random();
                     int _range = ((TimeSpan)(DateTime.Today - _start)).Days;
                     var _randomYear = _start.AddDays(_genD.Next(_range));
-                    var season = _randomYear.Year + "/" + _randomYear.AddYears(1).ToString("yy");
-                    return season;              
+                    return _randomYear.Year + "/" + _randomYear.AddYears(1).ToString("yy");             
                 case DataType.RandomInt:
                     var min = columnConfig.Min;
                     var max = columnConfig.Max;
@@ -562,10 +555,12 @@ namespace DataMasker
                 case DataType.RandomYear:
                 case DataType.RandomSeason:                
                 case DataType.PickRandom:
+                case DataType.Shuffle:
                 case DataType.FullAddress:
                 case DataType.State:
                 case DataType.SecondaryAddress:
                 case DataType.City:
+                case DataType.Bogus:
                 case DataType.StringConcat:
                 case DataType.PhoneNumber:
                 case DataType.None:
@@ -607,7 +602,8 @@ namespace DataMasker
                 case DataType.Rant:
                 case DataType.Lorem:
                     return int.Parse(unparsedValue);
-
+                case DataType.RandomYear:
+                    return DateTime.TryParseExact(unparsedValue, "yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dateTime) ? dateTime : defaultValue;
                 case DataType.DateOfBirth:
                     return DateTime.Parse(unparsedValue);
             }
@@ -743,18 +739,18 @@ namespace DataMasker
 
         }
         public object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,
-            string fileName, string fileExtension, string blobLocation, Name.Gender? gender = null)
+            string filename, string fileExtension, string blobLocation, Name.Gender? gender = null)
         {
             if (columnConfig.RetainNullValues &&
                existingValue == null)
             {
                 return null;
             }
+            var fileName = filename.ReplaceInvalidChars();
             switch (columnConfig.Type)
             {
                 case DataType.Blob:
                     IFileType fileType = new FileType();
-                    //fileType.GenerateDOCX("", "");
                     switch (fileExtension.ToUpper())
                     {
                         case nameof(FileTypes.PDF):
@@ -971,8 +967,7 @@ namespace DataMasker
                             //File.Delete(fileName);
                             return byteArray;
                         case nameof(FileTypes.XLSX):
-
-                            fileName = fileType.GenerateXLSX(Environment.CurrentDirectory + "\\" + blobLocation + fileName, string.Join(" ", _faker.Rant.Reviews(" ", 10).ToArray())).ToString();
+                            fileName = fileType.GenerateXLSX(Environment.CurrentDirectory + "\\" + blobLocation + fileName, columnConfig.Name).ToString();
                             byteArray = null;
 
                             using (FileStream fs = new FileStream
@@ -1030,6 +1025,7 @@ namespace DataMasker
                 return 0;
             }
         }
+      
         public static decimal ToDecimal(object value)
         {
             if (null == value)

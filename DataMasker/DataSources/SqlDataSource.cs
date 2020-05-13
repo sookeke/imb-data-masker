@@ -11,6 +11,8 @@ using System.Configuration;
 using System.IO;
 using KellermanSoftware.CompareNetObjects;
 using System.Security;
+using Bogus;
+using System.Globalization;
 
 namespace DataMasker.DataSources
 {
@@ -24,7 +26,9 @@ namespace DataMasker.DataSources
         //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly string _successfulCommit = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_successfulCommit"];
-
+        private static readonly DateTime DEFAULT_MIN_DATE = new DateTime(1900, 1, 1, 0, 0, 0, 0);
+        //private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
+        private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
         //private IEnumerable<IDictionary<string, object>> getData { get; set; }
         public object[] Values { get; private set; }
         public int o = 0;
@@ -76,7 +80,7 @@ namespace DataMasker.DataSources
                 rawData = new List<IDictionary<string, object>>();
 
 
-                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig, config), buffered: true);
+                var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig, config), buffered: true, commandTimeout: 0);
                 //rawData.AddRange(_prdData.Select(n => n.ToDictionary(x => x.Key, x => x.Value).Select(x => x) as IDictionary<string, object>));
 
                 foreach (IDictionary<string, object> prd in _prdData)
@@ -167,8 +171,8 @@ namespace DataMasker.DataSources
                     {
 
 
-                        connection.Execute(sql, batch.Items, sqlTransaction, null, CommandType.Text);
-
+                        connection.Execute(sql, batch.Items, sqlTransaction,0,CommandType.Text);
+                        
                         if (_sourceConfig.DryRun)
                         {
                             sqlTransaction.Rollback();
@@ -188,7 +192,7 @@ namespace DataMasker.DataSources
                     }
                     catch (Exception ex)
                     {
-
+                        sqlTransaction.Rollback();
                         Console.WriteLine(ex.Message);
                         File.AppendAllText(_exceptionpath, ex.Message + $" on table  {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine); ;
                     }
@@ -369,7 +373,34 @@ namespace DataMasker.DataSources
             //                        .SelectMany(x => x.Keys)).ToArray();
 
 
+            string[] formats = {"M/d/yyyy h:mm:ss tt", "M/d/yyyy h:mm tt",
+                     "MM/dd/yyyy hh:mm:ss", "M/d/yyyy h:mm:ss",
+                     "M/d/yyyy hh:mm tt", "M/d/yyyy hh tt",
+                     "M/d/yyyy h:mm", "M/d/yyyy h:mm",
+                     "MM/dd/yyyy hh:mm", "M/dd/yyyy hh:mm",
 
+                     "M-d-yyyy h:mm:ss tt", "M-d-yyyy h:mm tt",
+                     "MM-dd-yyyy hh:mm:ss", "M-d-yyyy h:mm:ss",
+                     "M-d-yyyy hh:mm tt", "M-d-yyyy hh tt",
+                     "M-d-yyyy h:mm", "M-d-yyyy h:mm",
+                     "MM-dd-yyyy hh:mm", "M-dd-yyyy hh:mm",
+
+                     "yyyy-d-M h:mm:ss tt", "yyyy-d-M h:mm tt",
+                     "yyyy-dd-MM hh:mm:ss", "yyyy-d-M h:mm:ss",
+                     "yyyy-d-M hh:mm tt", "yyyy-d-M hh tt",
+                     "yyyy-d-M h:mm", "yyyy-d-M h:mm",
+                     "yyyy-dd-MM hh:mm", "yyyy-dd-M hh:mm",
+
+                     "yyyy-M-d h:mm:ss tt", "yyyy-M-d h:mm tt",
+                     "yyyy-MM-dd hh:mm:ss", "yyyy-M-d h:mm:ss",
+                     "yyyy-M-d hh:mm tt", "yyyy-M-d hh tt",
+                     "yyyy-M-d h:mm", "yyyy-M-d h:mm",
+                     "yyyy-MM-dd hh:mm", "yyyy-M-dd hh:mm",
+                            "yyyyMMdd", "yyyyMdd hh:mm",
+
+
+            };
+            Faker faker = new Faker();
 
 
             foreach (var parent in parents)
@@ -447,15 +478,17 @@ namespace DataMasker.DataSources
                         {
                             if (columnRows[i] is string && string.IsNullOrWhiteSpace(columnRows[i].ToString()))
                             {
-
+                                
                                 columnRows[i] = RemoveWhitespace(columnRows[i].ToString());
                                 //columnRows[i] = DateTime.Parse(columnRows[i].ToString());
                                 //Clear nullspace date record;
-                                columnRows[i] = DateTime.TryParse(columnRows[i].ToString(), out DateTime temp) ? temp : DateTime.MinValue.AddHours(9);
+                                columnRows[i] = DateTime.TryParse(columnRows[i].ToString(), out DateTime temp) ? temp : faker.Date.Between(DEFAULT_MIN_DATE, DEFAULT_MAX_DATE);
 
-
+                                table.Rows[addedRows[i]][col] = columnRows[i];
                             }
-                            table.Rows[addedRows[i]][col] = columnRows[i];
+                            else
+                                table.Rows[addedRows[i]][col] = DateTime.TryParseExact(columnRows[i].ToString(), formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime temp) ? temp : DateTime.Now;
+
                         }
                         else
                         {
