@@ -586,7 +586,7 @@ namespace DataMasker.DataSources
             {
                 if (new FileInfo(_exceptionpath).Length == 0)
                 {
-                    sw.WriteLine("exceptions for " + ConfigurationManager.AppSettings["DatabaseName"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    sw.WriteLine("Exceptions for " + ConfigurationManager.AppSettings["DatabaseName"] + " Database.........." + Environment.NewLine + Environment.NewLine);
                     //  File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
                 }
                 // sw.WriteLine(""); 
@@ -598,7 +598,7 @@ namespace DataMasker.DataSources
                 {
                     // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
 
-                    sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["DatabaseName"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["DatabaseName"] + " database.........." + Environment.NewLine + Environment.NewLine);
                 }
             }
             return rawData;

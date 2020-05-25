@@ -19,7 +19,7 @@ namespace DataMasker.DataSources
    public class SpreadSheet : IDataSource
     {
         //create object = > SpreadSheetTable = > mask = >
-        private static TextFieldParser cvsReader;
+        //private static TextFieldParser cvsReader;
         private readonly DataSourceConfig _sourceConfig;
         private readonly string _connectionString;
         private static readonly List<KeyValuePair<object, object>> exceptionBuilder = new List<KeyValuePair<object, object>>();

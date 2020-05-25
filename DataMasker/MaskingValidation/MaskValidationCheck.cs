@@ -181,9 +181,6 @@ namespace DataMasker.MaskingValidation
 
 
             }
-
-
-
             catch (Exception ep)
             {
                 File.AppendAllText(exceptionPath, "failed to send email with the following error: "+ Environment.NewLine);
@@ -240,7 +237,7 @@ namespace DataMasker.MaskingValidation
             string path = Directory.GetCurrentDirectory() + $@"\Output\Validation\ValidationResult.txt";
             var _columndatamask = new List<object>();
             var _columndataUnmask = new List<object>();
-            string Hostname = dataSourceConfig.Config.Hostname;
+            //string Hostname = dataSourceConfig.Config.Hostname;
             string _operator = System.DirectoryServices.AccountManagement.UserPrincipal.Current.DisplayName;
             string connectionString = dataSourceConfig.Config.connectionString;
             string connectionStringPrd = dataSourceConfig.Config.connectionStringPrd;
@@ -404,14 +401,14 @@ namespace DataMasker.MaskingValidation
                             Console.WriteLine(_tables.Name + " Failed Validation test on column " + col.Name + Environment.NewLine);
                             File.AppendAllText(path, _tables.Name + " Failed Validation test on column " + col.Name + Environment.NewLine);
 
-                            report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                            report.Rows.Add(_tables.Name, _tables.Schema, col.Name, dataSourceConfig.Config.Hostname, dataSourceConfig.Type, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
                         }
                         else if (check.Contains("IGNORE"))
                         {
                             result = "No Validation";
                             failure = "Column not mask";
-                            report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                            report.Rows.Add(_tables.Name, _tables.Schema, col.Name, dataSourceConfig.Config.Hostname, dataSourceConfig.Type, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
                         }
                         else
                         {
@@ -429,7 +426,7 @@ namespace DataMasker.MaskingValidation
                             result = "<font color='green'>PASS</font>";
                             Console.WriteLine(_tables.Name + " Pass Validation test on column " + col.Name);
                             File.AppendAllText(path, _tables.Name + " Pass Validation test on column " + col.Name + Environment.NewLine);
-                            report.Rows.Add(_tables.Name, TSchema, col.Name, Hostname, Stype, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
+                            report.Rows.Add(_tables.Name, _tables.Schema, col.Name, dataSourceConfig.Config.Hostname, dataSourceConfig.Type, DateTime.Now.ToString(), _operator, _columndatamask.Count, _columndataUnmask.Count, result, failure);
 
 
                         }
@@ -447,7 +444,7 @@ namespace DataMasker.MaskingValidation
 
         }
 
-        public static DataTable getDiffRecords(DataTable dtDataOne, DataTable dtDataTwo)
+        public static DataTable GetDiffRecords(DataTable dtDataOne, DataTable dtDataTwo)
         {
             DataTable returnTable = new DataTable("returnTable");
 

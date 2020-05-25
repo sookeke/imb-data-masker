@@ -20,7 +20,7 @@ namespace DataMasker.DataLang
     {
         public static string colnameToString { get; private set; }
         public static bool HasSpatial { get; private set; }
-        public static string bdir { get; private set; }
+        public static string Bdir { get; private set; }
         public static string[] format = {"M/d/yyyy h:mm:ss tt", "M/d/yyyy h:mm tt",
                      "MM/dd/yyyy hh:mm:ss", "M/d/yyyy h:mm:ss",
                      "M/d/yyyy hh:mm tt", "M/d/yyyy hh tt",
@@ -56,7 +56,7 @@ namespace DataMasker.DataLang
         /// <param name="table">The table.</param>
         /// <param name="removeFields">a list of fields to be left out of the insert statement</param>
         /// <returns></returns>
-        public static string GenerateInsert(DataTable table, DataTable ProductionTable, bool isBinary, string[] removeFields, string fieldToReplace, string replacementValue, string writePath, Config config, TableConfig tableConfig, bool printDML)
+        public static string GenerateInsert(DataTable table, DataTable ProductionTable, bool isBinary, string[] removeFields, string fieldToReplace, string replacementValue, string writePath, Config config, TableConfig tableConfig)
         {
             if (table == null)
             {
@@ -81,7 +81,7 @@ namespace DataMasker.DataLang
             if (isBinary)
             {
                 var blobCol = tableConfig.Columns.Where(n => n.Type == DataType.Blob).FirstOrDefault();
-                bdir = Environment.CurrentDirectory + @"\output\" + config.DataSource.Config.Databasename.ToString() + "\\BinaryFiles\\" + tableConfig.Name + "\\";
+                Bdir = Environment.CurrentDirectory + @"\output\" + config.DataSource.Config.Databasename.ToString() + "\\BinaryFiles\\" + tableConfig.Name + "\\";
                 PrdTable = ProductionTable.Rows.OfType<DataRow>().Select(dr => dr.Field<string>(blobCol.StringFormatPattern)).ToList();
             }
             if (table.Rows.Count == 0 && table.Columns.Count == 0 && config.DataSource.Type != DataSourceType.OracleServer)
@@ -152,223 +152,233 @@ namespace DataMasker.DataLang
 
                 }
             }
-          
-
             var output = new StringBuilder();
+            try
+            {           
+                using (var tw = new StreamWriter(writePath, false))
+                {
 
-            if (config.DataSource.Type == DataSourceType.OracleServer)
-            {
-
-                output.AppendFormat("REM INSERTING into {0}\n", $"{tableConfig.Schema}." + $"{tableConfig.Name}");
-                output.AppendFormat("SET DEFINE OFF\n");
-                output.Append(Environment.NewLine);
-                if (isBinary)
-                {
-                    output.AppendFormat("CREATE or REPLACE DIRECTORY BINARYFILE as {0}", bdir.AddSingleQuotes() + ";\n");
-                    output.Append("/\n");
-                    string[] lines = File.ReadAllLines(@"isBlob.sql");
-
-                    foreach (string line in lines)
-                    {
-                        //Console.WriteLine(line);
-                        output.AppendFormat(line + "\n");
-                    }
-                    output.Append("/\n");
-                    //output.Append(Environment.NewLine);
-                    //output.Append("-- Run the IsBlob SQL script first to create LOAD_BLOB_FROM_FILE Function");
-                }
-            }
-            else if (config.DataSource.Type == DataSourceType.PostgresServer)
-            {
-                if (table.Rows.Count == 0)
-                {
-                    output.AppendFormat("--INSERT INTO " + "\"{0}\"" + "({1}) DEFAULT VALUES\n ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
-                    output.AppendFormat("-- EMPTY TABLE NOTHING TO INSERT");
-                }
-                else
-                    output.AppendFormat("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
-            }
-            else if (config.DataSource.Type == DataSourceType.SqlServer)
-            {
-                if (table.Rows.Count > 1000)
-                {
-                    output.AppendFormat("SET ANSI_NULLS ON\nGO\n");
-                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\nGO\n");
-                    output.AppendFormat("SET ANSI_WARNINGS OFF\nGO\n");
-                    if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
-                    {
-                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\nGO\n");
-                    }
-                }
-                else if (table.Rows.Count == 0)
-                {
-                    //insert default value to solve invalid sql error.
-                    output.AppendFormat("SET ANSI_NULLS ON\nGO\n");
-                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\nGO\n");
-                    output.AppendFormat("SET ANSI_WARNINGS OFF\nGO\n");
-                    //if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
-                    //{
-                    //    output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\n GO\n");
-                    //}                  
-                    output.AppendFormat("--INSERT INTO {0}({1}) DEFAULT VALUES\n", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
-                    output.AppendFormat("-- EMPTY TABLE NOTHING TO INSERT");
-                }
-                else
-                {
-                    output.AppendFormat("SET ANSI_NULLS ON\nGO\n");
-                    output.AppendFormat("SET QUOTED_IDENTIFIER ON\nGO\n");
-                    output.AppendFormat("SET ANSI_WARNINGS OFF\nGO\n");
-                    if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
-                    {
-                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\nGO\n");
-                    }
-                    output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
-                }
-                          
-            }
-            else if (config.DataSource.Type == DataSourceType.MySqlServer)
-            {
-                if (table.Rows.Count == 0)
-                {
-                    output.AppendFormat("--INSERT INTO {0}({1}) DEFAULT VALUES\n ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
-                    output.AppendFormat("-- EMPTY TABLE NOTHING TO INSERT");
-                }
-                else
-                    output.AppendFormat("INSERT INTO {0}\n\t({1})\nVALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray()));
-            }
-            else
-            {
-                output.AppendFormat("INSERT INTO [{0}]\n\t({1})\nVALUES ", table.TableName, string.Join(", ", names.ToArray()));
-            }
-
-           
-
-            bool firstRow = true;
-            int i = 1;
-            foreach (DataRow rw in table.Rows)
-            {
-                
-
-                if (firstRow)
-                {
-                    firstRow = false;
-                    output.AppendLine("");
-                }
-                else
-                {
-                    // there was a previous item, so add a comma
                     if (config.DataSource.Type == DataSourceType.OracleServer)
                     {
-                        output.AppendLine(";");
-                    }
-                    else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
-                    {
-                        output.AppendLine(";");
-                    }
-                    else
-                        output.AppendLine(",");
 
-                }
+                        tw.Write(string.Format("REM INSERTING into {0}\n", $"{tableConfig.Schema}." + $"{tableConfig.Name}"));
+                        tw.Write("SET DEFINE OFF\n");
+                        tw.Write(Environment.NewLine);
+                        if (isBinary)
+                        {
+                            tw.Write(string.Format("CREATE or REPLACE DIRECTORY BINARYFILE as {0}", Bdir.AddSingleQuotes() + ";\n"));
+                            tw.Write("/\n");
+                            string[] lines = File.ReadAllLines(@"isBlob.sql");
 
-              
+                            foreach (string line in lines)
+                            {
+                                //Console.WriteLine(line);
+                                tw.Write(line + "\n");
+                            }
+                            tw.Write("/\n");
+                            //output.Append(Environment.NewLine);
+                            //output.Append("-- Run the IsBlob SQL script first to create LOAD_BLOB_FROM_FILE Function");
+                        }
+                    }
+                    else if (config.DataSource.Type == DataSourceType.PostgresServer)
+                    {
+                        if (table.Rows.Count == 0)
+                        {
+                            tw.Write(string.Format("--INSERT INTO " + "\"{0}\"" + "({1}) DEFAULT VALUES\n ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
+                            tw.Write("-- EMPTY TABLE NOTHING TO INSERT");
+                        }
+                        else
+                            tw.Write(string.Format("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
+                    }
+                    else if (config.DataSource.Type == DataSourceType.SqlServer)
+                    {
+                        if (table.Rows.Count > 1000)
+                        {
+                            tw.Write(string.Format("SET ANSI_NULLS ON\nGO\n"));
+                            tw.Write("SET QUOTED_IDENTIFIER ON\nGO\n");
+                            tw.Write("SET ANSI_WARNINGS OFF\nGO\n");
+                            if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
+                            {
+                                tw.Write(string.Format("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\nGO\n"));
+                            }
+                        }
+                        else if (table.Rows.Count == 0)
+                        {
+                            //insert default value to solve invalid sql error.
+                            tw.Write("SET ANSI_NULLS ON\nGO\n");
+                            tw.Write("SET QUOTED_IDENTIFIER ON\nGO\n");
+                            tw.Write("SET ANSI_WARNINGS OFF\nGO\n");
 
-                //oracle does not allow multi insert
-                if (config.DataSource.Type == DataSourceType.OracleServer)
-                {
-                  
-                    if (table.Rows.Count == 0)
-                    {
-                        output.AppendFormat("INSERT INTO {0} VALUES (DEFAULT)", $"{tableConfig.Schema}." + $"{tableConfig.Name}");
-                    }
-                    else
-                    {
-                        output.AppendFormat("INSERT INTO {0}({1}) VALUES ", $"{tableConfig.Schema}." + $"{tableConfig.Name}", string.Join(", ", names.ToArray()));
-                        output.Append("(");
-                        output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
+                            tw.Write(string.Format("--INSERT INTO {0}({1}) DEFAULT VALUES\n", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
+                            tw.Write("-- EMPTY TABLE NOTHING TO INSERT");
+                        }
+                        else
+                        {
+                            tw.Write("SET ANSI_NULLS ON\nGO\n");
+                            tw.Write("SET QUOTED_IDENTIFIER ON\nGO\n");
+                            tw.Write("SET ANSI_WARNINGS OFF\nGO\n");
+                            if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
+                            {
+                                tw.Write("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\nGO\n");
+                            }
+                            tw.Write(string.Format("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
+                        }
 
-                        output.Append(")");
                     }
-                }
-                else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
-                {
-                    output.AppendFormat("INSERT INTO {0}({1}) VALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray()));
-                    output.Append("(");
-                    output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
-                    output.Append(")");
-                }
-                else
-                {
-                    output.Append("\t(");
-                    output.Append(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
-
-                    output.Append(")");
-                }
-               
-                i = i + 1;
-                // var xuux = string.Join("", config.Tables.Select(n => n.Columns.ToArray().Select(x => x.Type + " ,").ToArray()));
-                if (i == table.Rows.Count + 1 && config.DataSource.Type == DataSourceType.SqlServer)
-                {
-                 
-                    var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
-                    //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
-                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ");
-                    if (table.Rows.Count > 1000)
+                    else if (config.DataSource.Type == DataSourceType.MySqlServer)
                     {
-                        output.Append(";");
-                    }
-                    output.Append(Environment.NewLine);
-                    output.Append(_commentOut);
-                    output.Append(Environment.NewLine);
-                    //check Identity column
-                    if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
-                    {
-                        output.AppendFormat("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\nGO\n");
-                    }
-                  
-                    output.AppendFormat("SET ANSI_WARNINGS ON\nGO\n");
-                }
-                else if( i == table.Rows.Count + 1)
-                {
-                    var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
-                        //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
-                    var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ");
-                   
-                   
-                    if (HasSpatial && config.DataSource.Type == DataSourceType.OracleServer)
-                    {
-                        //get spatial USER_SDO_GEOM_METADATA fro View
-                        output.Append(";");
-                        output.Append(Environment.NewLine);
-                        output.Append(_commentOut);
-                        IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
-                        var USER_SDO_GEOM_METADATA = dataSource.GetDataTable(tableConfig.Name, "MDSYS", config.DataSource.Config.connectionStringPrd.ToString());
-                        var GeoMeTaData = SpatialInsert(USER_SDO_GEOM_METADATA);
-                       
-                        output.Append(Environment.NewLine);
-                        output.Append(Environment.NewLine);
-                        output.Append(GeoMeTaData);
-                        //Create Insert Statement
+                        if (table.Rows.Count == 0)
+                        {
+                            tw.Write(string.Format("--INSERT INTO {0}({1}) DEFAULT VALUES\n ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray())));
+                            tw.Write(string.Format("-- EMPTY TABLE NOTHING TO INSERT"));
+                        }
+                        else
+                            tw.Write(string.Format("INSERT INTO {0}\n\t({1})\nVALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray())));
                     }
                     else
                     {
-                        output.Append(";");
-                        output.Append(Environment.NewLine);
-                        output.Append(_commentOut);
+                        tw.Write(string.Format("INSERT INTO [{0}]\n\t({1})\nVALUES ", table.TableName, string.Join(", ", names.ToArray())));
                     }
 
-                }
 
+
+                    bool firstRow = true;
+                    int i = 1;
+                    foreach (DataRow rw in table.Rows)
+                    {
+
+
+                        if (firstRow)
+                        {
+                            firstRow = false;
+                            tw.Write("");
+                        }
+                        else
+                        {
+                            // there was a previous item, so add a comma
+                            if (config.DataSource.Type == DataSourceType.OracleServer)
+                            {
+                                tw.Write(";");
+                                tw.Write("\n");
+                            }
+                            else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
+                            {
+                                tw.Write(";");
+                                tw.Write("\n");
+                            }
+                            else
+                            {
+                                tw.Write(",");
+                                //tw.Write("\n");
+                            }
+
+                        }
+
+
+
+                        //oracle does not allow multi insert
+                        if (config.DataSource.Type == DataSourceType.OracleServer)
+                        {
+
+                            if (table.Rows.Count == 0)
+                            {
+                                tw.Write(string.Format("INSERT INTO {0} VALUES (DEFAULT)", $"{tableConfig.Schema}." + $"{tableConfig.Name}"));
+                            }
+                            else
+                            {
+                                tw.Write(string.Format("INSERT INTO {0}({1}) VALUES ", $"{tableConfig.Schema}." + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
+                                tw.Write("(");
+                                tw.Write(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
+
+                                tw.Write(")");
+                            }
+                        }
+                        else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
+                        {
+                            tw.Write(string.Format("INSERT INTO {0}({1}) VALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
+                            tw.Write("(");
+                            tw.Write(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
+                            tw.Write(")");
+                        }
+                        else
+                        {
+                            tw.Write("\n(");
+                            tw.Write(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
+
+                            tw.Write(")");
+                        }
+
+                        i = i + 1;
+                        // var xuux = string.Join("", config.Tables.Select(n => n.Columns.ToArray().Select(x => x.Type + " ,").ToArray()));
+                        if (i == table.Rows.Count + 1 && config.DataSource.Type == DataSourceType.SqlServer)
+                        {
+
+                            var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
+                            //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
+                            var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ");
+                            if (table.Rows.Count > 1000)
+                            {
+                                tw.Write(";");
+                            }
+                            tw.Write(Environment.NewLine);
+                            tw.Write(_commentOut);
+                            tw.Write(Environment.NewLine);
+                            //check Identity column
+                            if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
+                            {
+                                tw.Write(string.Format("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\nGO\n"));
+                            }
+
+                            tw.Write(string.Format("SET ANSI_WARNINGS ON\nGO\n"));
+                        }
+                        else if (i == table.Rows.Count + 1)
+                        {
+                            var _allmaskType = string.Join("", tableConfig.Columns.Select(n => n.Type + " ,").ToArray());
+                            //string.Join("", config.Tables.Select(n => n.Columns.Select(x => x.Type + " ,")).ToArray()[0].ToArray());
+                            var _commentOut = _allmaskType.Remove(_allmaskType.Length - 1).Insert(0, "-- No Masking PK, ");
+
+
+                            if (HasSpatial && config.DataSource.Type == DataSourceType.OracleServer)
+                            {
+                                //get spatial USER_SDO_GEOM_METADATA fro View
+                                tw.Write(";");
+                                tw.Write(Environment.NewLine);
+                                tw.Write(_commentOut);
+                                IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
+                                var USER_SDO_GEOM_METADATA = dataSource.GetDataTable(tableConfig.Name, "MDSYS", config.DataSource.Config.connectionStringPrd.ToString());
+                                var GeoMeTaData = SpatialInsert(USER_SDO_GEOM_METADATA);
+
+                                tw.Write(Environment.NewLine);
+                                tw.Write(Environment.NewLine);
+                                tw.Write(GeoMeTaData);
+                                //Create Insert Statement
+                            }
+                            else
+                            {
+                                tw.Write(";");
+                                tw.Write(Environment.NewLine);
+                                tw.Write(_commentOut);
+                            }
+
+                        }
+
+                    }
+
+
+                    //tw.WriteLine(output.ToString());
+                    tw.Close();
+                }
             }
-            
-            using (var tw = new StreamWriter(writePath, false))
+            catch (Exception ex)
             {
-                tw.WriteLine(output.ToString());
-                tw.Close();
-                if (printDML)
-                {
-                    Console.WriteLine("{0}{1}", table.TableName + "DML" + Environment.NewLine, output.ToString());
-                }
+                Console.WriteLine("Error generating SQL insert DML for {0}: {1}", table.TableName, ex.Message);
+                output.AppendFormat("Error generating SQL DML: {0}", ex.Message);
             }
+            //if (printDML)
+            //{
+            //    Console.WriteLine("{0}{1}", table.TableName + "DML" + Environment.NewLine, output.ToString());
+            //}
+            
 
             return output.ToString();
         }
@@ -573,7 +583,7 @@ namespace DataMasker.DataLang
                             if (column.DataType == typeof(DateTime))
                             {
                                 var data = DateTime.Parse(row[column.ColumnName].ToString());
-                                output = "To_DATE(" + "'" + data.ToString() + "," + "'YYYY-MM-DD HH:MI:SS'";
+                                output = "To_DATE(" + "'" + data.ToString() + "'," + "'YYYY-MM-DD HH:MI:SS')";
                             }
                             else if(CheckDate(row[column.ColumnName].ToString()))
                             {
@@ -670,7 +680,7 @@ namespace DataMasker.DataLang
                                 break;
                             case DataSourceType.SqlServer:
                                 fileName = PrdTable[rowIndex];
-                                var j = bdir + "\\" + fileName;
+                                var j = Bdir + "\\" + fileName;
                                 output = string.Format("(SELECT * FROM OPENROWSET(BULK N{0}, SINGLE_BLOB) as T1)", j.AddSingleQuotes());
                                 break;
                             case DataSourceType.OracleServer:

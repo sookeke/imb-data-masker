@@ -806,6 +806,7 @@ namespace DataMasker
                 case DataType.FirstName:
                 case DataType.LastName:
                 case DataType.Rant:
+                case DataType.Vehicle:
                 case DataType.Lorem:
                 case DataType.StringFormat:
                 case DataType.Company:

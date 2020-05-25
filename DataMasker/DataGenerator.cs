@@ -370,6 +370,24 @@ namespace DataMasker
                     return file.Remove(file.Length - 1);
                 case DataType.SecondaryAddress:
                     return _faker.Address.SecondaryAddress();
+                case DataType.Vehicle:
+                    switch (columnConfig.StringFormatPattern)
+                    {
+                        case nameof(Vehicles.Manufacturer):
+                            return _faker.Vehicle.Manufacturer();
+                        case nameof(Vehicles.Model):
+                            return _faker.Vehicle.Model();
+                        case nameof(Vehicles.Type):
+                            return _faker.Vehicle.Type();
+                        case nameof(Vehicles.Vin):
+                            return _faker.Vehicle.Vin();
+                        case nameof(Vehicles.Fuel):
+                            return _faker.Vehicle.Fuel();
+                        default:
+                            break;
+                    }
+
+                    throw new ArgumentOutOfRangeException(nameof(columnConfig.StringFormatPattern),columnConfig.StringFormatPattern,"Invalid Vehicle String Format value: " + columnConfig.StringFormatPattern.AddDoubleQuotes()); ;
                 case DataType.State:
                     //rnd = new Random();
                     var state = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Name;
@@ -548,6 +566,7 @@ namespace DataMasker
                 case DataType.Lorem:
                 case DataType.StringFormat:
                 case DataType.Company:
+                case DataType.Vehicle:
                 case DataType.FullName:
                 case DataType.CompanyPersonName:
                 case DataType.PostalCode:
@@ -1010,6 +1029,14 @@ namespace DataMasker
             Min = 0,
 
             Max = 1
+        }
+        private enum Vehicles
+        {
+            Manufacturer,
+            Model,
+            Type,
+            Vin,
+            Fuel
         }
         public static int ToInt32(object value)
         {
