@@ -296,7 +296,26 @@ namespace DataMasker
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException">Type - null</exception>
         /// 
+        public static T ToEnum<T>(string value, T defaultValue) where T : struct
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return defaultValue;
+            }
 
+            try
+            {
+                if (!Enum.TryParse(value, true, out T enumValue))
+                {
+                    return defaultValue;
+                }
+                return enumValue;
+            }
+            catch (Exception)
+            {
+                return defaultValue;
+            }
+        }
         private object GetValue(
             ColumnConfig columnConfig,
             Name.Gender? gender = null)
@@ -371,17 +390,17 @@ namespace DataMasker
                 case DataType.SecondaryAddress:
                     return _faker.Address.SecondaryAddress();
                 case DataType.Vehicle:
-                    switch (columnConfig.StringFormatPattern)
+                    switch (ToEnum(columnConfig.StringFormatPattern, Vehicles.None))
                     {
-                        case nameof(Vehicles.Manufacturer):
+                        case Vehicles.Manufacturer:
                             return _faker.Vehicle.Manufacturer();
-                        case nameof(Vehicles.Model):
+                        case Vehicles.Model:
                             return _faker.Vehicle.Model();
-                        case nameof(Vehicles.Type):
+                        case Vehicles.Type:
                             return _faker.Vehicle.Type();
-                        case nameof(Vehicles.Vin):
+                        case Vehicles.Vin:
                             return _faker.Vehicle.Vin();
-                        case nameof(Vehicles.Fuel):
+                        case Vehicles.Fuel:
                             return _faker.Vehicle.Fuel();
                         default:
                             break;
@@ -758,7 +777,7 @@ namespace DataMasker
 
         }
         public object GetBlobValue(ColumnConfig columnConfig, IDataSource dataSource, object existingValue,
-            string filename, string fileExtension, string blobLocation, Name.Gender? gender = null)
+            string filename, FileTypes fileExtension, string blobLocation, Name.Gender? gender = null)
         {
             if (columnConfig.RetainNullValues &&
                existingValue == null)
@@ -770,9 +789,9 @@ namespace DataMasker
             {
                 case DataType.Blob:
                     IFileType fileType = new FileType();
-                    switch (fileExtension.ToUpper())
+                    switch (fileExtension)
                     {
-                        case nameof(FileTypes.PDF):
+                        case FileTypes.PDF:
                             //generate pdf
                             //@"output\" + confi + @"\BinaryFiles\" + tableConfig.Name
                             fileName = fileType.GeneratePDF("\\"+blobLocation + fileName, "").ToString();
@@ -789,7 +808,7 @@ namespace DataMasker
                             //delete the file from location
                            // File.Delete(fileName);
                             return byteArray;
-                        case nameof(FileTypes.TXT):
+                        case FileTypes.TXT:
                             fileName = fileType.GenerateTXT(Environment.CurrentDirectory + "\\" +  blobLocation + fileName, "").ToString();
                             byteArray = null;
 
@@ -804,7 +823,7 @@ namespace DataMasker
                            // File.Delete(fileName);
                             return byteArray;
 
-                        case nameof(FileTypes.DOCX):
+                        case FileTypes.DOCX:
                             fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
@@ -819,7 +838,7 @@ namespace DataMasker
                             //File.Delete(fileName);
                             return byteArray;
                         // return fileType.GenerateDOCX(@"\", "");
-                        case nameof(FileTypes.DOC):
+                        case FileTypes.DOC:
                             fileName = fileType.GenerateDOCX(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
@@ -833,7 +852,7 @@ namespace DataMasker
                             }
                             //File.Delete(fileName);
                             return byteArray;
-                        case nameof(FileTypes.RTF):
+                        case FileTypes.RTF:
                             fileName = fileType.GenerateRTF(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
@@ -848,7 +867,7 @@ namespace DataMasker
                             //File.Delete(fileName);
                             return byteArray;
                         //return fileType.GenerateRTF(@"\", "");
-                        case nameof(FileTypes.JPG):
+                        case FileTypes.JPG:
                             var fileUrl = _faker.Image.PicsumUrl();
                             string someUrl = fileUrl;
                             //check if URL is valid
@@ -880,7 +899,7 @@ namespace DataMasker
                                // File.Delete(fileName);
                                 return byteArray;
                             }
-                        case nameof(FileTypes.PNG):
+                        case FileTypes.PNG:
                             fileUrl = _faker.Image.PicsumUrl();
                             someUrl = fileUrl;
                             //check if URL is valid
@@ -912,7 +931,7 @@ namespace DataMasker
                                 // File.Delete(fileName);
                                 return byteArray;
                             }
-                        case nameof(FileTypes.MSG):
+                        case FileTypes.MSG:
                             //generate pdf
                             fileName = fileType.GenerateMSG("\\" +  blobLocation + fileName, "").ToString();
                             byteArray = null;
@@ -928,7 +947,7 @@ namespace DataMasker
                             //File.Delete(fileName);
                             return byteArray;
                         //return fileType.GenerateMSG(@"\", "");
-                        case nameof(FileTypes.HTM):
+                        case FileTypes.HTM:
                             fileName = fileType.GenerateHTML(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
@@ -943,7 +962,7 @@ namespace DataMasker
                             //File.Delete(fileName);
                             return byteArray;
                         // return fileType.GenerateHTML(@"\" "");
-                        case nameof(FileTypes.TIF):
+                        case FileTypes.TIF:
                             fileName = fileType.GenerateTIF(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
@@ -957,7 +976,7 @@ namespace DataMasker
                             }
                             //File.Delete(fileName);
                             return byteArray;
-                        case nameof(FileTypes.HTML):
+                        case FileTypes.HTML:
                             fileName = fileType.GenerateHTML(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
@@ -971,7 +990,7 @@ namespace DataMasker
                             }
                             //File.Delete(fileName);
                             return byteArray;
-                        case nameof(FileTypes.TIFF):
+                        case FileTypes.TIFF:
                             fileName = fileType.GenerateTIF(Environment.CurrentDirectory + "\\" + blobLocation + fileName, "").ToString();
                             byteArray = null;
 
@@ -985,7 +1004,7 @@ namespace DataMasker
                             }
                             //File.Delete(fileName);
                             return byteArray;
-                        case nameof(FileTypes.XLSX):
+                        case FileTypes.XLSX:
                             fileName = fileType.GenerateXLSX(Environment.CurrentDirectory + "\\" + blobLocation + fileName, columnConfig.Name).ToString();
                             byteArray = null;
 
@@ -1019,7 +1038,7 @@ namespace DataMasker
                             }
                     }
                 case DataType.Filename:
-                       return _faker.System.FileName(fileExtension);
+                       return _faker.System.FileName(nameof(fileExtension));
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, "not implemented");
         }
@@ -1036,7 +1055,8 @@ namespace DataMasker
             Model,
             Type,
             Vin,
-            Fuel
+            Fuel,
+            None
         }
         public static int ToInt32(object value)
         {
@@ -1067,22 +1087,23 @@ namespace DataMasker
                 return 0.00m;
             }
         }
-        private enum FileTypes{
-            PDF,
-            XLSX,
-            DOC,
-            DOCX,
-            TIFF,
-            TIF,
-            HTML,
-            HTM,
-            JPG,
-            JPEG,
-            TXT,
-            MSG,
-            RTF,
-            PNG
-        }
+        //private enum FileTypes{
+        //    PDF,
+        //    XLSX,
+        //    DOC,
+        //    DOCX,
+        //    TIFF,
+        //    TIF,
+        //    HTML,
+        //    HTM,
+        //    JPG,
+        //    JPEG,
+        //    TXT,
+        //    MSG,
+        //    RTF,
+        //    PNG,
+        //    None
+        //}
 
         public bool IsValidUri(Uri uri)
         {
@@ -1130,33 +1151,33 @@ namespace DataMasker
             switch (columnConfig.Type)
             {
                 case DataType.math:
-                    switch (operation)
+                    switch (ToEnum(operation, Operation.None))
                     {
-                        case nameof(Operation.addition):
+                        case Operation.addition:
                             return source.Sum(n=>Convert.ToDouble(n));
-                        case nameof(Operation.substraction):
+                        case Operation.substraction:
                             for (int i = 0; i < columnConfig.StringFormatPattern.Split(',').Count(); i++)
                             {
                                 _value -= Convert.ToDouble(source[i]);
                             }
                             return _value;
-                        case nameof(Operation.percentage):
+                        case Operation.percentage:
                             _value = factor / 100 * (Convert.ToDouble(source[0]));
                             return _value;
-                        case nameof(Operation.randomPercentage):
+                        case Operation.randomPercentage:
                             Random random = new Random();
                             _value = (double)random.Next(factor,100) / 100 * (Convert.ToDouble(source[0]));
                             return _value;
-                        case nameof(Operation.avarage):
+                        case Operation.avarage:
                             return source.Sum(n=>Convert.ToDouble(n))/source.Count();
-                        case nameof(Operation.division):
+                        case Operation.division:
                             var k =  Convert.ToDouble(source.FirstOrDefault()) / factor;
                             return k;
                         default:
                             break;
                     }
-                    
-                    return null;
+                    throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, "Invalid Math Operation");
+                    //return null;
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
@@ -1170,18 +1191,18 @@ namespace DataMasker
             {
                 return null;
             }
-            switch (columnConfig.UseGenderColumn)
+            switch (ToEnum(columnConfig.UseGenderColumn, CountryLoad.None))
             {
-                case nameof(CountryLoad.Canada):
+                case CountryLoad.Canada:
                     loader = CountryLoader.LoadCanadaLocationData();
                     break;         
-                case nameof(CountryLoad.UnitedStates):
+                case CountryLoad.UnitedStates:
                     loader = CountryLoader.LoadUnitedStatesLocationData();
                     break;
-                case nameof(CountryLoad.Australia):
+                case CountryLoad.Australia:
                     loader = CountryLoader.LoadAustraliaLocationData();
                     break;
-                case nameof(CountryLoad.France):
+                case CountryLoad.France:
                     loader = CountryLoader.LoadFranceLocationData();
                     break;
                 default:
@@ -1232,7 +1253,8 @@ namespace DataMasker
             multiplication,
             division,
             percentage,
-            randomPercentage
+            randomPercentage,
+            None
         }
         public enum CountryLoad
         {
@@ -1240,7 +1262,8 @@ namespace DataMasker
             UnitedStates,
             UnitedKingdom,
             Australia,
-            France
+            France,
+            None
         }
     }
     public static class RandomExtensions

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Threading.Tasks;
 using DataMasker.Models;
 
 namespace DataMasker.Interfaces
@@ -16,6 +17,8 @@ namespace DataMasker.Interfaces
         /// <param name="tableConfig">The table configuration.</param>
         /// <returns></returns>
         IEnumerable<IDictionary<string, object>> GetData(
+            TableConfig tableConfig, Config config, int rowCount, int? fetch = null, int? offset = null);
+        Task<IEnumerable<IDictionary<string, object>>> GetAsyncData(
             TableConfig tableConfig, Config config);
         IEnumerable<IDictionary<string, object>> RawData(
            IEnumerable<IDictionary<string, object>> PrdData);

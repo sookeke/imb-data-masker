@@ -288,8 +288,8 @@
     <Reference Include="UdtProtocol, Version=0.9.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\UDT.Net.x64.0.9.0\lib\net40\UdtProtocol.dll</HintPath>
     </Reference>
-    <Reference Include="WaffleGenerator, Version=4.0.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\WaffleGenerator.4.0.2\lib\netstandard2.0\WaffleGenerator.dll</HintPath>
+    <Reference Include="WaffleGenerator, Version=1.0.0.0, Culture=neutral, PublicKeyToken=ef9e5a364f5893c5, processorArchitecture=MSIL">
+      <HintPath>..\packages\WaffleGenerator.4.1.1\lib\netstandard2.0\WaffleGenerator.dll</HintPath>
     </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="Z.Dapper.Plus, Version=2.0.2.0, Culture=neutral, PublicKeyToken=59b66d028979105b, processorArchitecture=MSIL">
@@ -307,6 +307,7 @@
     <Compile Include="DataSources\SpreadSheet.cs" />
     <Compile Include="DataLang\CreateDDL.cs" />
     <Compile Include="FileType.cs" />
+    <Compile Include="FileTypes.cs" />
     <Compile Include="GeographyMapper.cs" />
     <Compile Include="Interfaces\IFileType.cs" />
     <Compile Include="MaskingValidation\MaskValidationCheck.cs" />

@@ -103,7 +103,8 @@
         Scramble,
         MaskingOut,
 
-        RandomHexa
+        RandomHexa,
+        Error
     }
     public static class DataTypeextension
     {

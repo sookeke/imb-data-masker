@@ -6,7 +6,6 @@ using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using Dapper;
@@ -64,7 +63,7 @@ namespace DataMasker.DataSources
         /// <returns></returns>
         /// <inheritdoc/>
         public IEnumerable<IDictionary<string, object>> GetData(
-            TableConfig tableConfig, Config config)
+            TableConfig tableConfig, Config config, int rowCount, int? fetch = null, int? offset = null)
         {
             using (MySqlConnection connection = new MySqlConnection(_connectionString))
             {
@@ -587,6 +586,11 @@ namespace DataMasker.DataSources
                 }
             }
             return dataTable;
+        }
+
+        public Task<IEnumerable<IDictionary<string, object>>> GetAsyncData(TableConfig tableConfig, Config config)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading.Tasks;
 using DataMasker.Interfaces;
 using DataMasker.Models;
 
@@ -63,7 +63,7 @@ namespace DataMasker.DataSources
 
         /// <inheritdoc/>
         public IEnumerable<IDictionary<string, object>> GetData(
-            TableConfig tableConfig, Config config)
+            TableConfig tableConfig, Config config, int rowCount, int? fetch = null, int? offset = null)
         {
             return tableData[tableConfig.Name];
         }
@@ -208,6 +208,11 @@ namespace DataMasker.DataSources
         }
 
         public DataTable GetDataTable(string table, string schema, string connection)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<IDictionary<string, object>>> GetAsyncData(TableConfig tableConfig, Config config)
         {
             throw new NotImplementedException();
         }

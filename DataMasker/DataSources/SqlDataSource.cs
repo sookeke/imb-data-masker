@@ -13,6 +13,8 @@ using KellermanSoftware.CompareNetObjects;
 using System.Security;
 using Bogus;
 using System.Globalization;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace DataMasker.DataSources
 {
@@ -71,26 +73,25 @@ namespace DataMasker.DataSources
         /// <returns></returns>
         /// <inheritdoc/>
         public IEnumerable<IDictionary<string, object>> GetData(
-            TableConfig tableConfig, Config config)
+            TableConfig tableConfig, Config config, int rowCount, int? fetch = null, int? offset = null)
         {
             //SqlCredential credentials = new SqlCredential(UserName, ReadPassword());
             using (SqlConnection connection = new SqlConnection(_connectionStringPrd))
             {
+                Stopwatch watch = new Stopwatch();
+                watch.Start();
                 connection.Open();
                 rawData = new List<IDictionary<string, object>>();
-
-
                 var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig, config), buffered: true, commandTimeout: 0);
-                //rawData.AddRange(_prdData.Select(n => n.ToDictionary(x => x.Key, x => x.Value).Select(x => x) as IDictionary<string, object>));
-
                 foreach (IDictionary<string, object> prd in _prdData)
                 {
-
                     rawData.Add(new Dictionary<string, object>(prd));
                 }
-                //rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
-
-
+                watch.Stop();
+                TimeSpan timeSpan = watch.Elapsed;
+                var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
+                Console.WriteLine(timeElapse);
+                Console.ReadLine();
                 return _prdData;
             }
         }
@@ -570,34 +571,21 @@ namespace DataMasker.DataSources
         public IEnumerable<IDictionary<string, object>> RawData(IEnumerable<IDictionary<string, object>> PrdData)
         {
             if (!(File.Exists(_successfulCommit) && File.Exists(_exceptionpath)))
-            {
-            
-                
-                //write to the file
+            {               
                 File.Create(_successfulCommit).Close();
-
-                //write to the file
                 File.Create(_exceptionpath).Close();
-
-
-
             }
-            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_exceptionpath))
+            using (StreamWriter sw = File.AppendText(_exceptionpath))
             {
                 if (new FileInfo(_exceptionpath).Length == 0)
                 {
                     sw.WriteLine("Exceptions for " + ConfigurationManager.AppSettings["DatabaseName"] + " Database.........." + Environment.NewLine + Environment.NewLine);
-                    //  File.WriteAllText(_exceptionpath, "exceptions for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
                 }
-                // sw.WriteLine(""); 
             }
-            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_successfulCommit))
+            using (StreamWriter sw = File.AppendText(_successfulCommit))
             {
-                //write my text 
                 if (new FileInfo(_successfulCommit).Length == 0)
                 {
-                    // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
-
                     sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["DatabaseName"] + " database.........." + Environment.NewLine + Environment.NewLine);
                 }
             }
@@ -648,6 +636,10 @@ namespace DataMasker.DataSources
                 }
                 return dataTable;
             }
+        }
+        public Task<IEnumerable<IDictionary<string, object>>> GetAsyncData(TableConfig tableConfig, Config config)
+        {
+            throw new NotImplementedException();
         }
     }
 }

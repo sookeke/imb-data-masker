@@ -2,8 +2,6 @@
 using DataMasker.Models;
 using Dapper;
 using Oracle.DataAccess.Client;
-//using Oracle.ManagedDataAccess.Client;
-//using Oracle.ManagedDataAccess.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,11 +9,12 @@ using DataMasker.Utils;
 using System.Data;
 using System.IO;
 using System.Configuration;
-//using ChoETL;
 using DataMasker.DataLang;
 using KellermanSoftware.CompareNetObjects;
 using System.Globalization;
 using Bogus;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace DataMasker.DataSources
 {
@@ -57,54 +56,40 @@ namespace DataMasker.DataSources
             }
 
         }
-        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config)
-        {
-            //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
-            using (var connection = new OracleConnection(_connectionStringPrd))
+        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config, int rowCount, int? fetch = null, int? offset = null)
+        {           
+            using (OracleConnection connection = new OracleConnection(_connectionStringPrd))
             {
+                Stopwatch watch = new Stopwatch();
+                watch.Start();
                 connection.Open();
                 string query = "";
                 IDictionary<string, object> idict = new Dictionary<string, object>();
-                IEnumerable<IDictionary<string, object>> row = new List<IDictionary<string, object>>();
+                IEnumerable<IDictionary<string, object>> row = null;
                 List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
                 rawData = new List<IDictionary<string, object>>();
-                var rowCount = GetCount(tableConfig);
+                //var rowCount = GetCount(tableConfig);
 
 
 
-                if (rowCount != 0 && rowCount > 50000 && tableConfig.Columns.Where(n => n.Type == DataType.Blob).Count() > 0)
+                if (rowCount != 0 && rowCount > 50000)
                 {
-                    query = BuildSelectSql(tableConfig, config);
+                    query = BuildSelectSql(tableConfig, config, rowCount,null,null);
                     using (OracleCommand cmd = new OracleCommand(query, connection))
                     {
                         cmd.InitialLOBFetchSize = 1;
-
-
                         using (OracleDataReader reader = cmd.ExecuteReader())
                         {
                             reader.FetchSize = cmd.RowSize * 1000;
+                            cmd.FetchSize = 100000;
                             var start_time = DateTime.Now;
                             if (reader.HasRows)
                             {
-
-
                                 while (reader.Read())
                                 {
-
-
-
                                     var o = Enumerable.Range(0, reader.FieldCount).ToDictionary(reader.GetName, reader.GetValue);
-
-
-
-
                                     rows.Add(o);
-
-
                                     rawData.Add(new Dictionary<string, object>(o));
-                                    //Console.WriteLine(it);
-                                    // }
-
                                 }
 
                                 row = rows;
@@ -112,24 +97,37 @@ namespace DataMasker.DataSources
                                 GC.WaitForPendingFinalizers();
                             }
                         }
+                        cmd.Connection = null;
+                        OracleConnection.ClearAllPools();
+                        connection.Dispose();
                     }
+                    watch.Stop();
+                    TimeSpan timeSpan = watch.Elapsed;
+                    var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
+                    Console.WriteLine(timeElapse);
+                    Console.ReadLine();
                     return row;
                 }
                 else
                 {
-                    query = BuildSelectSql(tableConfig, config);
-                    //var retu = connection.Query(BuildSelectSql(tableConfig));
+                    query = BuildSelectSql(tableConfig, config, rowCount,offset,fetch);
                     rawData = new List<IDictionary<string, object>>();
                     var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(query, buffered: true);
                     foreach (IDictionary<string, object> prd in _prdData)
                     {
-
                         rawData.Add(new Dictionary<string, object>(prd));
                     }
                     //rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
+                    watch.Stop();
+                    TimeSpan timeSpan = watch.Elapsed;
+                    var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
+                    Console.WriteLine(timeElapse);
+                    connection.Close();
+                    //connection.();
+                    //connection.Dispose();
                     return _prdData;
                 }
-
+                //connection.Close();
 
             }
         }
@@ -279,13 +277,17 @@ namespace DataMasker.DataSources
             return sql;
         }
         private string BuildSelectSql(
-           TableConfig tableConfig, Config config)
+           TableConfig tableConfig, Config config, int rowCount, int? offset = null, int? fetch = null)
         {
             //var clumns = tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn)
             string sql = "";
             if (int.TryParse(tableConfig.RowCount, out int n))
             {
                 sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name} WHERE rownum <=" + n;
+            }
+            else if (rowCount > 100000 && offset != null && fetch != null)
+            {
+                sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name} ORDER BY {tableConfig.PrimaryKeyColumn} OFFSET {offset} ROWS FETCH NEXT {fetch} ROWS ONLY";
             }
             else
                 sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name}";
@@ -515,43 +517,55 @@ namespace DataMasker.DataSources
                 for (int i = 0; i < length; i++)
                     addedRows[i] = table.Rows.IndexOf(table.Rows.Add());
 
-                foreach (DataColumn col in table.Columns)
+                try
                 {
-                    if (!allEntries.TryGetValue(col.ColumnName, out object[] columnRows))
-                        continue;
 
-                    for (int i = 0; i < addedRows.Length; i++)
+
+                    foreach (DataColumn col in table.Columns)
                     {
-                        if (columnRows[i] is SdoGeometry)
+                        if (!allEntries.TryGetValue(col.ColumnName, out object[] columnRows))
+                            continue;
+
+                        for (int i = 0; i < addedRows.Length; i++)
                         {
-                            table.Rows[addedRows[i]][col] = (SdoGeometry)columnRows[i];
-                        }
-                        else if (columnRows[i] is byte[])
-                        {
-                            table.Rows[addedRows[i]][col] = (byte[])columnRows[i];
-                        }
-                       else if (col.DataType == typeof(DateTime))
-                        {
-                            if (columnRows[i] is string && string.IsNullOrWhiteSpace(columnRows[i].ToString()))
+                            if (columnRows[i] is SdoGeometry)
                             {
-                                
-                                columnRows[i] = RemoveWhitespace(columnRows[i].ToString());
-                                //columnRows[i] = DateTime.Parse(columnRows[i].ToString());
-                                //Clear nullspace date record;
-                                columnRows[i] = DateTime.TryParse(columnRows[i].ToString(), out DateTime temp) ? temp : faker.Date.Between(DEFAULT_MIN_DATE,  DEFAULT_MAX_DATE);
+                                table.Rows[addedRows[i]][col] = (SdoGeometry)columnRows[i];
+                            }
+                            else if (columnRows[i] is byte[])
+                            {
+                                table.Rows[addedRows[i]][col] = (byte[])columnRows[i];
+                            }
+                            else if (col.DataType == typeof(DateTime))
+                            {
+                                if (columnRows[i] is string && string.IsNullOrWhiteSpace(columnRows[i].ToString()))
+                                {
+
+                                    columnRows[i] = RemoveWhitespace(columnRows[i].ToString());
+                                    columnRows[i] = DateTime.TryParse(columnRows[i].ToString(), out DateTime temp) ? temp : faker.Date.Between(DEFAULT_MIN_DATE, DEFAULT_MAX_DATE);
+
+                                    table.Rows[addedRows[i]][col] = columnRows[i];
+                                }
+                               else if (columnRows[i] is null)
+                                {
+                                    table.Rows[addedRows[i]][col] = DBNull.Value;
+                                }
+                                else
+                                    table.Rows[addedRows[i]][col] = DateTime.TryParseExact(columnRows[i].ToString(), formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime temp) ? temp : DateTime.Now;
+
+                            }
+                            else
+                            {
 
                                 table.Rows[addedRows[i]][col] = columnRows[i];
                             }
-                            else
-                                 table.Rows[addedRows[i]][col] = DateTime.TryParseExact(columnRows[i].ToString(), formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime temp) ? temp : DateTime.Now;
-
-                        }
-                        else
-                        {
-                          
-                            table.Rows[addedRows[i]][col] = columnRows[i];
                         }
                     }
+                }
+                catch (Exception ex )
+                {
+
+                    Console.WriteLine(ex.ToString());
                 }
             }
 
@@ -716,6 +730,18 @@ namespace DataMasker.DataSources
                 }
             }
             return dataTable;
+        }
+
+        public async Task<IEnumerable<IDictionary<string, object>>> GetAsyncData(TableConfig tableConfig, Config config)
+        {
+            using (var connection = new OracleConnection(_connectionStringPrd))
+            {
+                await connection.OpenAsync();
+                var query = BuildSelectSql(tableConfig, config,0,null,null);
+                rawData = new List<IDictionary<string, object>>();
+                var result = await connection.QueryAsync<IDictionary<string, object>>(query,commandTimeout:0);
+                return result;
+            }
         }
     }
 }

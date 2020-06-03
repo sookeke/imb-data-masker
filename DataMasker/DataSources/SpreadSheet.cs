@@ -284,7 +284,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config)
+        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config, int rowCount, int? fetch = null, int? offset = null)
         {
             throw new NotImplementedException();
         }
@@ -540,6 +540,11 @@ namespace DataMasker.DataSources
         }
 
         public DataTable GetDataTable(string table, string schema, string connection)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<IDictionary<string, object>>> GetAsyncData(TableConfig tableConfig, Config config)
         {
             throw new NotImplementedException();
         }

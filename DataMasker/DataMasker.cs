@@ -296,7 +296,7 @@ namespace DataMasker
             return isNum;
         }
         public IDictionary<string, object> MaskBLOB(IDictionary<string, object> obj,
-            TableConfig tableConfig, IDataSource dataSource, IEnumerable<IDictionary<string, object>> data, string filename, string fileExtension, string blobLocation)
+            TableConfig tableConfig, IDataSource dataSource, IEnumerable<IDictionary<string, object>> data, string filename, FileTypes fileExtension, string blobLocation)
         {
             var addr = new DataTable();
             _location.Rows.Clear();

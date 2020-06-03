@@ -10,6 +10,7 @@ using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DataMasker.DataSources
 {
@@ -48,7 +49,7 @@ namespace DataMasker.DataSources
                 _connectionStringPrd = sourceConfig.Config.connectionStringPrd;
             }
         }
-        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config)
+        public IEnumerable<IDictionary<string, object>> GetData(TableConfig tableConfig, Config config, int rowCount, int? fetch = null, int? offset = null)
         {
             //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
 
@@ -61,7 +62,7 @@ namespace DataMasker.DataSources
                 IEnumerable<IDictionary<string, object>> row = new List<IDictionary<string, object>>();
                 List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
                 rawData = new List<IDictionary<string, object>>();
-                var rowCount = GetCount(tableConfig);
+                //var rowCount = GetCount(tableConfig);
                 query = BuildSelectSql(tableConfig, config);
                 //var retu = connection.Query(BuildSelectSql(tableConfig));
                 rawData = new List<IDictionary<string, object>>();
@@ -570,6 +571,11 @@ namespace DataMasker.DataSources
                 }
             }
             return dataTable;
+        }
+
+        public Task<IEnumerable<IDictionary<string, object>>> GetAsyncData(TableConfig tableConfig, Config config)
+        {
+            throw new NotImplementedException();
         }
     }
 }
