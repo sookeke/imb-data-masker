@@ -63,7 +63,7 @@ namespace DataMasker.Models
                             tw.Close();
                         }
                         var oo = JsonObject(o);
-                        Console.WriteLine("{0}{1}", "converted output: ".ToUpper() + Environment.NewLine,o);
+                        //Console.WriteLine("{0}{1}", "converted output: ".ToUpper() + Environment.NewLine,o);
                     }
                   
                 }

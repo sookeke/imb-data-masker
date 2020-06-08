@@ -78,20 +78,33 @@ namespace DataMasker.DataSources
             //SqlCredential credentials = new SqlCredential(UserName, ReadPassword());
             using (SqlConnection connection = new SqlConnection(_connectionStringPrd))
             {
-                Stopwatch watch = new Stopwatch();
-                watch.Start();
-                connection.Open();
+                //Stopwatch watch = new Stopwatch();
+                //watch.Start();
+                try
+                {
+                    connection.Open();
+                    //Console.WriteLine("Database Connection established");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception occurs {0}", e.Message);
+                    Console.WriteLine("Program will exit: Press ENTER to exist..");
+                    Console.ReadLine();
+
+                    File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
+                    System.Environment.Exit(1);
+                }
                 rawData = new List<IDictionary<string, object>>();
                 var _prdData = (IEnumerable<IDictionary<string, object>>)connection.Query(BuildSelectSql(tableConfig, config), buffered: true, commandTimeout: 0);
                 foreach (IDictionary<string, object> prd in _prdData)
                 {
                     rawData.Add(new Dictionary<string, object>(prd));
                 }
-                watch.Stop();
-                TimeSpan timeSpan = watch.Elapsed;
-                var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
-                Console.WriteLine(timeElapse);
-                Console.ReadLine();
+                //watch.Stop();
+                //TimeSpan timeSpan = watch.Elapsed;
+                //var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
+                //Console.WriteLine(timeElapse);
+             
                 return _prdData;
             }
         }
@@ -596,7 +609,21 @@ namespace DataMasker.DataSources
         {
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
+                try
+                {
+                    connection.Open();
+                    //Console.WriteLine("Database Connection established");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception occurs {0}", e.Message);
+                    Console.WriteLine("Program will exit: Press ENTER to exist..");
+                    Console.ReadLine();
+
+                    File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
+                    System.Environment.Exit(1);
+                }
+
                 var count = connection.ExecuteScalar(BuildCountSql(config));
                 return Convert.ToInt32(count);
             }

@@ -56,7 +56,20 @@ namespace DataMasker.DataSources
             using (var connection = new NpgsqlConnection(_connectionStringPrd))
             {
 
-                connection.Open();
+                try
+                {
+                    connection.Open();
+                    //Console.WriteLine("Database Connection established");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception occurs {0}", e.Message);
+                    Console.WriteLine("Program will exit: Press ENTER to exist..");
+                    Console.ReadLine();
+
+                    File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
+                    System.Environment.Exit(1);
+                }
                 string query = "";
                 IDictionary<string, object> idict = new Dictionary<string, object>();
                 IEnumerable<IDictionary<string, object>> row = new List<IDictionary<string, object>>();
@@ -533,8 +546,20 @@ namespace DataMasker.DataSources
         {
             using (NpgsqlConnection connection = new NpgsqlConnection(_connectionStringPrd))
             {
-                connection.Open();
-                //var tb = BuildCountSql(config);
+                try
+                {
+                    connection.Open();
+                    //Console.WriteLine("Database Connection established");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception occurs {0}", e.Message);
+                    Console.WriteLine("Program will exit: Press ENTER to exist..");
+                    Console.ReadLine();
+
+                    File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
+                    System.Environment.Exit(1);
+                }
                 var count = connection.ExecuteScalar(BuildCountSql(config));
                 return Convert.ToInt32(count);
             }

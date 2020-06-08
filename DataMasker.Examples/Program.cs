@@ -38,7 +38,7 @@ using ChoETL;
 
 namespace DataMasker.Examples
 {
-    internal class Program
+    public class Program
     {
         #region system declarations
         #region read-only and const app config
@@ -261,7 +261,7 @@ namespace DataMasker.Examples
             }
             Run();
         }
-        private static void JsonConfig(string json, string excelspreadsheet)
+        public static void JsonConfig(string json, string excelspreadsheet)
         {
             #region Initialize system variables
 
@@ -1450,96 +1450,7 @@ namespace DataMasker.Examples
             #endregion
 
         }
-        public class RootObject
-        {
-            [DefaultValue("")]
-            [JsonProperty("TABLE_NAME", DefaultValueHandling = DefaultValueHandling.Populate)]
-
-            public string TableName { get; set; }
-            [DefaultValue("")]
-            [JsonProperty("COLUMN_NAME", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string ColumnName { get; set; }
-           
-            [DefaultValue("max")]
-            [JsonProperty("ROW_COUNT", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string RowCount { get; set; }
-            [DefaultValue("")]
-            [JsonProperty("DATA_TYPE", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string DataType { get; set; }
-
-            [JsonProperty("NULLABLE")]
-            public string Nullable { get; set; }
-
-            [JsonProperty("DATA_DEFAULT")]
-            public string DataDefault { get; set; }
-            [DefaultValue(0)]
-            [JsonProperty("COLUMN_ID", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public long? ColumnId { get; set; } = 0;
-
-            [DefaultValue("")]
-            // [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-            [JsonProperty("COMMENTS", DefaultValueHandling = DefaultValueHandling.Populate, NullValueHandling = NullValueHandling.Ignore)]
-            public string Comments { get; set; } = "";
-
-            [JsonProperty("Description")]
-            public string Description { get; set; }
-
-            [JsonProperty("Public")]
-            public string Public { get; set; }
-
-            [JsonProperty("Personal")]
-            public string Personal { get; set; }
-            [DefaultValue("")]
-            [JsonProperty("PKconstraintName", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string PKconstraintName { get; set; } = "";
-            [JsonRequired]
-            [JsonProperty("SCHEMA")]
-            public string Schema { get; set; }
-
-            [DefaultValue("TRUE")]
-            [JsonProperty("Retain NULL", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string RetainNull { get; set; } = "TRUE";
-
-            [DefaultValue("FALSE")]
-            [JsonProperty("RetainEmptyString", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string RetainEmptyString{ get; set; } = "FALSE";
-
-            [DefaultValue("FALSE")]
-            [JsonProperty("Preview", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string Preview { get; set; } = "FALSE";
-
-            [DefaultValue("")]
-            [JsonProperty("Min", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string Min { get; set; }
-            [DefaultValue("")]
-            [JsonProperty("max", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string Max { get; set; }
-
-            [JsonProperty("Sensitive")]
-            public string Sensitive { get; set; }
-            [DefaultValue("")]
-            [JsonProperty("Masking Rule", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string MaskingRule { get; set; }
-
-            [JsonProperty("Rule set by")]
-            public string RuleSetBy { get; set; }
-
-            [JsonProperty("Rule Reasoning")]
-            public string RuleReasoning { get; set; }
-
-            [JsonProperty("COMPLETED")]
-            public string Completed { get; set; }
-            [DefaultValue("")]
-            [JsonProperty("StringFormat", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string StringFormat { get; set; }
-            [DefaultValue(null)]
-            [JsonProperty("UseValue", DefaultValueHandling = DefaultValueHandling.Populate)]
-            public string UseValue { get; set; }
-            [JsonProperty("Conversion Consideration (NEEDS BUSINESS DISCUSSION)")]
-            public string Consideration { get; set; }
-        }
-
-        private static Config LoadConfig(
+        public static Config LoadConfig(
             int example)
         {
 
@@ -1591,8 +1502,6 @@ namespace DataMasker.Examples
            
             return secured;
         }
-
-
         public static T ToEnum<T>(string value, T defaultValue) where T : struct
         {
             if (string.IsNullOrEmpty(value))
@@ -1776,15 +1685,11 @@ namespace DataMasker.Examples
 
                                 for (int i = 0; i < rowCount; i++)
                                 {
-                                    //var to = rows.ElementAt(i);
                                     if (isblob.Count() == 1 && rows.ElementAt(i).Select(n => n.Key).ToArray().Where(x => x.Equals(string.Join("", isblob.Select(n => n.StringFormatPattern)))).Count() > 0)
                                     {
                                         isBinary = isblob.Any();
                                         var blobLocation = @"output\" + _nameDatabase + @"\BinaryFiles\" + tableConfig.Name + @"\";
-                                        if (!Directory.Exists(blobLocation))
-                                        {
-                                            Directory.CreateDirectory(blobLocation);
-                                        }
+                                        if (!Directory.Exists(blobLocation)){Directory.CreateDirectory(blobLocation);}
                                         FileNameWithExtension = rows.ElementAt(i)[string.Join("", isblob.Select(n => n.StringFormatPattern))];
                                         string ex = FileNameWithExtension.ToString().Substring(FileNameWithExtension.ToString().LastIndexOf('.') + 1);
                                         dataMasker.MaskBLOB(rows.ElementAt(i), tableConfig, dataSource, tableConfig.Columns.Where(n => n.Type == DataType.Shuffle).Any() ? rawData : null, FileNameWithExtension.ToString(), ToEnum(ex, FileTypes.JPEG), blobLocation);
@@ -2084,6 +1989,7 @@ namespace DataMasker.Examples
         public  static bool CheckAppConfig()
         {
             bool flag = false;
+            //string valid = EmailValidation;
             List<string> allKeys = new List<string>();
 
             foreach (string key in ConfigurationManager.AppSettings.AllKeys)
@@ -2170,7 +2076,7 @@ namespace DataMasker.Examples
                 flag = true;
 
             //check email validation and recipient
-            if (allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+            if (allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().FirstOrDefault().Equals(true))
             {
                 if (string.IsNullOrEmpty(fromEmail)
                     || string.IsNullOrEmpty(Recipients))

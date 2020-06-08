@@ -321,7 +321,6 @@ namespace DataMasker
             Name.Gender? gender = null)
         {
             _faker = new Faker();
-            //global::Dapper.SqlMapper.AddTypeHandler(typeof(DbGeography), new GeographyMapper());
             switch (columnConfig.Type)
             {
                 case DataType.FirstName:
@@ -343,22 +342,16 @@ namespace DataMasker
                     DateTime span = start_time.AddMinutes(rnd.Next(241));
                     return span.ToString(columnConfig.StringFormatPattern);
                 case DataType.Rant:
-                    //Random rnd = new Random();
                     var rant = WaffleEngine.Text(rnd, ToInt32(columnConfig.Min), false);
-                        //_faker.Rant.Review(columnConfig.StringFormatPattern);
                     int lenght = rant.Length;
-
                     if (!string.IsNullOrEmpty(columnConfig.Max) && rant.Length > ToInt32(columnConfig.Max))
                     {
                         var rantSub = rant.Substring(0, ToInt32(columnConfig.Max));
                         return rantSub;
                     }
-                    //var rant = _faker.Rant.Reviews(lines: ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_RANT_MAX))[0];
-
                     return rant; // return _faker.Rant.Review(columnConfig.StringFormatPattern);
                 case DataType.Lorem:
-                    return _faker.Lorem.Sentence(ToInt32(columnConfig.Min), ToInt32(columnConfig.Max))
-                        ;
+                    return _faker.Lorem.Sentence(ToInt32(columnConfig.Min), ToInt32(columnConfig.Max));
                 case DataType.StringFormat:
                     return _randomizer.Replace(columnConfig.StringFormatPattern);
                 case DataType.FullAddress:
@@ -416,19 +409,11 @@ namespace DataMasker
                     
                     var cities = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Provinces;
                     var states = CountryLoader.LoadCanadaLocationData().States.Where(n => n.Provinces.Count > 1 ).Select(n=>n).ToArray();
-                    var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null).Select(n=>n).ToArray();
-                  
-                    
+                    var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null).Select(n=>n).ToArray();                    
                     var city = provinces[rnd.Next(0, provinces.Count())];
-                    //var cityname = cities.OrderBy(n => rnd.Next()).Where(n => n.Name != null).First().Name;
-                   
                     return city.Name;
                 case DataType.Blob:
-
                     var fileUrl = _faker.Image.PicsumUrl();
-                    //_faker.System.
-                    //FileStream stream = new FileStream(fileUrl, FileMode.Open, FileAccess.Read);
-                    ///BinaryReader reader = new BinaryReader(stream);
                     string someUrl = fileUrl;
                     using (var WebClient = new WebClient())
                     {
@@ -439,8 +424,7 @@ namespace DataMasker
                 case DataType.Clob:
                     var randomString = _faker.Lorem.Text();
                     byte[] newvalue = System.Text.Encoding.Unicode.GetBytes(randomString);
-                    var bs64 = System.Convert.ToBase64String(newvalue);
-                    //var base64EncodedBytes = System.Convert.FromBase64String(newvalue);
+                    var bs64 = Convert.ToBase64String(newvalue);
                     return bs64;
                 case DataType.Ignore:
                     return null;
@@ -469,19 +453,15 @@ namespace DataMasker
                     var max = columnConfig.Max;
                     if (min.Contains(".") || max.Contains("."))
                     {
-                        //return decimal
                         return Math.Round(_faker.Random.Decimal(ToDecimal(min), ToDecimal(max)));
                     }
                     return _faker.Random.Int(ToInt32(min), ToInt32(max));
-                //return _faker.Random.Int(Convert.ToInt32(columnConfig.Min), Convert.ToInt32(columnConfig.Max));
                 case DataType.CompanyPersonName:
                     var _compName = new Faker().Company.CompanyName();
                     var _personName = _faker.Person.FullName;
                     string[] _array = new string[] { _compName, _personName };
-
                     return _faker.PickRandom(_array);
                 case DataType.PostalCode:
-                    //var xx = _xeger.Generate().ToUpper();
                     return _xeger.Generate().ToUpper().Replace(" ", string.Empty);
                 case DataType.Company:
                     var company = new Faker();
@@ -516,7 +496,6 @@ namespace DataMasker
                     return fileexception.Remove(fileexception.Length - 1);
                 case DataType.PhoneNumberInt:
                     var _phone = Convert.ToInt64(_faker.Phone.PhoneNumber(columnConfig.StringFormatPattern));
-                    var numeric = "TONUMERIC(" + _phone + ")";
                     return _phone;
                 case DataType.RandomDec:
                     var value = _faker.Random.Decimal(ToDecimal(columnConfig.Min), ToDecimal(columnConfig.Max));
@@ -557,8 +536,6 @@ namespace DataMasker
                 case DataType.Computed:
                     return null;
             }
-
-
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
         }
 
@@ -1038,7 +1015,7 @@ namespace DataMasker
                             }
                     }
                 case DataType.Filename:
-                       return _faker.System.FileName(nameof(fileExtension));
+                       return _faker.System.FileName(fileExtension.ToString());
             }
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, "not implemented");
         }

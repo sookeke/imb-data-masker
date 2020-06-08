@@ -60,9 +60,24 @@ namespace DataMasker.DataSources
         {           
             using (OracleConnection connection = new OracleConnection(_connectionStringPrd))
             {
-                Stopwatch watch = new Stopwatch();
-                watch.Start();
-                connection.Open();
+                //Stopwatch watch = new Stopwatch();
+                //watch.Start();
+                try
+                {
+                    connection.Open();
+                    Console.WriteLine("Database Connection established");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception occurs {0}", e.Message);
+                    Console.WriteLine("Program will exit: Press ENTER to exist..");
+                    Console.ReadLine();
+
+                    File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
+                    System.Environment.Exit(1);
+                }
+
+                
                 string query = "";
                 IDictionary<string, object> idict = new Dictionary<string, object>();
                 IEnumerable<IDictionary<string, object>> row = null;
@@ -101,11 +116,11 @@ namespace DataMasker.DataSources
                         OracleConnection.ClearAllPools();
                         connection.Dispose();
                     }
-                    watch.Stop();
-                    TimeSpan timeSpan = watch.Elapsed;
-                    var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
-                    Console.WriteLine(timeElapse);
-                    Console.ReadLine();
+                    //watch.Stop();
+                    //TimeSpan timeSpan = watch.Elapsed;
+                    //var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
+                    //Console.WriteLine(timeElapse);
+                    //Console.ReadLine();
                     return row;
                 }
                 else
@@ -118,10 +133,10 @@ namespace DataMasker.DataSources
                         rawData.Add(new Dictionary<string, object>(prd));
                     }
                     //rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
-                    watch.Stop();
-                    TimeSpan timeSpan = watch.Elapsed;
-                    var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
-                    Console.WriteLine(timeElapse);
+                    //watch.Stop();
+                    //TimeSpan timeSpan = watch.Elapsed;
+                    //var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
+                    //Console.WriteLine(timeElapse);
                     connection.Close();
                     //connection.();
                     //connection.Dispose();
@@ -680,7 +695,21 @@ namespace DataMasker.DataSources
         {
             using (OracleConnection connection = new OracleConnection(_connectionStringPrd))
             {
-                connection.Open();
+                try
+                {
+                    connection.Open();
+                    //Console.WriteLine("Database Connection established");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception occurs {0}", e.Message);
+                    Console.WriteLine("Program will exit: Press ENTER to exist..");
+                    Console.ReadLine();
+
+                    File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
+                    System.Environment.Exit(1);
+                }
+             
                 //var tb = BuildCountSql(config);
                 var count = connection.ExecuteScalar(BuildCountSql(config));
                 return Convert.ToInt32(count);

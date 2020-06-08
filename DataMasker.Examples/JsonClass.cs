@@ -17,7 +17,6 @@ namespace DataMasker.Examples
         public string connectionStringPrd { get; set; }
         public string Databasename { get; set; }
         public string Hostname { get; set; }
-        public string Destination { get; set; }
     }
 
     public class DataSource
