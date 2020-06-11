@@ -176,9 +176,7 @@ namespace DataMasker.Examples
                     UseDefaultCredentials = true
                 };
                 string versionString = Client.DownloadString(urlVersion);
-
                 Version latestVersion = new Version(versionString);
-
                 //get my own version to compare against latest.
                 Assembly assembly = Assembly.GetExecutingAssembly();
                 FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(assembly.Location);

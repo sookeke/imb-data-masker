@@ -583,7 +583,7 @@ namespace DataMasker.DataLang
                             if (column.DataType == typeof(DateTime))
                             {
                                 var data = DateTime.Parse(row[column.ColumnName].ToString());
-                                output = "To_DATE(" + "'" + data.ToString() + "'," + "'YYYY-MM-DD HH:MI:SS')";
+                                output = "To_DATE(" + "'" + data.ToString("yyyy-MM-dd HH:mm:ss") + "'," + "'YYYY-MM-DD HH:MI:SS')";
                             }
                             else if(CheckDate(row[column.ColumnName].ToString()))
                             {

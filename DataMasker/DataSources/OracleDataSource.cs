@@ -33,7 +33,6 @@ namespace DataMasker.DataSources
 
         private static List<IDictionary<string, object>> rawData = new List<IDictionary<string, object>>();
         private static Dictionary<string, string> exceptionBuilder = new Dictionary<string, string>();
-
         private readonly string _connectionString;
         private readonly string _connectionStringPrd;
 
@@ -148,7 +147,6 @@ namespace DataMasker.DataSources
         }
         public static string ByteArrayToString(byte[] ba)
         {
-
             return BitConverter.ToString(ba).Replace("-", "");
         }
         private string BuildCountSql(
@@ -709,8 +707,6 @@ namespace DataMasker.DataSources
                     File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
                     System.Environment.Exit(1);
                 }
-             
-                //var tb = BuildCountSql(config);
                 var count = connection.ExecuteScalar(BuildCountSql(config));
                 return Convert.ToInt32(count);
             }
