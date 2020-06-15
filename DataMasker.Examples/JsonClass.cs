@@ -57,6 +57,7 @@ namespace DataMasker.Examples
         public string primaryKeyColumn { get; set; }
         public string RowCount { get; set; }
         public string Schema { get; set; }
+        public string TargetSchema { get; set; }
         public List<Column> columns { get; set; }
     }
 

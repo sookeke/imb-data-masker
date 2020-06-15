@@ -322,6 +322,7 @@ namespace DataMasker.Examples
 
                     table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
                     table.Schema = col.Schema;
+                    table.TargetSchema = col.TargetSchema;
                     table.RowCount = col.RowCount;
                     bool o = col.RetainNull.ToUpper().Equals("TRUE") ? true : false;
                     bool prview = col.Preview.ToUpper().Equals("FALSE") ? false : true;

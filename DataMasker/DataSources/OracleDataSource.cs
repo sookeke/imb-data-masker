@@ -220,9 +220,6 @@ namespace DataMasker.DataSources
             using (OracleConnection connection = new OracleConnection(_connectionString))
             {
                 connection.Open();
-                
-
-
                 foreach (Batch<IDictionary<string, object>> batch in batches)
                 {
                     using (IDbTransaction sqlTransaction = connection.BeginTransaction())
@@ -273,7 +270,7 @@ namespace DataMasker.DataSources
            TableConfig tableConfig, Config config)
         {
             var charsToRemove = new string[] { "[", "]" };
-            string sql = $"UPDATE {tableConfig.Schema}.{tableConfig.Name} SET ";
+            string sql = $"UPDATE {tableConfig.TargetSchema}.{tableConfig.Name} SET ";
 
             sql += tableConfig.Columns.GetUpdateColumns(config);
             sql += $" WHERE {tableConfig.PrimaryKeyColumn} = @{tableConfig.PrimaryKeyColumn}";

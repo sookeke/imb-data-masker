@@ -218,7 +218,7 @@ namespace DataMasker.DataSources
            TableConfig tableConfig, Config config)
         {
             var charsToRemove = new string[] { "[", "]" };
-            string sql = $"UPDATE {tableConfig.Schema.AddDoubleQuotes()}.{tableConfig.Name.AddDoubleQuotes()} SET ";
+            string sql = $"UPDATE {tableConfig.TargetSchema.AddDoubleQuotes()}.{tableConfig.Name.AddDoubleQuotes()} SET ";
 
             sql += tableConfig.Columns.GetUpdateColumns(config);
             sql += $" WHERE {tableConfig.PrimaryKeyColumn.AddDoubleQuotes()} = @{tableConfig.PrimaryKeyColumn}";

@@ -44,5 +44,7 @@ namespace DataMasker.Models
 
         [JsonRequired]
         public string Schema { get; set; }
+        [JsonRequired]
+        public string TargetSchema { get; set; }
     }
 }

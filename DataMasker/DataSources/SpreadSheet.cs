@@ -2,21 +2,18 @@
 using DataMasker.Models;
 using ExcelDataReader;
 using KellermanSoftware.CompareNetObjects;
-using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace DataMasker.DataSources
 {
-   public class SpreadSheet : IDataSource
+    public class SpreadSheet : IDataSource
     {
         //create object = > SpreadSheetTable = > mask = >
         //private static TextFieldParser cvsReader;

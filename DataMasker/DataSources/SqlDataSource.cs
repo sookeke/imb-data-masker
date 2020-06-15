@@ -222,7 +222,7 @@ namespace DataMasker.DataSources
         private string BuildUpdateSql(
             TableConfig tableConfig, Config config)
         {
-            string sql = $"UPDATE [{tableConfig.Schema}].[{tableConfig.Name}] SET ";
+            string sql = $"UPDATE [{tableConfig.TargetSchema}].[{tableConfig.Name}] SET ";
 
             sql += tableConfig.Columns.GetUpdateColumns(config);
             sql += $" WHERE [{tableConfig.PrimaryKeyColumn}] = @{tableConfig.PrimaryKeyColumn}";

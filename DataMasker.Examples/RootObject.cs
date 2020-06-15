@@ -54,6 +54,10 @@ namespace DataMasker.Examples
         [JsonProperty("SCHEMA")]
         public string Schema { get; set; }
 
+        [JsonRequired]
+        [JsonProperty("TARGETSCHEMA")]
+        public string TargetSchema { get; set; }
+
         [DefaultValue("TRUE")]
         [JsonProperty("Retain NULL", DefaultValueHandling = DefaultValueHandling.Populate)]
         public string RetainNull { get; set; } = "TRUE";
