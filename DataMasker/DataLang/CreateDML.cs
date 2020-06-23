@@ -161,7 +161,7 @@ namespace DataMasker.DataLang
                     if (config.DataSource.Type == DataSourceType.OracleServer)
                     {
 
-                        tw.Write(string.Format("REM INSERTING into {0}\n", $"{tableConfig.Schema}." + $"{tableConfig.Name}"));
+                        tw.Write(string.Format("REM INSERTING into {0}\n", $"{tableConfig.TargetSchema}." + $"{tableConfig.TargetSchema}"));
                         tw.Write("SET DEFINE OFF\n");
                         tw.Write(Environment.NewLine);
                         if (isBinary)
@@ -184,11 +184,11 @@ namespace DataMasker.DataLang
                     {
                         if (table.Rows.Count == 0)
                         {
-                            tw.Write(string.Format("--INSERT INTO " + "\"{0}\"" + "({1}) DEFAULT VALUES\n ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
+                            tw.Write(string.Format("--INSERT INTO " + "\"{0}\"" + "({1}) DEFAULT VALUES\n ", $"{tableConfig.TargetSchema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
                             tw.Write("-- EMPTY TABLE NOTHING TO INSERT");
                         }
                         else
-                            tw.Write(string.Format("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", $"{tableConfig.Schema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
+                            tw.Write(string.Format("INSERT INTO " + "\"{0}\"" + "\n\t({1})\nVALUES ", $"{tableConfig.TargetSchema}" + @""".""" + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
                     }
                     else if (config.DataSource.Type == DataSourceType.SqlServer)
                     {
@@ -199,7 +199,7 @@ namespace DataMasker.DataLang
                             tw.Write("SET ANSI_WARNINGS OFF\nGO\n");
                             if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
                             {
-                                tw.Write(string.Format("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\nGO\n"));
+                                tw.Write(string.Format("SET IDENTITY_INSERT " + $"[{ tableConfig.TargetSchema}].[{tableConfig.Name}]" + " ON\nGO\n"));
                             }
                         }
                         else if (table.Rows.Count == 0)
@@ -209,7 +209,7 @@ namespace DataMasker.DataLang
                             tw.Write("SET QUOTED_IDENTIFIER ON\nGO\n");
                             tw.Write("SET ANSI_WARNINGS OFF\nGO\n");
 
-                            tw.Write(string.Format("--INSERT INTO {0}({1}) DEFAULT VALUES\n", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
+                            tw.Write(string.Format("--INSERT INTO {0}({1}) DEFAULT VALUES\n", $"[{ tableConfig.TargetSchema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
                             tw.Write("-- EMPTY TABLE NOTHING TO INSERT");
                         }
                         else
@@ -219,9 +219,9 @@ namespace DataMasker.DataLang
                             tw.Write("SET ANSI_WARNINGS OFF\nGO\n");
                             if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
                             {
-                                tw.Write("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " ON\nGO\n");
+                                tw.Write("SET IDENTITY_INSERT " + $"[{ tableConfig.TargetSchema}].[{tableConfig.Name}]" + " ON\nGO\n");
                             }
-                            tw.Write(string.Format("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
+                            tw.Write(string.Format("INSERT INTO {0}\n\t({1})\nVALUES ", $"[{ tableConfig.TargetSchema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
                         }
 
                     }
@@ -229,11 +229,11 @@ namespace DataMasker.DataLang
                     {
                         if (table.Rows.Count == 0)
                         {
-                            tw.Write(string.Format("--INSERT INTO {0}({1}) DEFAULT VALUES\n ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray())));
+                            tw.Write(string.Format("--INSERT INTO {0}({1}) DEFAULT VALUES\n ", $"`{tableConfig.TargetSchema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray())));
                             tw.Write(string.Format("-- EMPTY TABLE NOTHING TO INSERT"));
                         }
                         else
-                            tw.Write(string.Format("INSERT INTO {0}\n\t({1})\nVALUES ", $"`{tableConfig.Schema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray())));
+                            tw.Write(string.Format("INSERT INTO {0}\n\t({1})\nVALUES ", $"`{tableConfig.TargetSchema}`." + $"`{tableConfig.Name}`", string.Join(", ", names.ToArray())));
                     }
                     else
                     {
@@ -282,11 +282,11 @@ namespace DataMasker.DataLang
 
                             if (table.Rows.Count == 0)
                             {
-                                tw.Write(string.Format("INSERT INTO {0} VALUES (DEFAULT)", $"{tableConfig.Schema}." + $"{tableConfig.Name}"));
+                                tw.Write(string.Format("INSERT INTO {0} VALUES (DEFAULT)", $"{tableConfig.TargetSchema}." + $"{tableConfig.Name}"));
                             }
                             else
                             {
-                                tw.Write(string.Format("INSERT INTO {0}({1}) VALUES ", $"{tableConfig.Schema}." + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
+                                tw.Write(string.Format("INSERT INTO {0}({1}) VALUES ", $"{tableConfig.TargetSchema}." + $"{tableConfig.Name}", string.Join(", ", names.ToArray())));
                                 tw.Write("(");
                                 tw.Write(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
 
@@ -295,7 +295,7 @@ namespace DataMasker.DataLang
                         }
                         else if (config.DataSource.Type == DataSourceType.SqlServer && table.Rows.Count > 1000)
                         {
-                            tw.Write(string.Format("INSERT INTO {0}({1}) VALUES ", $"[{ tableConfig.Schema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
+                            tw.Write(string.Format("INSERT INTO {0}({1}) VALUES ", $"[{ tableConfig.TargetSchema}].[{tableConfig.Name}]", string.Join(", ", names.ToArray())));
                             tw.Write("(");
                             tw.Write(GetInsertColumnValues(table, rw, excludeNames, fieldToReplace, replacementValue, config));
                             tw.Write(")");
@@ -326,7 +326,7 @@ namespace DataMasker.DataLang
                             //check Identity column
                             if (TableHasIdentity(tableConfig.Name, "OBJECTPROPERTYCHECK", config))
                             {
-                                tw.Write(string.Format("SET IDENTITY_INSERT " + $"[{ tableConfig.Schema}].[{tableConfig.Name}]" + " OFF\nGO\n"));
+                                tw.Write(string.Format("SET IDENTITY_INSERT " + $"[{ tableConfig.TargetSchema}].[{tableConfig.Name}]" + " OFF\nGO\n"));
                             }
 
                             tw.Write(string.Format("SET ANSI_WARNINGS ON\nGO\n"));
@@ -345,7 +345,7 @@ namespace DataMasker.DataLang
                                 tw.Write(Environment.NewLine);
                                 tw.Write(_commentOut);
                                 IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
-                                var USER_SDO_GEOM_METADATA = dataSource.GetDataTable(tableConfig.Name, "MDSYS", config.DataSource.Config.connectionStringPrd.ToString());
+                                var USER_SDO_GEOM_METADATA = dataSource.GetDataTable(tableConfig.Name, "MDSYS", config.DataSource.Config.connectionStringPrd.ToString(),tableConfig.RowCount);
                                 var GeoMeTaData = SpatialInsert(USER_SDO_GEOM_METADATA);
 
                                 tw.Write(Environment.NewLine);
@@ -393,7 +393,7 @@ namespace DataMasker.DataLang
         public static bool TableHasIdentity(string table, string OBJECTPROPERTYCHECK, Config config)
         {
             IDataSource dataSource = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
-            DataTable t = dataSource.GetDataTable(table.AddSingleQuotes(), OBJECTPROPERTYCHECK, config.DataSource.Config.connectionStringPrd.ToString());
+            DataTable t = dataSource.GetDataTable(table.AddSingleQuotes(), OBJECTPROPERTYCHECK, config.DataSource.Config.connectionStringPrd.ToString(), "");
             if(t.Rows.Cast<DataRow>().Any(n => n.Field<int?>("IDENTITY") == 1))
             {
                 return true;

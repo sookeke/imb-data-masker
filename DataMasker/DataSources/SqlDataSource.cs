@@ -13,7 +13,6 @@ using KellermanSoftware.CompareNetObjects;
 using System.Security;
 using Bogus;
 using System.Globalization;
-using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace DataMasker.DataSources
@@ -33,6 +32,8 @@ namespace DataMasker.DataSources
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
         //private IEnumerable<IDictionary<string, object>> getData { get; set; }
         public object[] Values { get; private set; }
+        public bool isRolledBack { get; private set; }
+
         public int o = 0;
 
         private static List<IDictionary<string, object>> rawData = new List<IDictionary<string, object>>();
@@ -149,13 +150,14 @@ namespace DataMasker.DataSources
             return secured;
         }
         /// <inheritdoc/>
-        public void UpdateRows(
+        public bool UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
             TableConfig tableConfig, Config config,
             Action<int> updatedCallback)
         {
             int? batchSize = _sourceConfig.UpdateBatchSize;
+            isRolledBack = false;
             if (batchSize == null ||
                 batchSize <= 0)
             {
@@ -190,6 +192,7 @@ namespace DataMasker.DataSources
                         if (_sourceConfig.DryRun)
                         {
                             sqlTransaction.Rollback();
+                            isRolledBack = true;
                         }
                         else
                         {
@@ -207,11 +210,13 @@ namespace DataMasker.DataSources
                     catch (Exception ex)
                     {
                         sqlTransaction.Rollback();
+                        isRolledBack = true;
                         Console.WriteLine(ex.Message);
-                        File.AppendAllText(_exceptionpath, ex.Message + $" on table  {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine); ;
+                        File.AppendAllText(_exceptionpath, ex.Message + $" on table  {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine); 
                     }
                 }
             }
+            return isRolledBack;
         }
 
         /// <summary>
@@ -633,7 +638,7 @@ namespace DataMasker.DataSources
         {
             throw new NotImplementedException();
         }
-        public DataTable GetDataTable(string table,string schema, string connection)
+        public DataTable GetDataTable(string table,string schema, string connection, string rowCount)
         {
             DataTable dataTable = new DataTable();
             using (SqlConnection sqlConnection = new SqlConnection(connection))
@@ -645,7 +650,15 @@ namespace DataMasker.DataSources
                     squery = $"SELECT OBJECTPROPERTY(OBJECT_ID({table}), 'TableHasIdentity') AS 'IDENTITY'";
                 }
                 else
-                    squery = $"Select * from [{schema}].[{table}]";
+                {
+                    if (int.TryParse(rowCount, out int n))
+                    {
+                        squery = $"SELECT TOP ({n}) * from [{schema}].[{table}]";
+                    }
+                    else
+                        squery = $"Select * from [{schema}].[{table}]";
+                    //squery = $"Select * from [{schema}].[{table}]";
+                }
                 sqlConnection.Open();
                 using (SqlDataAdapter adapter = new SqlDataAdapter(squery, sqlConnection))
                 {

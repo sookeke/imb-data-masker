@@ -90,7 +90,7 @@ namespace DataMasker.DataSources
         }
 
         /// <inheritdoc/>
-        public void UpdateRows(
+        public bool UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
             TableConfig tableConfig, Config config,
@@ -101,6 +101,7 @@ namespace DataMasker.DataSources
             {
                 UpdateRow(dictionary, tableConfig, config);
             }
+            return false;
         }
 
         public object Shuffle(string schema, string table, string column, object existingValue, bool retainnull, IEnumerable<IDictionary<string,object>> dataTable)
@@ -207,7 +208,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTable GetDataTable(string table, string schema, string connection)
+        public DataTable GetDataTable(string table, string schema, string connection, string rowCount)
         {
             throw new NotImplementedException();
         }

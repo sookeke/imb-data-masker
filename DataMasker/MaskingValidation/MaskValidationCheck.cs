@@ -201,7 +201,7 @@ namespace DataMasker.MaskingValidation
             }
             return totalSize;
         }
-        private static DataTable GetdataTable(string connectionString1,string schema, string table, Config config)
+        private static DataTable GetdataTable(string connectionString1,string schema, string table, Config config, string rowCount)
         {
             // This is your table to hold the result set:
             DataTable dataTable = new DataTable();
@@ -211,15 +211,15 @@ namespace DataMasker.MaskingValidation
                 case DataSourceType.InMemoryFake:
                     break;
                 case DataSourceType.SqlServer:
-                    return dataSource.GetDataTable(table,schema, connectionString1.ToString());
+                    return dataSource.GetDataTable(table,schema, connectionString1.ToString(), rowCount);
                 case DataSourceType.OracleServer:
-                    return dataSource.GetDataTable(table, schema,connectionString1.ToString());                
+                    return dataSource.GetDataTable(table, schema,connectionString1.ToString(), rowCount);                
                 case DataSourceType.SpreadSheet:
                     break;
                 case DataSourceType.PostgresServer:
-                    return dataSource.GetDataTable(table, schema, connectionString1.ToString());
+                    return dataSource.GetDataTable(table, schema, connectionString1.ToString(), rowCount);
                 case DataSourceType.MySqlServer:
-                    return dataSource.GetDataTable(table, schema, connectionString1.ToString());
+                    return dataSource.GetDataTable(table, schema, connectionString1.ToString(), rowCount);
                 default:
                     break;
             }
@@ -255,8 +255,8 @@ namespace DataMasker.MaskingValidation
                 {
 
 
-                    var _dataTable = GetdataTable(connectionString, _tables.Schema, _tables.Name.ToString(), config);
-                    var _dataTablePrd = GetdataTable(connectionStringPrd, _tables.Schema, _tables.Name, config);
+                    var _dataTable = GetdataTable(connectionString, _tables.TargetSchema, _tables.Name.ToString(), config, _tables.RowCount);
+                    var _dataTablePrd = GetdataTable(connectionStringPrd, _tables.Schema, _tables.Name, config, _tables.RowCount);
 
 
                     if (_dataTable.Rows.Count == 0)

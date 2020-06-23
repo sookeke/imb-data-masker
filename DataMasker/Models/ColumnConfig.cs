@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace DataMasker.Models
 {
@@ -19,26 +20,28 @@ namespace DataMasker.Models
     public string Name { get; set; }
 
 
-    /// <summary>
-    /// The type of data contained within the column, fist name, last name, date of birth etc.
-    /// </summary>
-    /// <value>
-    /// The type.
-    /// </value>
-    [JsonRequired]
+        /// <summary>
+        /// The type of data contained within the column, fist name, last name, date of birth etc.
+        /// </summary>
+        /// <value>
+        /// The type.
+        /// </value>
+        /// 
+        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonRequired]
     public DataType Type { get; set; }
 
-    /// <summary>
-    /// Specific value mappings
-    /// <remarks>
-    /// e.g. If value "Steve" is found always replace it with "John"
-    /// </remarks>
-    /// </summary>
-    /// <value>
-    /// The value mappings.
-    /// </value>
-
-    public IDictionary<object, object> ValueMappings { get; set; }
+        /// <summary>
+        /// Specific value mappings
+        /// <remarks>
+        /// e.g. If value "Steve" is found always replace it with "John"
+        /// </remarks>
+        /// </summary>
+        /// <value>
+        /// The value mappings.
+        /// </value>
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public IDictionary<object, object> ValueMappings { get; set; }
 
     /// <summary>
     /// When generated data for this column, take into consideration a gender column, can be null
@@ -67,7 +70,7 @@ namespace DataMasker.Models
     /// <value>
     /// <c>true</c> if ignore; otherwise, <c>false</c>.
     [DefaultValue(false)]
-    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool Unmask { get; set; }
 
         /// <summary>
@@ -100,14 +103,15 @@ namespace DataMasker.Models
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
     public string StringFormatPattern { get; set; }
 
-    /// <summary>
-    /// When see, this value will be used for all rows
-    /// </summary>
-    /// <value>
-    /// The use value.
-    /// </value>
-    /// 
-    public int MinMax { get; set; }
+        /// <summary>
+        /// When see, this value will be used for all rows
+        /// </summary>
+        /// <value>
+        /// The use value.
+        /// </value>
+        /// 
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public int MinMax { get; set; }
     [DefaultValue(null)]
     [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
     public string UseValue { get; set; }
@@ -153,7 +157,7 @@ namespace DataMasker.Models
         /// <c>true</c> if [use local value mappings]; otherwise, <c>false</c>.
         /// </value>
         [DefaultValue(false)]
-    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool UseLocalValueMappings { get; set; }
 
     /// <summary>
@@ -163,14 +167,14 @@ namespace DataMasker.Models
     /// <c>true</c> if [use global value mappings]; otherwise, <c>false</c>.
     /// </value>
     [DefaultValue(false)]
-    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool UseGlobalValueMappings { get; set; }
 
     /// <summary>
     /// When true, any values replaced in this column will be unique
     /// </summary>
     [DefaultValue(false)]
-    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool Unique { get; set; }
 
 

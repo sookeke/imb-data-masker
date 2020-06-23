@@ -531,12 +531,12 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
+        public bool UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
         {
             throw new NotImplementedException();
         }
 
-        public DataTable GetDataTable(string table, string schema, string connection)
+        public DataTable GetDataTable(string table, string schema, string connection, string rowCount)
         {
             throw new NotImplementedException();
         }

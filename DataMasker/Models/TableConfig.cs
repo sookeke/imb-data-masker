@@ -32,6 +32,11 @@ namespace DataMasker.Models
         public string PrimaryKeyColumn { get; set; }
         public string RowCount { get; set; }
 
+        [JsonRequired]
+        public string Schema { get; set; }
+        [JsonRequired]
+        public string TargetSchema { get; set; }
+
         /// <summary>
         /// List of <see cref="ColumnConfig"/>
         /// </summary>
@@ -42,9 +47,5 @@ namespace DataMasker.Models
         public IList<ColumnConfig> Columns { get; set; }
 
 
-        [JsonRequired]
-        public string Schema { get; set; }
-        [JsonRequired]
-        public string TargetSchema { get; set; }
     }
 }

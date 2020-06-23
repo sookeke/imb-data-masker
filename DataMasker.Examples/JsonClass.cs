@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using DataMasker.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -65,6 +66,6 @@ namespace DataMasker.Examples
     {
         public DataSource dataSource { get; set; }
         public DataGeneration dataGeneration { get; set; }
-        public List<Table> tables { get; set; }
+        public IList<TableConfig> tables { get; set; }
     }
 }

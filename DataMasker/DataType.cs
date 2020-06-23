@@ -14,6 +14,7 @@
         NULL,
         PostalCode,
         StringConcat,
+        Date,
         Shuffle,
         Ignore,
         Money,

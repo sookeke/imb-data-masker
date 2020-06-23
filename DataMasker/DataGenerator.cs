@@ -6,10 +6,7 @@ using Bogus;
 using Bogus.DataSets;
 using DataMasker.Interfaces;
 using DataMasker.Models;
-using GeoAPI.Geometries;
-using NetTopologySuite.Geometries;
 using System.Linq;
-using Dapper;
 using System.Configuration;
 using System.Data;
 using System.Net.Http;
@@ -26,7 +23,7 @@ namespace DataMasker
     /// <seealso cref="IDataGenerator"/>
     public class DataGenerator : IDataGenerator
     {
-        private static readonly DateTime DEFAULT_MIN_DATE = new DateTime(1900, 1, 1, 0, 0, 0, 0);
+        private static readonly DateTime DEFAULT_MIN_DATE = new DateTime(1990, 1, 1, 0, 0, 0, 0);
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
         public static object[] Values { get; private set; }
@@ -333,45 +330,39 @@ namespace DataMasker
                     return _faker.Date.Between(
                         ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
                         ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_MAX_DATE));
+                case DataType.Date:
+                    return _faker.Date.Between(
+                        ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
+                        ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_MAX_DATE)).ToString(columnConfig.StringFormatPattern); ;
                 case DataType.Longitude:
                     return _faker.Address.Longitude();
                 case DataType.Latitude:
                     return _faker.Address.Latitude();
                 case DataType.TimeSpan:
-                    DateTime start_time = DateTime.Today.AddHours(rnd.Next(3600));
-                    DateTime span = start_time.AddMinutes(rnd.Next(241));
-                    return span.ToString(columnConfig.StringFormatPattern);
+                  return _faker.Date.Between(
+                        ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
+                        ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_MAX_DATE)).ToString(columnConfig.StringFormatPattern);
+                    //DateTime start_time = DateTime.Today.AddHours(rnd.Next(3600));
+                    //DateTime span = start_time.AddMinutes(rnd.Next(241));
+                    //return span.ToString(columnConfig.StringFormatPattern);
                 case DataType.Rant:
                     var rant = WaffleEngine.Text(rnd, ToInt32(columnConfig.Min), false);
-                    int lenght = rant.Length;
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && rant.Length > ToInt32(columnConfig.Max))
-                    {
-                        var rantSub = rant.Substring(0, ToInt32(columnConfig.Max));
-                        return rantSub;
-                    }
-                    return rant; // return _faker.Rant.Review(columnConfig.StringFormatPattern);
+                    return !string.IsNullOrEmpty(columnConfig.Max) && rant.Length > ToInt32(columnConfig.Max) ? rant.Substring(0, ToInt32(columnConfig.Max)) : rant;
+                     // return _faker.Rant.Review(columnConfig.StringFormatPattern);
                 case DataType.Lorem:
-                    return _faker.Lorem.Sentence(ToInt32(columnConfig.Min), ToInt32(columnConfig.Max));
+                    var lorem =  _faker.Lorem.Sentences();
+                    return !string.IsNullOrEmpty(columnConfig.Max) && lorem.Length > ToInt32(columnConfig.Max) ? lorem.Substring(0, ToInt32(columnConfig.Max)) : lorem;
                 case DataType.StringFormat:
                     return _randomizer.Replace(columnConfig.StringFormatPattern);
                 case DataType.FullAddress:
-                    return _faker.Address.FullAddress();
+                    var fullAddress =  _faker.Address.FullAddress();
+                    return !string.IsNullOrEmpty(columnConfig.Max) && fullAddress.Length > ToInt32(columnConfig.Max) ? fullAddress.Substring(0, ToInt32(columnConfig.Max)) : fullAddress;
                 case DataType.StreetAddress:
-                    return _faker.Address.StreetAddress(false);
-                case DataType.File:
-                    if (columnConfig.Max.Contains("."))
-                    {
-                        //return decimal
-                        columnConfig.Max = Math.Round(ToDecimal(columnConfig.Max)).ToString();
-                    }
+                    var streetAdd =  _faker.Address.StreetAddress(false);
+                    return !string.IsNullOrEmpty(columnConfig.Max) && streetAdd.Length > ToInt32(columnConfig.Max) ? streetAdd.Substring(0, ToInt32(columnConfig.Max)) : streetAdd;
+                case DataType.File:         
                     var f = _faker.System.FileName(columnConfig.StringFormatPattern);
-                    //Console.WriteLine(f);
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && f.Length > ToInt32(columnConfig.Max))
-                    {
-                        var _shortnum = f.Substring(f.Length - ToInt32(columnConfig.Max), ToInt32(columnConfig.Max));
-                        return _shortnum;
-                    }
-                    return f;
+                    return !string.IsNullOrEmpty(columnConfig.Max) && f.Length > ToInt32(columnConfig.Max) ? f.Substring(f.Length - ToInt32(columnConfig.Max), ToInt32(columnConfig.Max)) : f;
                 case DataType.Filename:
                     var file = _faker.System.FileName("");
                     if (!string.IsNullOrEmpty(columnConfig.Max) && file.Length > ToInt32(columnConfig.Max))
@@ -401,17 +392,12 @@ namespace DataMasker
 
                     throw new ArgumentOutOfRangeException(nameof(columnConfig.StringFormatPattern),columnConfig.StringFormatPattern,"Invalid Vehicle String Format value: " + columnConfig.StringFormatPattern.AddDoubleQuotes()); ;
                 case DataType.State:
-                    //rnd = new Random();
-                    var state = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Name;
+                    var state = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).Where(n=>n.Name.Length < ToInt32(columnConfig.Max)).First().Name;
                     return state;
                 case DataType.City:
-                    //rnd = new Random();
-                    
-                    var cities = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).First().Provinces;
-                    var states = CountryLoader.LoadCanadaLocationData().States.Where(n => n.Provinces.Count > 1 ).Select(n=>n).ToArray();
-                    var provinces = states[rnd.Next(0, states.Count())].Provinces.Where(n => n.Name != null).Select(n=>n).ToArray();                    
-                    var city = provinces[rnd.Next(0, provinces.Count())];
-                    return city.Name;
+                    var cities = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).Where(n=>n.Code.Equals(columnConfig.StringFormatPattern) && n.Name != null).First().Provinces.Where(n=>n.Name != null && n.Name.Length < ToInt32(columnConfig.Max)).Select(n=>n).ToArray();
+                    var provinces = cities[rnd.Next(0, cities.Count())];
+                    return cities.Count() != 0 ? provinces.Name : null;
                 case DataType.Blob:
                     var fileUrl = _faker.Image.PicsumUrl();
                     string someUrl = fileUrl;
@@ -445,33 +431,20 @@ namespace DataMasker
                 case DataType.RandomSeason:
                     DateTime _start = new DateTime(1995, 1, 1);
                     Random _genD = new Random();
-                    int _range = ((TimeSpan)(DateTime.Today - _start)).Days;
+                    int _range = (DateTime.Today - _start).Days;
                     var _randomYear = _start.AddDays(_genD.Next(_range));
                     return _randomYear.Year + "/" + _randomYear.AddYears(1).ToString("yy");             
                 case DataType.RandomInt:
-                    var min = columnConfig.Min;
-                    var max = columnConfig.Max;
-                    if (min.Contains(".") || max.Contains("."))
-                    {
-                        return Math.Round(_faker.Random.Decimal(ToDecimal(min), ToDecimal(max)));
-                    }
-                    return _faker.Random.Int(ToInt32(min), ToInt32(max));
+                    return _faker.Random.Int(ToInt32(columnConfig.Min), ToInt32(columnConfig.Max));
                 case DataType.CompanyPersonName:
-                    var _compName = new Faker().Company.CompanyName();
-                    var _personName = _faker.Person.FullName;
-                    string[] _array = new string[] { _compName, _personName };
-                    return _faker.PickRandom(_array);
+                    string[] _array = new string[] { new Faker().Company.CompanyName(), _faker.Person.FullName };
+                    var prand = _faker.PickRandom(_array);
+                    return !string.IsNullOrEmpty(columnConfig.Max) && prand.Length > ToInt32(columnConfig.Max) ? prand.Substring(0, ToInt32(columnConfig.Max)) : prand;
                 case DataType.PostalCode:
                     return _xeger.Generate().ToUpper().Replace(" ", string.Empty);
                 case DataType.Company:
-                    var company = new Faker();
-                    var _genCompany = company.Company.CompanyName(columnConfig.StringFormatPattern); ;
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && _genCompany.Length > ToInt32(columnConfig.Max))
-                    {
-                        var _shortComp = _genCompany.Substring(0, ToInt32(columnConfig.Max));
-                        return _shortComp;
-                    }
-                    return _genCompany;
+                    var company = new Faker().Company.CompanyName(columnConfig.StringFormatPattern);
+                    return !string.IsNullOrEmpty(columnConfig.Max) && company.Length > ToInt32(columnConfig.Max) ? company.Substring(0, ToInt32(columnConfig.Max)) : company;
                 case DataType.RandomString2:
                     var rand = _faker.Random.String2(ToInt32(columnConfig.Max), columnConfig.StringFormatPattern);
                     return _faker.Random.String2(ToInt32(columnConfig.Max), columnConfig.StringFormatPattern);
@@ -485,12 +458,7 @@ namespace DataMasker
                     return _number;
                 case DataType.StringConcat:
                     var _string = _faker.Phone.PhoneNumber(columnConfig.StringFormatPattern);
-                    if (!string.IsNullOrEmpty(columnConfig.Max) && _string.Length > ToInt32(columnConfig.Max))
-                    {
-                        var _shortString = _string.Substring(0, ToInt32(columnConfig.Max));
-                        return _shortString;
-                    }
-                    return _string;
+                    return !string.IsNullOrEmpty(columnConfig.Max) && _string.Length > ToInt32(columnConfig.Max) ? _string.Substring(0, ToInt32(columnConfig.Max)) : _string;
                 case DataType.exception:
                     var fileexception = _faker.System.FileName("");
                     return fileexception.Remove(fileexception.Length - 1);
@@ -506,33 +474,11 @@ namespace DataMasker
                 case DataType.RandomHexa:
                     return _faker.Random.Hexadecimal(ToInt32(columnConfig.StringFormatPattern));
                 case DataType.Bogus:
-                    if (string.IsNullOrEmpty(columnConfig.StringFormatPattern))
-                    {
-                        
-                        throw new ArgumentException(nameof(columnConfig.Type) + " must have a StringFormatPattern", columnConfig.StringFormatPattern);
-                        
-                    }
                     var _gen = _faker.Parse(columnConfig.StringFormatPattern);
-                    if (columnConfig.Min.Contains(".") || columnConfig.Max.Contains("."))
-                    {
-                        if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > ToDecimal(columnConfig.Max))
-                        {
-                            var _short = _gen.Substring(0, ToInt32(columnConfig.Max));
-                            return _short;
-                        }
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > ToInt32(columnConfig.Max))
-                        {
-                            var _short = _gen.Substring(0, ToInt32(columnConfig.Max));
-                            return _short;
-                        }
-                    }
-                    return _gen;
+                    return !string.IsNullOrEmpty(columnConfig.Max) && _gen.Length > ToInt32(columnConfig.Max) ? _gen.Substring(0, ToInt32(columnConfig.Max)) : _gen;
                 case DataType.RandomUsername:
-                    var ussername = new Faker();
-                    return ussername.Person.UserName;
+                    var ussername = new Faker().Person.UserName;
+                    return !string.IsNullOrEmpty(columnConfig.Max) && ussername.Length > ToInt32(columnConfig.Max) ? ussername.Substring(0, ToInt32(columnConfig.Max)) : ussername;
                 case DataType.Computed:
                     return null;
             }
@@ -575,6 +521,7 @@ namespace DataMasker
                 case DataType.State:
                 case DataType.SecondaryAddress:
                 case DataType.City:
+                case DataType.Date:
                 case DataType.Bogus:
                 case DataType.StringConcat:
                 case DataType.PhoneNumber:
@@ -621,6 +568,10 @@ namespace DataMasker
                     return DateTime.TryParseExact(unparsedValue, "yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dateTime) ? dateTime : defaultValue;
                 case DataType.DateOfBirth:
                     return DateTime.Parse(unparsedValue);
+                case DataType.Date:
+                    return defaultValue;
+                case DataType.TimeSpan:
+                    return defaultValue;
             }
 
             throw new ArgumentOutOfRangeException(nameof(columnConfig.Type), columnConfig.Type, null);
@@ -1168,7 +1119,7 @@ namespace DataMasker
             {
                 return null;
             }
-            switch (ToEnum(columnConfig.UseGenderColumn, CountryLoad.None))
+            switch (ToEnum(columnConfig.StringFormatPattern, CountryLoad.None))
             {
                 case CountryLoad.Canada:
                     loader = CountryLoader.LoadCanadaLocationData();

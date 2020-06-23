@@ -23,6 +23,8 @@ namespace DataMasker.DataSources
 
         //private IEnumerable<IDictionary<string, object>> getData { get; set; }
         public object[] Values { get; private set; }
+        public bool isRolledBack { get; private set; }
+
         public int o = 0;
 
         private static List<IDictionary<string, object>> rawData = new List<IDictionary<string, object>>();
@@ -127,13 +129,14 @@ namespace DataMasker.DataSources
         }
 
         /// <inheritdoc/>
-        public void UpdateRows(
+        public bool UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
             TableConfig tableConfig, Config config,
             Action<int> updatedCallback)
         {
             int? batchSize = _sourceConfig.UpdateBatchSize;
+            isRolledBack = false;
             if (batchSize == null ||
                 batchSize <= 0)
             {
@@ -168,6 +171,7 @@ namespace DataMasker.DataSources
                         if (_sourceConfig.DryRun)
                         {
                             sqlTransaction.Rollback();
+                            isRolledBack = true;
                         }
                         else
                         {
@@ -186,10 +190,12 @@ namespace DataMasker.DataSources
                     {
 
                         Console.WriteLine(ex.ToString());
+                        isRolledBack = true;
                         File.AppendAllText(_exceptionpath, ex.ToString() + $" on table  {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine); ;
                     }
                 }
             }
+            return isRolledBack;
         }
 
         /// <summary>
@@ -591,12 +597,19 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public DataTable GetDataTable(string table, string schema, string connection)
+        public DataTable GetDataTable(string table, string schema, string connection, string rowCount)
         {
             DataTable dataTable = new DataTable();
             using (MySqlConnection mySqlConnection = new MySqlConnection(connection))
             {
-                string squery = $"Select * from `{schema}`.`{table}`";
+                string squery = "";
+                if (int.TryParse(rowCount, out int n))
+                {
+                    squery = $"Select * from `{schema}`.`{table}` LIMIT {n}";
+                }
+                else
+                    squery = $"Select * from `{schema}`.`{table}`";
+
                 mySqlConnection.Open();
                 using (MySqlDataAdapter oda = new MySqlDataAdapter(squery, mySqlConnection))
                 {

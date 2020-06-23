@@ -30,7 +30,7 @@ namespace DataMasker.Interfaces
         IEnumerable<T> CreateObjecttst<T>(DataTable dataTable);
 
         DataTable CreateTable(IEnumerable<IDictionary<string, object>> obj);
-        DataTable GetDataTable(string table, string schema, string connection);
+        DataTable GetDataTable(string table, string schema, string connection, string rowCount);
         DataTable SpreadSheetTable(IEnumerable<IDictionary<string, object>> parents, TableConfig tableConfig);
 
 
@@ -56,7 +56,7 @@ namespace DataMasker.Interfaces
         /// Called when a number of items have been updated, the value passed is the total items
         /// updated
         /// </param>
-        void UpdateRows(
+        bool UpdateRows(
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
             TableConfig tableConfig, Config config,

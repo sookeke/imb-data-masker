@@ -29,6 +29,8 @@ namespace DataMasker.DataSources
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
         //private IEnumerable<IDictionary<string, object>> getData { get;  set; }
         public object[] Values { get; private set; }
+        public bool isRolledBack { get; private set; }
+
         public int o = 0;
 
         private static List<IDictionary<string, object>> rawData = new List<IDictionary<string, object>>();
@@ -59,12 +61,10 @@ namespace DataMasker.DataSources
         {           
             using (OracleConnection connection = new OracleConnection(_connectionStringPrd))
             {
-                //Stopwatch watch = new Stopwatch();
-                //watch.Start();
                 try
                 {
                     connection.Open();
-                    Console.WriteLine("Database Connection established");
+                    //Console.WriteLine("Database Connection established");
                 }
                 catch (Exception e)
                 {
@@ -75,17 +75,11 @@ namespace DataMasker.DataSources
                     File.WriteAllText(_exceptionpath, e.Message + Environment.NewLine + Environment.NewLine);
                     System.Environment.Exit(1);
                 }
-
-                
                 string query = "";
                 IDictionary<string, object> idict = new Dictionary<string, object>();
                 IEnumerable<IDictionary<string, object>> row = null;
                 List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
                 rawData = new List<IDictionary<string, object>>();
-                //var rowCount = GetCount(tableConfig);
-
-
-
                 if (rowCount != 0 && rowCount > 50000)
                 {
                     query = BuildSelectSql(tableConfig, config, rowCount,null,null);
@@ -96,7 +90,6 @@ namespace DataMasker.DataSources
                         {
                             reader.FetchSize = cmd.RowSize * 1000;
                             cmd.FetchSize = 100000;
-                            var start_time = DateTime.Now;
                             if (reader.HasRows)
                             {
                                 while (reader.Read())
@@ -105,7 +98,6 @@ namespace DataMasker.DataSources
                                     rows.Add(o);
                                     rawData.Add(new Dictionary<string, object>(o));
                                 }
-
                                 row = rows;
                                 GC.Collect();
                                 GC.WaitForPendingFinalizers();
@@ -115,11 +107,6 @@ namespace DataMasker.DataSources
                         OracleConnection.ClearAllPools();
                         connection.Dispose();
                     }
-                    //watch.Stop();
-                    //TimeSpan timeSpan = watch.Elapsed;
-                    //var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
-                    //Console.WriteLine(timeElapse);
-                    //Console.ReadLine();
                     return row;
                 }
                 else
@@ -131,18 +118,9 @@ namespace DataMasker.DataSources
                     {
                         rawData.Add(new Dictionary<string, object>(prd));
                     }
-                    //rawData.AddRange(new List<IDictionary<string, object>>(_prdData));
-                    //watch.Stop();
-                    //TimeSpan timeSpan = watch.Elapsed;
-                    //var timeElapse = string.Format("{0}h {1}m {2}s {3}ms", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
-                    //Console.WriteLine(timeElapse);
                     connection.Close();
-                    //connection.();
-                    //connection.Dispose();
                     return _prdData;
                 }
-                //connection.Close();
-
             }
         }
         public static string ByteArrayToString(byte[] ba)
@@ -163,10 +141,11 @@ namespace DataMasker.DataSources
             }
         }
 
-        public void UpdateRows(IEnumerable<IDictionary<string, object>> rows,int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
+        public bool UpdateRows(IEnumerable<IDictionary<string, object>> rows,int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
         {
             SqlMapper.AddTypeHandler(new GeographyMapper());
             int? batchSize = _sourceConfig.UpdateBatchSize;
+            isRolledBack = false;
             if (batchSize == null ||
                 batchSize <= 0)
             {
@@ -202,21 +181,15 @@ namespace DataMasker.DataSources
                 }
                // sw.WriteLine(""); 
             }
-            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_successfulCommit))
+            using (StreamWriter sw = File.AppendText(_successfulCommit))
             {
                 //write my text 
                 if (new FileInfo(_successfulCommit).Length == 0)
                 {
                    // File.WriteAllText(_successfulCommit, "Successful Commits for " + ConfigurationManager.AppSettings["APP_NAME"] + ".........." + Environment.NewLine + Environment.NewLine);
-
-                    sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["DatabaseName"] + ".........." + Environment.NewLine + Environment.NewLine);
+                    sw.WriteLine("Successful Commits for " + ConfigurationManager.AppSettings["DatabaseName"] + "on schema " + tableConfig.TargetSchema + ".........." + Environment.NewLine + Environment.NewLine);
                 }
             }
-            
-           
-            
-           
-           
             using (OracleConnection connection = new OracleConnection(_connectionString))
             {
                 connection.Open();
@@ -239,14 +212,13 @@ namespace DataMasker.DataSources
                             if (_sourceConfig.DryRun)
                             {
                                 sqlTransaction.Rollback();
+                                isRolledBack = true;
                             }
                             else
                             {
                                 sqlTransaction.Commit();
-                                File.AppendAllText(_successfulCommit, $"Successful Commit on table  {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);
+                                File.AppendAllText(_successfulCommit, $"Successful Commit on table  {tableConfig.TargetSchema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);
                             }
-
-
                             if (updatedCallback != null)
                             {
                                 totalUpdated += batch.Items.Count;
@@ -255,16 +227,17 @@ namespace DataMasker.DataSources
                         }
                         catch (Exception ex)
                         {
-
+                            sqlTransaction.Rollback();
+                            isRolledBack = true;
                             Console.WriteLine(ex.Message);
-                            File.AppendAllText(_exceptionpath, ex.Message + $" on table {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);
-                           
+                            File.AppendAllText(_exceptionpath, ex.Message + $" on table {tableConfig.TargetSchema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);                       
                         }
 
                         
                     }
                 }
             }
+            return isRolledBack;
         }
         public string BuildUpdateSql(
            TableConfig tableConfig, Config config)
@@ -719,7 +692,7 @@ namespace DataMasker.DataSources
             public SdoDimArray Geo { get; set; }
             
         }
-        public DataTable GetDataTable(string table, string schema, string connection)
+        public DataTable GetDataTable(string table, string schema, string connection, string rowCount)
         {
             DataTable dataTable = new DataTable();
             List<object> geoInfoList = new List<object>();
@@ -732,7 +705,16 @@ namespace DataMasker.DataSources
                     squery = $"Select * from {schema}.{view} where TABLE_NAME = {table.AddSingleQuotes()}";
                 }
                 else
-                    squery = $"Select * from {schema}.{table}";
+                {
+                    if (int.TryParse(rowCount, out int n))
+                    {
+                        squery = $"Select * from {schema}.{table} WHERE rownum <=" + n;
+                    }
+                    else
+                        squery = $"Select * from {schema}.{table}";
+
+                    //squery = $"Select * from {schema}.{table}";
+                }
                 oracleConnection.Open();
                 using (OracleDataAdapter oda = new OracleDataAdapter(squery, oracleConnection))
                 {

@@ -12,7 +12,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Schema;
 using Newtonsoft.Json.Schema.Generation;
 using Newtonsoft.Json.Serialization;
-using System.ComponentModel;
 using OfficeOpenXml;
 using Newtonsoft.Json.Linq;
 using DataMasker.DataLang;
@@ -20,13 +19,11 @@ using DataMasker.MaskingValidation;
 using KellermanSoftware.CompareNetObjects;
 using System.Diagnostics;
 using System.Reflection;
-using static DataMasker.PrintDataExtensions;
 using System.Security.Principal;
 using SharpCompress.Archives.Rar;
 using SharpCompress.Common;
 using SharpCompress.Archives;
 using System.Net;
-using System.Globalization;
 using ChoETL;
 
 /*
@@ -69,11 +66,12 @@ namespace DataMasker.Examples
         private static DataTable report = new DataTable();  
         private static List<string> _colError = new List<string>();
         private static List<KeyValuePair<string, string>> collist = new List<KeyValuePair<string, string>>();
-        private static List<KeyValuePair<string, Dictionary<string, string>>> jsconfigTable = new List<KeyValuePair<string, Dictionary<string, string>>>();
-        private static List<KeyValuePair<string, Dictionary<string, string>>> copyJsTable = new List<KeyValuePair<string, Dictionary<string, string>>>();
+        private static List<KeyValuePair<TableConfig,ColumnConfig>> jsconfigTable = new List<KeyValuePair<TableConfig, ColumnConfig>>();
+        private static List<KeyValuePair<TableConfig, ColumnConfig>> copyJsTable = new List<KeyValuePair<TableConfig, ColumnConfig>>();
         private static List<KeyValuePair<string, Dictionary<string, string>>> _allNull = new List<KeyValuePair<string, Dictionary<string, string>>>();
         private static int rowCount;
         private static bool isBinary;
+        private static bool isRollback;
         private static readonly Dictionary<ProgressType, ProgressbarUpdate> _progressBars = new Dictionary<ProgressType, ProgressbarUpdate>();
         private static readonly Dictionary<string, object> allkey = new Dictionary<string, object>();
 
@@ -122,6 +120,7 @@ namespace DataMasker.Examples
             try
             {
                 //var https = new HttpClient();
+                Console.WriteLine("Downloading latest version...");
                 WebClient Clients = new WebClient
                 {
                     UseDefaultCredentials = true
@@ -147,7 +146,7 @@ namespace DataMasker.Examples
             try
             {
                 Console.WriteLine("Installing latest version...");
-                string configfile = @"C:\Program Files\IMB\DataMasker\DataMasker.Mask.exe.config";
+                string configfile = Directory.GetCurrentDirectory() + @"\DataMasker.Mask.exe.config";
                 File.Copy(configfile, Path.Combine(Path.GetDirectoryName(configfile)
                     , Path.GetFileName(configfile) + ".bak"), true);
                 Process process = new Process();
@@ -270,7 +269,7 @@ namespace DataMasker.Examples
             List<string> MaskingRules = new List<string>() { "No Masking required", "Replace Value with fake data","Shuffle", "Flagged" };
             List<string> maskingoutString = new List<string>() { "char", "nchar","string","varchar", "nvarchar", "binary", "varbinary" , "character varying" };
             List<string> ScrableList = new List<string>() { "char", "nchar", "string", "varchar", "nvarchar", "binary", "varbinary", "character varying", "numeric", "decimal", "double", "int","Number"};
-            List<Table> tableList = new List<Table>();
+            List<TableConfig> tableList = new List<TableConfig>();
             List<string> Vehicles = new List<string> { "Manufacturer", "Vin", "Model", "Type", "Fuel" };
             DataGeneration dataGeneration = new DataGeneration
             {
@@ -310,9 +309,9 @@ namespace DataMasker.Examples
 
                 //if (nameGroup.Where(n => !(n.MaskingRule.Contains("No masking") || n.MaskingRule.Contains("Flagged"))).Count() > 0)
                 //{
-                Table table = new Table();
-                List<Column> colList = new List<Column>();
-                table.name = nameGroup.Key;
+                TableConfig table = new TableConfig();
+                List<ColumnConfig> colList = new List<ColumnConfig>();
+                table.Name = nameGroup.Key;
                 
                
 
@@ -320,17 +319,17 @@ namespace DataMasker.Examples
                 foreach (var col in nameGroup)
                 {
 
-                    table.primaryKeyColumn = col.PKconstraintName.Split(',')[0];
+                    table.PrimaryKeyColumn = col.PKconstraintName.Split(',')[0];
                     table.Schema = col.Schema;
                     table.TargetSchema = col.TargetSchema;
                     table.RowCount = col.RowCount;
                     bool o = col.RetainNull.ToUpper().Equals("TRUE") ? true : false;
                     bool prview = col.Preview.ToUpper().Equals("FALSE") ? false : true;
                     bool nullString = col.RetainEmptyString.ToUpper().Equals("FALSE") ? false : true;
-                    Column column = new Column
+                    ColumnConfig column = new ColumnConfig
                     {
-                        name = col.ColumnName,
-                        retainNullValues = o,
+                        Name = col.ColumnName,
+                        RetainNullValues = o,
                         RetainEmptyStringValues = nullString,
                         StringFormatPattern = "",
                         UseValue = col.UseValue.NullIfEmpty(),
@@ -341,24 +340,24 @@ namespace DataMasker.Examples
 
                     if (col.MaskingRule.ToUpper().Contains("NO MASKING"))
                     {
-                        column.type = DataType.NoMasking.ToString();
+                        column.Type = DataType.NoMasking;
                         if (col.DataType.ToUpper().Equals("SDO_GEOMETRY") || col.DataType.ToUpper().ToUpper().Contains("GEOMETRY"))
                         {
-                            column.type = DataType.Geometry.ToString();
+                            column.Type = DataType.Geometry;
                         }
-                        column.ignore = true;
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Ignore = true;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }                   
                     else if (col.MaskingRule.ToUpper().Contains("SHUFFLE"))
                     {
-                        column.type = DataType.Shuffle.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.Shuffle;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }                
                     else if (col.MaskingRule.ToUpper().Contains("MATH"))
                     {
@@ -366,16 +365,16 @@ namespace DataMasker.Examples
                         {
                             throw new ArgumentException("Math Operation apply only on Numeric Datatype", col.DataType + " on " + col.ColumnName);
                         }
-                        column.type = DataType.math.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min;
+                        column.Type = DataType.math;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min;
                         if (string.IsNullOrEmpty(col.StringFormat))
                         {
                             throw new ArgumentException("Math Operation requires a stringFormat", col.StringFormat + " on " + col.ColumnName);
                         }
                         column.StringFormatPattern = col.StringFormat;
-                        column.useGenderColumn = "";
-                        column.ignore = true;
+                        column.UseGenderColumn = "";
+                        column.Ignore = true;
                         column.Operator = col.RuleReasoning;
                     }
                     else if (!MaskingRules.Any(n => col.MaskingRule.ToUpper().Contains(n.ToUpper())))
@@ -383,11 +382,11 @@ namespace DataMasker.Examples
                         switch (ToEnum(col.MaskingRule, DataType.Error))
                         {
                             case DataType.None:
-                                column.type = DataType.None.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.None;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Vehicle:
                                 if (string.IsNullOrEmpty(col.StringFormat))
@@ -400,19 +399,19 @@ namespace DataMasker.Examples
                                     throw new ArgumentException("Invalid Vehicle StringFormatPattern value: " + col.StringFormat.AddDoubleQuotes(), nameof(col.StringFormat) + " on " + col.ColumnName);
 
                                 }
-                                column.type = DataType.Vehicle.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.Vehicle;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.CompanyPersonName:
-                                column.type = DataType.CompanyPersonName.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.CompanyPersonName;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.MaskingOut:
                                 //datatype must be string 
@@ -420,16 +419,16 @@ namespace DataMasker.Examples
                                 {
                                     throw new ArgumentException("MaskingOut type apply only on String dataType", col.DataType + " on " + col.ColumnName);
                                 }
-                                column.type = DataType.MaskingOut.ToString();                             
-                                column.min = col.Min;
+                                column.Type = DataType.MaskingOut;                             
+                                column.Min = col.Min;
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
                                     throw new ArgumentException("MaskingOut type requires a StringFormatPattern value", nameof(col.StringFormat) + " on " + col.ColumnName);
 
                                 }
                                 column.StringFormatPattern = col.StringFormat.Split('(').FirstOrDefault(); //StringFormatpattern = MaskingRight(4) , MaskingLeft(ChunkSize), MaskigMiddle(chunkSize)
-                                column.max = string.Join("", col.StringFormat.Where(char.IsDigit));
-                                column.useGenderColumn = "";
+                                column.Max = string.Join("", col.StringFormat.Where(char.IsDigit));
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Scramble:
                                 //datatype must be string 
@@ -437,98 +436,100 @@ namespace DataMasker.Examples
                                 {
                                     throw new ArgumentException("Scramble type apply only on Strings and Numeric Datatype", col.DataType + " on " + col.ColumnName);
                                 }
-                                column.type = DataType.Scramble.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.Scramble;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Company:
-                                column.type = DataType.Company.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.Company;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 column.StringFormatPattern = "{{COMPANY.COMPANYNAME}} {{COMPANY.COMPANYSUFFIX}}";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.NULL:
                                 break;
                             case DataType.TimeSpan:
-                                column.type = DataType.TimeSpan.ToString();
+                                column.Type = DataType.TimeSpan;
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
                                     throw new ArgumentException("StringFormat type requires a StringFormatPattern value", nameof(col.StringFormat) + " on " + col.ColumnName);
                                 }
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
                                 column.StringFormatPattern = col.StringFormat;
                                 break;
                             case DataType.PostalCode:
-                                column.type = DataType.PostalCode.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.PostalCode;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.StringConcat:
-                                column.type = DataType.StringConcat.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.StringConcat;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
                                     throw new ArgumentException("StringFormat type requires a StringFormatPattern value", nameof(col.StringFormat) + " on " + col.ColumnName);
                                 }
                                 column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Shuffle:
-                                column.type = DataType.Shuffle.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.Shuffle;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Ignore:
                                 break;
                             case DataType.Money:
-                                column.type = DataType.Money.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.Money;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 column.StringFormatPattern = "{{FINANCE.AMOUNT}}";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Location:
                                 break;
                             case DataType.NoMasking:
-                                column.ignore = true;
+                                column.Ignore = true;
                                 break;
                             case DataType.math:
                                 if (maskingoutString.Any(n => col.DataType.ToUpper().Contains(n.ToUpper())))
                                 {
                                     throw new ArgumentException("Math Operation apply only on Numeric Datatype", col.DataType + " on " + col.ColumnName);
                                 }
-                                column.type = DataType.math.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.math;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
-                                column.ignore = true;
+                                column.UseGenderColumn = "";
+                                column.Ignore = true;
                                 column.Operator = col.RuleReasoning;
                                 break;
                             case DataType.Shufflegeometry:
-                                column.type = DataType.Shufflegeometry.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.Shufflegeometry;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.exception:
                                 break;
                             case DataType.Bogus:
-                                column.type = DataType.Bogus.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.Bogus;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
@@ -536,152 +537,186 @@ namespace DataMasker.Examples
                                     
                                 }
                                 column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.RandomUsername:
-                                column.type = DataType.RandomUsername.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.RandomUsername;
+                                if (string.IsNullOrEmpty(col.Max.ToString()) || string.IsNullOrEmpty(col.Min.ToString()))
+                                {
+                                    throw new ArgumentException("RandomUsername type requires MinMax value", nameof(col.Min) + nameof(col.Max) + " on " + col.ColumnName);
+                                }
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.FirstName:
-                                column.type = DataType.FirstName.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.FirstName;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.FullName:
-                                column.type = DataType.FullName.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.FullName;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.LastName:
-                                column.type = DataType.LastName.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.LastName;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.DateOfBirth:
-                                column.type = DataType.DateOfBirth.ToString();                    
+                                column.Type = DataType.DateOfBirth;                    
                                 if (string.IsNullOrEmpty(col.Max.ToString()) || string.IsNullOrEmpty(col.Min.ToString()))
                                 {
                                     throw new ArgumentException("DateOfBirth type requires MinMax value", nameof(col.Min) + nameof(col.Max) + " on " + col.ColumnName);
                                 }
                                 if (col.Max.ToString().Equals("-- ::") || col.Min.ToString().Equals("-- ::"))
                                 {
-                                    column.ignore = true;
+                                    column.Ignore = true;
                                 }
-                                if (col.Max.ToString().Equals(col.Min.ToString()))
+                                if (col.Max.ToString().Equals(col.Min.ToString()) && !col.Max.ToString().Equals("-- ::"))
                                 {
                                     col.Max = DateTime.Now.ToString();
                                 }
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
+                                column.RetainEmptyStringValues = false;
+                                break;
+                            case DataType.Date:
+                                column.Type = DataType.Date;
+                                if (string.IsNullOrEmpty(col.Max.ToString()) || string.IsNullOrEmpty(col.Min.ToString()))
+                                {
+                                    throw new ArgumentException("Date type requires MinMax value", nameof(col.Min) + nameof(col.Max) + " on " + col.ColumnName);
+                                }
+                                if (string.IsNullOrEmpty(col.StringFormat.ToString()))
+                                {
+                                    throw new ArgumentException("Date type requires StringFormat value", nameof(col.StringFormat) +" on " + col.ColumnName);
+                                }
+                                if (col.Max.ToString().Equals("-- ::") || col.Min.ToString().Equals("-- ::"))
+                                {
+                                    column.Ignore = true;
+                                }
+                                //if (col.Max.ToString().Equals(col.Min.ToString()))
+                                //{
+                                //    col.Max = DateTime.Now.ToString();
+                                //}
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 column.RetainEmptyStringValues = false;
                                 break;
                             case DataType.PickRandom:
-                                column.type = DataType.PickRandom.ToString();
+                                column.Type = DataType.PickRandom;
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
                                     throw new ArgumentException("PickRandom type requires a StringFormatPattern of a list of random variable seperated with a comma", col.StringFormat + " on" + col.ColumnName);
 
                                 }
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.Max = col.Max.ToString(); 
+                                column.Min = col.Min;
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.RandomString2:
-                                column.type = DataType.RandomString2.ToString();
+                                column.Type = DataType.RandomString2;
                                 if (string.IsNullOrEmpty(col.Max.ToString()) || string.IsNullOrEmpty(col.Min.ToString()))
                                 {
                                     throw new ArgumentException("RandomString2 type requires a Min and Max value", nameof(col.Min) + nameof(col.Max) + " on " + col.ColumnName);
                                 }
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                                 
                             case DataType.Rant:
-                                column.type = DataType.Rant.ToString();
+                                column.Type = DataType.Rant;
                                 if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
                                     throw new ArgumentException("Rant type requires a Max value",  nameof(col.Max) + " on " + col.ColumnName);
                                 }
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
                                 //column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
-                                column.min = Convert.ToString(1);
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.Min = Convert.ToString(1).Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length); ;
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.State:
-                                column.type = DataType.State.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "Canada";
+                                column.Type = DataType.State;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
+                                column.StringFormatPattern = "Canada";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.City:
-                                column.type = DataType.City.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "Canada";
+                                column.Type = DataType.City;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
+                                //column.StringFormatPattern = "";
+                                column.StringFormatPattern = "BC";
                                 break;
                             case DataType.Lorem:
-                                column.type = DataType.Lorem.ToString();
+                                column.Type = DataType.Lorem;
                                 if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
                                     throw new ArgumentException("Lorem type requires a Min and Max value", nameof(col.Max) + " on " + col.ColumnName);
                                 }
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.StringFormat:
+                                column.Type = DataType.StringFormat;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.FullAddress:
-                                column.type = DataType.FullAddress.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.FullAddress;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "Canada";
+                                column.StringFormatPattern = "Canada";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.StreetAddress:
-                                column.type = DataType.StreetAddress.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.StreetAddress;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.SecondaryAddress:
-                                column.type = DataType.SecondaryAddress.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.SecondaryAddress;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.PhoneNumber:
-                                column.type = DataType.PhoneNumber.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.PhoneNumber;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
@@ -690,80 +725,78 @@ namespace DataMasker.Examples
                                 else
                                     column.StringFormatPattern = col.StringFormat;
 
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.PhoneNumberInt:
-                                column.type = DataType.PhoneNumberInt.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
+                                column.Type = DataType.PhoneNumberInt;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
                                 if (string.IsNullOrEmpty(col.StringFormat))
                                 {
                                     column.StringFormatPattern = "##########";
                                 }
                                 else
                                     column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Longitude:
-                                column.type = DataType.Longitude.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.Type = DataType.Longitude;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Latitude:
-                                column.type = DataType.Latitude.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.Type = DataType.Latitude;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.RandomSeason:
-                                column.type = DataType.RandomSeason.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min;
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.Type = DataType.RandomSeason;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min;
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.File:
-                                column.type = DataType.File.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
-
+                                column.Type = DataType.File;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
                                 column.StringFormatPattern = "{{SYSTEM.FILENAME}}";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Filename:                             
-                                column.type = DataType.File.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.File;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                                 //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
                                 column.StringFormatPattern = "{{SYSTEM.FILENAME}}";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Blob:
                                 var filename = nameGroup.Where(n => n.ColumnName.Equals("FILE_NAME") || n.ColumnName.Equals("FILENAME")).Select(n => n).FirstOrDefault().ColumnName;
-                                column.type = DataType.Blob.ToString();
-                                column.max = col.Max.ToString();
-                                column.min = col.Min.ToString();
-
+                                column.Type = DataType.Blob;
+                                column.Max = col.Max.ToString();
+                                column.Min = col.Min.ToString();
                                 column.StringFormatPattern = "";
                                 if (!string.IsNullOrEmpty(filename))
                                 {
                                     column.StringFormatPattern = filename;
                                 }
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Clob:
-                                column.type = DataType.Clob.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min.ToString(); ;
+                                column.Type = DataType.Clob;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.RandomDec:
-                                column.type = DataType.RandomDec.ToString();
+                                column.Type = DataType.RandomDec;
                                 if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
                                     throw new ArgumentException("RandomDec type requires a Max value",  nameof(col.Max) + " on " + col.ColumnName);
@@ -772,35 +805,35 @@ namespace DataMasker.Examples
                                 {
                                     throw new ArgumentException("RandomDec type requires a Max value", nameof(col.Min) + " on " + col.ColumnName);
                                 }
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min.ToString(); ;
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min.ToString(); ;
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Geometry:
-                                column.type = DataType.Geometry.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min.ToString(); ;
+                                column.Type = DataType.Geometry;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.RandomYear:
-                                column.type = DataType.RandomYear.ToString();
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.Type = DataType.RandomYear;
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.RandomMonth:
-                                column.type = DataType.RandomMonth.ToString();
-                                column.max = col.Max.ToString();
-                                column.min = col.Min.ToString();
+                                column.Type = DataType.RandomMonth;
+                                column.Max = col.Max.ToString();
+                                column.Min = col.Min.ToString();
                                 column.StringFormatPattern = col.StringFormat;
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.RandomInt:
-                                column.type = DataType.RandomInt.ToString();
+                                column.Type = DataType.RandomInt;
                                 if (string.IsNullOrEmpty(col.Max.ToString()))
                                 {
                                     throw new ArgumentException("RandomInt type requires a Max value", nameof(col.Max) + " on " + col.ColumnName);
@@ -809,115 +842,115 @@ namespace DataMasker.Examples
                                 {
                                     throw new ArgumentException("RandomInt type requires a Max value", nameof(col.Min) + " on " + col.ColumnName);
                                 }
-                                column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                                column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
-                                column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                                column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                                column.StringFormatPattern = col.StringFormat;
+                                column.UseGenderColumn = "";
                                 break;
                             case DataType.Computed:
                                 break;
                             case DataType.RandomHexa:
                                 break;
                             default:
-                                column.ignore = true;   
+                                column.Ignore = true;   
                                 break;
                         }
                     }
                     else if (col.ColumnName.ToUpper().Contains("LONGITUDE") && (col.DataType.ToUpper().Contains("NUMERIC") || col.DataType.ToUpper().Contains("DECIMAL")))
                     {
-                        column.type = DataType.Longitude.ToString();
-                        column.max = col.Max.ToString();
-                        column.min = col.Min.ToString();
+                        column.Type = DataType.Longitude;
+                        column.Max = col.Max.ToString();
+                        column.Min = col.Min.ToString();
                         column.StringFormatPattern = col.Description;
                         column.Operator = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Contains("LATITUDE") && (col.DataType.ToUpper().Contains("NUMERIC") || col.DataType.ToUpper().Contains("DECIMAL")))
                     {
-                        column.type = DataType.Latitude.ToString();
-                        column.max = col.Max.ToString();
-                        column.min = col.Min.ToString();
+                        column.Type = DataType.Latitude;
+                        column.Max = col.Max.ToString();
+                        column.Min = col.Min.ToString();
                         column.StringFormatPattern = col.Description;
                         column.Operator = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Contains("FIRST_NAME") || col.ColumnName.ToUpper().Contains("FIRSTNAME")  || col.ColumnName.ToUpper().Contains("MIDDLE_NAME"))
                     {
-                        column.type = DataType.FirstName.ToString();
-                        column.max = col.Max.ToString(); 
-                        column.min = col.Min.ToString(); 
+                        column.Type = DataType.FirstName;
+                        column.Max = col.Max.ToString(); 
+                        column.Min = col.Min.ToString(); 
                         column.StringFormatPattern = "{{NAME.FIRSTNAME}}";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.DataType.ToUpper().Equals("BLOB") || col.DataType.ToUpper().Equals("IMAGE"))
                     {
                         var filename = nameGroup.Where(n => n.ColumnName.Equals("FILE_NAME") || n.ColumnName.Equals("FILENAME")).Select(n=>n).FirstOrDefault().ColumnName;
-                        column.type = DataType.Blob.ToString();
-                        column.max = col.Max.ToString(); 
-                        column.min = col.Min.ToString();
+                        column.Type = DataType.Blob;
+                        column.Max = col.Max.ToString(); 
+                        column.Min = col.Min.ToString();
                        
-                        column.StringFormatPattern = "";
+                        column.StringFormatPattern = col.StringFormat;
                         if (!string.IsNullOrEmpty(filename))
                         {
                             column.StringFormatPattern = filename;
                         }
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.DataType.ToUpper().Equals("CLOB"))
                     {
-                        column.type = DataType.Clob.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.Type = DataType.Clob;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
+                        column.StringFormatPattern = col.StringFormat;
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Contains("CITY"))
                     {
-                        column.type = DataType.City.ToString(); 
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.City; 
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{ADDRESS.CITY}}";
-                        column.useGenderColumn = "Canada";
+                        column.UseGenderColumn = "Canada";
                     }
                     else if (col.ColumnName.ToUpper().Contains("STATE") || col.ColumnName.ToUpper().Contains("PROVINCE"))
                     {
-                        column.type = DataType.State.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.State;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{ADDRESS.CITY}}";
-                        column.useGenderColumn = "Canada";
+                        column.UseGenderColumn = "Canada";
                     }
                     else if (col.ColumnName.ToUpper().Contains("COUNTRY"))
                     {
-                        column.type = DataType.Bogus.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.Bogus;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{ADDRESS.COUNTRY}}";
-                        column.useGenderColumn = "Canada";
+                        column.UseGenderColumn = "Canada";
                     }
                     else if (col.DataType.ToUpper().Equals("SDO_GEOMETRY") || col.DataType.ToUpper().ToUpper().Contains("GEOMETRY"))
                     {
-                        column.type = DataType.Geometry.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
-                        column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.Type = DataType.ShufflePolygon;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
+                        column.StringFormatPattern = col.StringFormat;
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Contains("SURNAME") || col.ColumnName.ToUpper().Contains("LASTNAME") || col.ColumnName.ToUpper().Contains("LAST_NAME"))
                     {
-                        column.type = DataType.LastName.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.LastName;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{NAME.LASTNAME}}";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Contains("COMPANY_NAME") || col.ColumnName.ToUpper().Contains("ORGANIZATION_NAME"))
                     {
-                        column.type = DataType.Company.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.Company;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{COMPANY.COMPANYNAME}} {{COMPANY.COMPANYSUFFIX}}";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (_comment.Any(n => col.ColumnName.ToUpper().Contains(n)) || col.DataType.ToUpper().Contains("CHAR") || _comment.Any(x => col.Comments.Contains(x)))
                     {
@@ -927,99 +960,99 @@ namespace DataMasker.Examples
                             var sizze = size[1].ToString();
                             if (!string.IsNullOrEmpty(sizze))
                             {
-                                column.type = DataType.Rant.ToString();
-                                column.max = Convert.ToString(sizze);
-                                column.min = Convert.ToString(1); ;
+                                column.Type = DataType.Rant;
+                                column.Max = Convert.ToString(sizze);
+                                column.Min = Convert.ToString(1); ;
                                 column.StringFormatPattern = "DESCRIPTION";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                             }
                             else
                             {
-                                column.type = DataType.Rant.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = Convert.ToString(1) ;
+                                column.Type = DataType.Rant;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = Convert.ToString(1) ;
                                 column.StringFormatPattern = "DESCRIPTION";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                             }
                         }
                         else
                         {
-                            column.type = DataType.Rant.ToString();
-                            column.max = col.Max.ToString(); ;
-                            column.min = Convert.ToString(1);
+                            column.Type = DataType.Rant;
+                            column.Max = col.Max.ToString(); ;
+                            column.Min = Convert.ToString(1);
                             column.StringFormatPattern = "DESCRIPTION";
-                            column.useGenderColumn = "";
+                            column.UseGenderColumn = "";
                         }//split varchar(20 byte) and get max number
 
                     }
                     else if (col.DataType.ToUpper().Contains("DATE"))
                     {
-                        column.type = DataType.DateOfBirth.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min;
+                        column.Type = DataType.DateOfBirth;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min;
                         column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Equals("YEAR"))
                     {
-                        column.type = DataType.RandomYear.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.RandomYear;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Contains("PHONE_NO") || col.ColumnName.ToUpper().Contains("FAX_NO") || col.ColumnName.ToUpper().Contains("CONTRACT_NO") || col.ColumnName.ToUpper().Contains("CELL") || col.ColumnName.ToUpper().Contains("_PHONE") || col.ColumnName.ToUpper().Contains("PHONENUMBER"))
                     {
                         if (col.DataType.ToUpper().Contains("NUMBER"))
                         {
-                            column.type = DataType.PhoneNumberInt.ToString();
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
+                            column.Type = DataType.PhoneNumberInt;
+                            column.Max = col.Max.ToString(); ;
+                            column.Min = col.Min.ToString(); ;
                             if (string.IsNullOrEmpty(col.StringFormat))
                             {
                                 column.StringFormatPattern = "##########";
                             }
                             else
                                 column.StringFormatPattern = col.StringFormat;
-                            column.useGenderColumn = "";
+                            column.UseGenderColumn = "";
                         }
                         else
                         {
-                            column.type = DataType.PhoneNumber.ToString();
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
+                            column.Type = DataType.PhoneNumber;
+                            column.Max = col.Max.ToString(); ;
+                            column.Min = col.Min.ToString(); ;
                             if (string.IsNullOrEmpty(col.StringFormat))
                             {
                                 column.StringFormatPattern = "##########";
                             }
                             else
                                 column.StringFormatPattern = col.StringFormat;
-                            column.useGenderColumn = "";
+                            column.UseGenderColumn = "";
                         }
                     }
                     else if (col.ColumnName.ToUpper().Contains("EMAIL_ADDRESS"))
                     {
-                        column.type = DataType.Bogus.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.Bogus;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "{{INTERNET.EMAIL}}";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.DataType.ToUpper().Contains("MONEY"))
                     {
-                        column.type = DataType.Money.ToString();
-                        column.max = col.Max.ToString();
-                        column.min = col.Min.ToString();
+                        column.Type = DataType.Money;
+                        column.Max = col.Max.ToString();
+                        column.Min = col.Min.ToString();
                         column.StringFormatPattern = "{{FINANCE.AMOUNT}}";
                         //column.useGenderColumn = "Gender";
                     }
                     else if (col.ColumnName.ToUpper().Contains("POSTAL_CODE"))
                     {
-                        column.type = DataType.PostalCode.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.PostalCode;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.DataType.ToUpper().Equals("CHAR(1 BYTE)"))
                     {
@@ -1029,30 +1062,30 @@ namespace DataMasker.Examples
                             var charSize = chr[1].ToString();
                             if (!string.IsNullOrEmpty(charSize))
                             {
-                                column.type = DataType.PickRandom.ToString();
-                                column.max = Convert.ToString(charSize);
-                                column.min = col.Min.ToString(); ;
+                                column.Type = DataType.PickRandom;
+                                column.Max = Convert.ToString(charSize);
+                                column.Min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                             }
                             else
                             {
-                                column.type = DataType.Ignore.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min.ToString(); ;
-                                column.ignore = true;
+                                column.Type = DataType.Ignore;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min.ToString(); ;
+                                column.Ignore = true;
                                 column.StringFormatPattern = "";
-                                column.useGenderColumn = "";
+                                column.UseGenderColumn = "";
                             }
                         }
                         else
                         {
-                            column.type = DataType.Ignore.ToString();
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
-                            column.ignore = true;
+                            column.Type = DataType.Ignore;
+                            column.Max = col.Max.ToString(); ;
+                            column.Min = col.Min.ToString(); ;
+                            column.Ignore = true;
                             column.StringFormatPattern = "";
-                            column.useGenderColumn = "";
+                            column.UseGenderColumn = "";
                         }
                     }
                     else if (col.ColumnName.ToUpper().Contains("ADDRESS"))
@@ -1065,130 +1098,130 @@ namespace DataMasker.Examples
                             {
                                 if (col.ColumnName.ToUpper().Contains("ADDRESS") && (col.ColumnName.Contains("2") || col.ColumnName.Contains("3")))
                                 {
-                                    column.type = DataType.SecondaryAddress.ToString();
+                                    column.Type = DataType.SecondaryAddress;
                                 }
                                 else if (col.ColumnName.ToUpper().Contains("STREET"))
                                 {
-                                    column.type = DataType.StreetAddress.ToString();
+                                    column.Type = DataType.StreetAddress;
                                 }
                                 else
-                                    column.type = DataType.FullAddress.ToString();
+                                    column.Type = DataType.FullAddress;
 
-                                column.max = Convert.ToString(sizze);
-                                column.min = col.Min.ToString(); ;
+                                column.Max = Convert.ToString(sizze);
+                                column.Min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
-                                column.useGenderColumn = "Canada";
+                                column.UseGenderColumn = "Canada";
                             }
                             else
                             {
-                                column.type = DataType.FullAddress.ToString();
-                                column.max = col.Max.ToString(); ;
-                                column.min = col.Min.ToString(); ;
+                                column.Type = DataType.FullAddress;
+                                column.Max = col.Max.ToString(); ;
+                                column.Min = col.Min.ToString(); ;
                                 column.StringFormatPattern = "{{address.fullAddress}}";
-                                column.useGenderColumn = "Canada";
+                                column.UseGenderColumn = "Canada";
                             }
                         }
                         else
                         {
-                            column.type = DataType.FullAddress.ToString();
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
+                            column.Type = DataType.FullAddress;
+                            column.Max = col.Max.ToString(); ;
+                            column.Min = col.Min.ToString(); ;
                             //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
                             column.StringFormatPattern = "{{address.fullAddress}}";
-                            column.useGenderColumn = "Canada";
+                            column.UseGenderColumn = "Canada";
                         }
                     }
                     else if (col.ColumnName.ToUpper().Contains("USERID") || col.ColumnName.ToUpper().Contains("USERNAME"))
                     {
-                        column.type = DataType.RandomUsername.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.RandomUsername;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
                         column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Contains("FILE_NAME"))
                     {
-                        column.type = DataType.File.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.File;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
                         column.StringFormatPattern = "{{SYSTEM.FILENAME}}";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (_fullName.Any(n => col.ColumnName.ToUpper().Contains(n)) || _fullName.Any(x => col.Comments.Contains(x)))
                     {
-                        column.type = DataType.Bogus.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min.ToString(); ;
+                        column.Type = DataType.Bogus;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min.ToString(); ;
                         //column.StringFormatPattern = "{{ADDRESS.STREETADDRESS}} {{ADDRESS.CITY}} {{ADDRESS.STATE}}";
                         column.StringFormatPattern = "{{NAME.FULLNAME}}";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }
                     else if (col.ColumnName.ToUpper().Contains("AMOUNT") || col.ColumnName.ToUpper().Contains("AMT") || col.Comments.Contains("Amount"))
                     {
-                        column.type = DataType.RandomDec.ToString();
-                        column.max = col.Max.ToString(); ;
-                        column.min = col.Min;
+                        column.Type = DataType.RandomDec;
+                        column.Max = col.Max.ToString(); ;
+                        column.Min = col.Min;
                         column.StringFormatPattern = "";
-                        column.useGenderColumn = "";
+                        column.UseGenderColumn = "";
                     }                  
                     else
                     {                       
                         if (col.ColumnName.ToUpper().Equals("NAME")) //set company name
                         {
-                            column.type = DataType.Bogus.ToString();
+                            column.Type = DataType.Bogus;
                             //column.type = col.DATA_TYPE;
                             column.StringFormatPattern = "{{COMPANY.COMPANYNAME}}";
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min.ToString(); ;
-                            column.useGenderColumn = "";
+                            column.Max = col.Max.ToString(); ;
+                            column.Min = col.Min.ToString(); ;
+                            column.UseGenderColumn = "";
                         }
                         else if ((col.ColumnName.ToUpper().Contains("AUTHOR") || col.ColumnName.ToUpper().Contains("EDITOR")) && col.DataType.ToUpper().Contains("VARCHAR"))
                         {
-                            column.type = DataType.FullName.ToString();
-                            column.max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
-                            column.min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
+                            column.Type = DataType.FullName;
+                            column.Max = col.Max.ToString().Substring(0, col.Max.ToString().IndexOf('.') > 0 ? col.Max.ToString().IndexOf('.') : col.Max.ToString().Length);
+                            column.Min = col.Min.ToString().Substring(0, col.Min.ToString().IndexOf('.') > 0 ? col.Min.ToString().IndexOf('.') : col.Min.ToString().Length);
 
                             column.StringFormatPattern = "";
-                            column.useGenderColumn = "";
+                            column.UseGenderColumn = "";
                         }
                         else if (col.DataType.ToUpper().Contains("NUMBER"))
                         {
                             //var size = col.DataType.ToUpper().Replace("(", " ").Replace(")", " ").Split(' ')[1].Split(',')[0].ToString();
 
-                            column.type = DataType.RandomInt.ToString();
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min;
+                            column.Type = DataType.RandomInt;
+                            column.Max = col.Max.ToString(); ;
+                            column.Min = col.Min;
                             column.StringFormatPattern = "";
-                            column.useGenderColumn = "";
+                            column.UseGenderColumn = "";
 
                         }
                         else if (col.ColumnName.ToUpper().Equals("TOTAL_AREA")) //set company name
                         {
-                            column.type = DataType.Bogus.ToString();
+                            column.Type = DataType.Bogus;
                             //column.type = col.DATA_TYPE;
                             column.StringFormatPattern = "";
-                            column.max = col.Max.ToString(); ;
-                            column.min = col.Min;
-                            column.useGenderColumn = "";
+                            column.Max = col.Max.ToString(); ;
+                            column.Min = col.Min;
+                            column.UseGenderColumn = "";
                         }
                         else
                         {
                             count++;
                             collist.Add(new KeyValuePair<string, string>(col.ColumnName, col.TableName));
                             //collist.Add(col.ColumnName.ToUpper(), col.TableName);
-                            column.type = DataType.Ignore.ToString();
+                            column.Type = DataType.Ignore;
                             //column.type = col.DATA_TYPE;
                             column.StringFormatPattern = "";
-                            column.max = col.Max.ToString();
-                            column.min = col.Min.ToString();
-                            column.useGenderColumn = "";
-                            column.ignore = true;
+                            column.Max = col.Max.ToString();
+                            column.Min = col.Min.ToString();
+                            column.UseGenderColumn = "";
+                            column.Ignore = true;
 
                         }
                     }
-                    if (!col.ColumnName.Equals(table.primaryKeyColumn) && !col.MaskingRule.ToUpper().Contains("FLAGGED"))
+                    if (!col.ColumnName.Equals(table.PrimaryKeyColumn) && !col.MaskingRule.ToUpper().Contains("FLAGGED"))
                     {
                         colList.Add(column);
                     }
@@ -1197,18 +1230,18 @@ namespace DataMasker.Examples
 
                 // if (colList.Count > 0)
                 // {
-                table.columns = colList;
+                table.Columns = colList;
 
                 tableList.Add(table);
                 //}
                 #region check for null type
-                var nullType = table.columns.Where(x => x.type == null);
+                var nullType = table.Columns.Where(x => x.Type == null);
                 if (nullType.Any())
                 {
                     int autoNumber1 = 1;
                     foreach (var type in nullType)
                     {
-                        Console.WriteLine(autoNumber1++.ToString() + ". "+ $"Column {type.name} contains invalid masking rule type");
+                        Console.WriteLine(autoNumber1++.ToString() + ". "+ $"Column {type.Name} contains invalid masking rule type");
                     }
                     Console.WriteLine("The Program will exit. Hit Enter to exit..");
 
@@ -1288,17 +1321,19 @@ namespace DataMasker.Examples
                     foreach (var colitems in tabitem.Columns)
                     {
                         var newdic = new Dictionary<string, string> { { colitems.Name, colitems.Type.ToString() } };
-                        jsconfigTable.Add(new KeyValuePair<string, Dictionary<string, string>>(tabitem.Name, newdic));
+                        jsconfigTable.Add(new KeyValuePair<TableConfig,ColumnConfig>(tabitem, colitems));
 
                         //(item.Name, new Dictionary<string, string>() { { items.Name, items.Type.ToString() } });
                     }
                 }
                 var buildConfig = JsonConvert.DeserializeObject<RootObject1>(jsonresult);
+                CompareLogic compareLogic = new CompareLogic();
+                var gg = compareLogic.Compare(buildConfig.tables,rootConfig.Tables).Differences;
                 foreach (var tabCol in buildConfig.tables)
                 {
-                    foreach (var col in tabCol.columns)
+                    foreach (var col in tabCol.Columns)
                     {
-                        copyJsTable.Add(new KeyValuePair<string, Dictionary<string, string>>(tabCol.name, new Dictionary<string, string> { { col.name, col.type } }));
+                        copyJsTable.Add(new KeyValuePair<TableConfig, ColumnConfig>(tabCol, col));
                     }
                 }
                 // var diff = jsconfigTable.Where(x=> x.Key != copyJsTable.Select(n=>n.Key).ToString());
@@ -1307,18 +1342,42 @@ namespace DataMasker.Examples
                 {
                     for (int i = 0; i < copyJsTable.Count; i++)
                     {
-                        if (!jsconfigTable[i].Value.SequenceEqual(copyJsTable[i].Value))
+                        if (!compareLogic.Compare(jsconfigTable[i], copyJsTable[i]).AreEqual)
                         {
-                            mapped = string.Join(",", jsconfigTable[i].Value.Select(n => n.Value).ToArray());
-                            Console.WriteLine(jsconfigTable[i].Key.ToString() + " " + string.Join(",", copyJsTable[i].Value.ToArray()) + " now mapped with: " + mapped);
-                        }
-                        else if (jsconfigTable[i].Value.Where(n => n.Value.Equals(DataType.Ignore.ToString())).Count() != 0)
-                        {
-                            var xxxx = jsconfigTable[i].Value.Where(n => n.Value.Equals(DataType.Ignore.ToString())).ToDictionary(n => n.Key, n => n.Value);
-                            //exit
-                            _allNull.Add(new KeyValuePair<string, Dictionary<string, string>>(string.Join("", jsconfigTable[i].Key.ToArray()).ToString(), xxxx));
+                            var diff = compareLogic.Compare(jsconfigTable[i], copyJsTable[i]).Differences;
+                            var obj1 = diff.FirstOrDefault().ParentObject1;
+                            var obj2 = diff.FirstOrDefault().ParentObject2;
+                            if (obj1.GetType() == typeof(TableConfig))
+                            {
+                                var t1 = (TableConfig)obj1;
+                                var t2 = (TableConfig)obj2;
+                                var t3 = compareLogic.Compare(t1.Columns, t2.Columns).Differences;
+                                var t4 = compareLogic.Compare(t1, t2).Differences;
+                                //mapped = t4.FirstOrDefault().PropertyName;
+                               mapped = t4.FirstOrDefault().PropertyName + " " + t1.Name +" now mapped with: " + t4.FirstOrDefault().Object1Value;
+                            }
+                            else
+                            {
+                                var t1 = (ColumnConfig)obj1;
+                                var t2 = (ColumnConfig)obj2;
+                                var t4 = compareLogic.Compare(t1, t2).Differences;
+                                //mapped = t4.FirstOrDefault().PropertyName;
+                                mapped = "Column " +  t1.Name + " of " + t4.FirstOrDefault().PropertyName + " " +  t4.FirstOrDefault().Object2Value +"  now set to " + t4.FirstOrDefault().Object1Value;
+                            }
 
+
+                            //var objDiff = ggg.GetType() == typeof(TableConfig) ? (TableConfig)ggg : (TableConfig)ggg;
+                            //var yu = objDiff.Name;
+                            //mapped = string.Join(",", jsconfigTable[i].Value.Select(n => n.Value).ToArray());
+                            //Console.WriteLine(jsconfigTable[i].Key.ToString() + " " + string.Join(",", copyJsTable[i].Value.ToArray()) + " now mapped with: " + mapped);
                         }
+                        //else if (jsconfigTable[i].Value.Where(n => n.Value.Equals(DataType.Ignore.ToString())).Count() != 0)
+                        //{
+                        //    var xxxx = jsconfigTable[i].Value.Where(n => n.Value.Equals(DataType.Ignore.ToString())).ToDictionary(n => n.Key, n => n.Value);
+                        //    //exit
+                        //    _allNull.Add(new KeyValuePair<string, Dictionary<string, string>>(string.Join("", jsconfigTable[i].Key.ToArray()).ToString(), xxxx));
+
+                        //}
                      
 
 
@@ -1358,6 +1417,8 @@ namespace DataMasker.Examples
                             }
                         }
                     }
+                    else
+                        Console.WriteLine(mapped);
                     if (_allNull.Count() != 0)
                     {
                         if (!Directory.Exists(@"output\Validation"))
@@ -1546,9 +1607,7 @@ namespace DataMasker.Examples
                     Console.WriteLine("");
                     Console.WriteLine("Type your database user password for prod and press enter");
                     config.DataSource.Config.connectionStringPrd = string.Format(config.DataSource.Config.connectionStringPrd.ToString(), ReadPassword());
-                }
-               
-                
+                }  
                 _nameDatabase = config.DataSource.Config.Databasename.ToString();
                 if (string.IsNullOrEmpty(_nameDatabase)) { throw new ArgumentException("Database name cannot be null, check app.config and specify the database name", _nameDatabase); }
                 IDataMasker dataMasker = new DataMasker(new DataGenerator(config.DataGeneration));
@@ -1562,7 +1621,7 @@ namespace DataMasker.Examples
                     MaskValidationCheck.Verification(config.DataSource, config, sheetPath, CreateDir, _nameDatabase, exceptionPath, _columnMapping, "");
                     Console.WriteLine("Validation completed: Press ENTER to exist..");
                     Console.ReadLine();
-                    System.Environment.Exit(1);
+                    Environment.Exit(1);
                 }
 
                 Stopwatch watch = new Stopwatch();
@@ -1651,11 +1710,16 @@ namespace DataMasker.Examples
                     {
                         try
                         {
-                            rowCount = dataSource.GetCount(tableConfig);
-                            if (rowCount > 100000)
+                            rowCount = int.TryParse(tableConfig.RowCount, out int rc) ? rc : dataSource.GetCount(tableConfig);
+                            if (rowCount > 100000 && !string.IsNullOrEmpty(""))
                             {
                                 Console.Title = string.Format("Data Generation v{0}", MaskerVersion);
-                                Console.WriteLine(Environment.NewLine);
+                                if (config.Tables.IndexOf(tableConfig) != 0)
+                                {
+                                    Console.WriteLine(Environment.NewLine);
+                                } 
+                                
+                                //? Console.WriteLine(Environment.NewLine) : Console.WriteLine("");
 
                                 int fetch = int.TryParse(ConfigurationManager.AppSettings["Fetch"].ToString(), out int f) ? f : 100000;
                                 var batch = Math.Ceiling((double)rowCount / (double)fetch);
@@ -1675,7 +1739,11 @@ namespace DataMasker.Examples
                             else
                             {
                                 Console.Title = string.Format("Data Generation v{0}", MaskerVersion);
-                                Console.WriteLine(Environment.NewLine);
+                                //Console.WriteLine(Environment.NewLine);
+                                if (config.Tables.IndexOf(tableConfig) != 0)
+                                {
+                                    Console.WriteLine(Environment.NewLine);
+                                }
                                 Console.WriteLine(string.Format("Data Generation for {0} has started....", tableConfig.Name));
                                 rows = dataSource.GetData(tableConfig, config, rowCount, null, null); //masked
                                 rawData = dataSource.RawData(null); //unmask
@@ -1749,13 +1817,22 @@ namespace DataMasker.Examples
                             }
                             #endregion
                             if (allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
-                            {
-                                Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
+                            {                               
                                 if (tableConfig.Columns.Where(n => !n.Ignore).Any())
                                 {
-                                    dataSource.UpdateRows(rows, rowCount, tableConfig, config);
+                                    Console.WriteLine("writing table " + tableConfig.Name + " on database " + _nameDatabase + "" + " .....");
+                                    isRollback = dataSource.UpdateRows(rows, rowCount, tableConfig, config);
                                 }
-
+                            }
+                            if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
+                                && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
+                                && PrdTable.Rows != null && MaskTable.Rows != null
+                                && !isRollback
+                                && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+                            {
+                                Console.Title = string.Format("Data Masking Validation v{0}", MaskerVersion);
+                                Console.WriteLine(string.Format("Running Validation for {0}....", tableConfig.Name));
+                                Reportvalidation(PrdTable, _dmlTable, config.DataSource, tableConfig);
                             }
 
                         }
@@ -1785,19 +1862,19 @@ namespace DataMasker.Examples
                 }
 
                 #region validate masking 
-                if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
-                    && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
-                    && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
-                {
-                    Console.WriteLine("Data Masking Validation has started......................................");
-                    Console.Title = string.Format("Data Masking Validation v{0}",MaskerVersion);
-                    watch.Stop();
+                //if (allkey.Where(n => n.Key.ToUpper().Equals(RunValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
+                //    && allkey.Where(n => n.Key.ToUpper().Equals(MaskedCopyDatabase.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true)
+                //    && allkey.Where(n => n.Key.ToUpper().Equals(EmailValidation.ToUpper())).Select(n => n.Value).Select(n => n).ToArray().First().Equals(true))
+                //{
+                //    Console.WriteLine("Data Masking Validation has started......................................");
+                //    Console.Title = string.Format("Data Masking Validation v{0}",MaskerVersion);
+                //    watch.Stop();
 
-                    TimeSpan timeSpan = watch.Elapsed;
-                    var timeElapse = string.Format("{0}h {1}m {2}s", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds);
+                //    TimeSpan timeSpan = watch.Elapsed;
+                //    var timeElapse = string.Format("{0}h {1}m {2}s", timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds);
 
-                    MaskValidationCheck.Verification(config.DataSource, config, sheetPath, CreateDir, _nameDatabase, exceptionPath, _columnMapping, timeElapse);
-                }
+                //    MaskValidationCheck.Verification(config.DataSource, config, sheetPath, CreateDir, _nameDatabase, exceptionPath, _columnMapping, timeElapse);
+                //}
                 #endregion
             }
             catch (Exception e)
