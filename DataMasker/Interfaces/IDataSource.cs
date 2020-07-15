@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 using DataMasker.Models;
+using Oracle.DataAccess.Client;
 
 namespace DataMasker.Interfaces
 {
@@ -60,6 +61,7 @@ namespace DataMasker.Interfaces
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
             TableConfig tableConfig, Config config,
+            IDictionary<string, KeyValuePair<string,string>> cmdParameter = null,
             Action<int> updatedCallback = null);
 
         int GetCount(TableConfig config);

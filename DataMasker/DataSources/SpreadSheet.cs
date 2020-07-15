@@ -531,7 +531,7 @@ namespace DataMasker.DataSources
             throw new NotImplementedException();
         }
 
-        public bool UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
+        public bool UpdateRows(IEnumerable<IDictionary<string, object>> rows, int rowCount, TableConfig tableConfig, Config config, IDictionary<string, KeyValuePair<string, string>> cmdParameters, Action<int> updatedCallback = null)
         {
             throw new NotImplementedException();
         }

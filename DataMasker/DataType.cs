@@ -22,6 +22,7 @@
         NoMasking,
         math,
         Shufflegeometry,
+        Unmask,
         ShufflePolygon,
         exception,
         Vehicle,

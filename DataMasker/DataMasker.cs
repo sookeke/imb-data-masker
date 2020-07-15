@@ -69,26 +69,23 @@ namespace DataMasker
             _location.Rows.Clear();
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type != DataType.Computed))
             {
-                //CompareLogic compareLogic = new CompareLogic();
                 try
                 {
                     object existingValue = obj[columnConfig.Name];
-
-                   // object newv = obj[columnConfig.UseGenderColumn];
-
                     string uniqueCacheKey = $"{tableConfig.Name}.{columnConfig.Name}";
-
-
                     Name.Gender? gender = null;
                     if (!string.IsNullOrEmpty(columnConfig.UseGenderColumn) && obj[columnConfig.UseGenderColumn] != null)
                     {
                         object g = obj[columnConfig.UseGenderColumn];
                         gender = Utils.Utils.TryParseGender(g?.ToString());
                     }
-
                     if (columnConfig.Unique)
                     {
                         existingValue = GetUniqueValue(tableConfig.Name, columnConfig, existingValue, gender);
+                    }
+                    else if (columnConfig.Type == DataType.Unmask)
+                    {
+                        obj[columnConfig.Name] = existingValue;
                     }
                     else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry || columnConfig.Type == DataType.ShufflePolygon)
                     {
@@ -263,7 +260,7 @@ namespace DataMasker
                 catch (Exception ex)
                 {
                    // Console.WriteLine(ex.ToString());
-                    Console.WriteLine(ex.Message);
+                    Console.WriteLine(ex.ToString());
                     File.AppendAllText(_exceptionpath, $"Unable to mask column {columnConfig.Name} with the following error: {ex.Message}" + Environment.NewLine);
                 }
             }
@@ -331,13 +328,13 @@ namespace DataMasker
                 else if (columnConfig.Type == DataType.Filename && !string.IsNullOrEmpty(columnConfig.StringFormatPattern))
                 {
                     //   // existingValue = _dataGenerator.GetBlobValue(columnConfig, tableConfig.Name, columnConfig.Name, dataSource, existingValue, columnConfig.StringFormatPattern, gender)
-                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue,filename, fileExtension,blobLocation, gender);
+                    existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, blobLocation, gender);
                 }
                 else if (columnConfig.Type == DataType.Blob)
                 {
                     existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, blobLocation, gender);
                 }
-               else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
+                else if (columnConfig.Type == DataType.Shuffle || columnConfig.Type == DataType.Shufflegeometry)
                 {
                     var columndata = data.Select(n => n.Where(x => x.Key.Equals(columnConfig.Name)).ToDictionary());
                     existingValue = _dataGenerator.GetValueShuffle(columnConfig, tableConfig.Schema, tableConfig.Name, columnConfig.Name, dataSource, columndata, existingValue, gender);
@@ -497,13 +494,11 @@ namespace DataMasker
                 }
                 else
                 {
-                    //existingValue = _dataGenerator.GetBlobValue(columnConfig, dataSource, existingValue, filename, fileExtension, gender);
                     existingValue = _dataGenerator.GetValue(columnConfig, existingValue, tableConfig.Name, gender);
                 }
                 //replace the original value
                 obj[columnConfig.Name] = existingValue;
-            }
-          
+            }          
             foreach (ColumnConfig columnConfig in tableConfig.Columns.Where(x => !x.Ignore && x.Type == DataType.Computed))
             {
                 var separator = columnConfig.Separator ?? " ";
@@ -869,34 +864,12 @@ namespace DataMasker
         public DataTable DictionaryToDataTable(IEnumerable<IDictionary<string, object>> parents, TableConfig config)
         {
             var table = new DataTable();
-
-
-
             var c = parents.FirstOrDefault(x => x.Values
                                            .OfType<IEnumerable<IDictionary<string, object>>>()
                                            .Any());
             var p = c ?? parents.FirstOrDefault();
             if (p == null)
                 return table;
-
-            //var ccc = p.Where(x => x.Value is object)
-            //               .Select(x => x.Key);
-
-
-
-            //var headers1 = p.Where(x => x.Value is object)
-            //               .Select(x => x.Key)
-            //               .Concat(c == null ?
-            //                       Enumerable.Empty<object>() :
-            //                       c.Values
-            //                        .OfType<IEnumerable<IDictionary<string, object>>>()
-            //                        .First()
-            //                        .SelectMany(x => x.Keys)).ToArray();
-
-
-
-
-
             foreach (var parent in parents)
             {
                 var children = parent.Values

@@ -1,10 +1,7 @@
 ﻿using System;
 using CommandLine;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DataMasker.Interfaces;
 using DataMasker.Models;
 using Konsole;
@@ -158,7 +155,7 @@ namespace DataMasker.Runner
 
 
                 //update all rows
-                dataSource.UpdateRows(rows,0, tableConfig, config, totalUpdated => UpdateProgress(ProgressType.Updating, totalUpdated));
+                dataSource.UpdateRows(rows,0, tableConfig, config,null, totalUpdated => UpdateProgress(ProgressType.Updating, totalUpdated));
                 UpdateProgress(ProgressType.Overall, i + 1);
             }
 

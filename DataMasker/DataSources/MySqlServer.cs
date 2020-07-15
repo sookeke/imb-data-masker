@@ -133,8 +133,17 @@ namespace DataMasker.DataSources
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
             TableConfig tableConfig, Config config,
+            IDictionary<string, KeyValuePair<string, string>> cmdParameters,
             Action<int> updatedCallback)
         {
+            if (rowCount > 200000)
+            {
+                _sourceConfig.UpdateBatchSize = 100000;
+            }
+            if (rowCount >= 50000 && rowCount <= 180000)
+            {
+                _sourceConfig.UpdateBatchSize = 50000;
+            }
             int? batchSize = _sourceConfig.UpdateBatchSize;
             isRolledBack = false;
             if (batchSize == null ||

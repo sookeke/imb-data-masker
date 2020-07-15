@@ -94,6 +94,7 @@ namespace DataMasker.DataSources
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
             TableConfig tableConfig, Config config,
+            IDictionary<string, KeyValuePair<string, string>> cmdParameters,
             Action<int> updatedCallback)
         {
 

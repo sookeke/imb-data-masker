@@ -13,8 +13,9 @@ using DataMasker.DataLang;
 using KellermanSoftware.CompareNetObjects;
 using System.Globalization;
 using Bogus;
-using System.Diagnostics;
 using System.Threading.Tasks;
+using SqlBulkTools;
+using System.Transactions;
 
 namespace DataMasker.DataSources
 {
@@ -25,11 +26,9 @@ namespace DataMasker.DataSources
         private static readonly string _exceptionpath = Directory.GetCurrentDirectory() +  ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly string _successfulCommit = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_successfulCommit"];
         private static readonly DateTime DEFAULT_MIN_DATE = new DateTime(1900, 1, 1, 0, 0, 0, 0);
-        //private static readonly string _exceptionpath = Directory.GetCurrentDirectory() + ConfigurationManager.AppSettings["_exceptionpath"];
         private static readonly DateTime DEFAULT_MAX_DATE = DateTime.Now;
-        //private IEnumerable<IDictionary<string, object>> getData { get;  set; }
         public object[] Values { get; private set; }
-        public bool isRolledBack { get; private set; }
+        public bool IsRolledBack { get; private set; }
 
         public int o = 0;
 
@@ -76,11 +75,10 @@ namespace DataMasker.DataSources
                     System.Environment.Exit(1);
                 }
                 string query = "";
-                IDictionary<string, object> idict = new Dictionary<string, object>();
                 IEnumerable<IDictionary<string, object>> row = null;
                 List<IDictionary<string, object>> rows = new List<IDictionary<string, object>>();
                 rawData = new List<IDictionary<string, object>>();
-                if (rowCount != 0 && rowCount > 50000)
+                if (rowCount != 0 && rowCount >= 10000)
                 {
                     query = BuildSelectSql(tableConfig, config, rowCount,null,null);
                     using (OracleCommand cmd = new OracleCommand(query, connection))
@@ -88,8 +86,8 @@ namespace DataMasker.DataSources
                         cmd.InitialLOBFetchSize = 1;
                         using (OracleDataReader reader = cmd.ExecuteReader())
                         {
-                            reader.FetchSize = cmd.RowSize * 1000;
-                            cmd.FetchSize = 100000;
+                            reader.FetchSize = cmd.RowSize * 10000;
+                            //cmd.FetchSize = 100000;
                             if (reader.HasRows)
                             {
                                 while (reader.Read())
@@ -141,11 +139,19 @@ namespace DataMasker.DataSources
             }
         }
 
-        public bool UpdateRows(IEnumerable<IDictionary<string, object>> rows,int rowCount, TableConfig tableConfig, Config config, Action<int> updatedCallback = null)
+        public bool UpdateRows(IEnumerable<IDictionary<string, object>> rows,int rowCount, TableConfig tableConfig, Config config, IDictionary<string,KeyValuePair<string,string>> cmdParameters, Action<int> updatedCallback = null)
         {
             SqlMapper.AddTypeHandler(new GeographyMapper());
+            if (rowCount > 200000)
+            {
+                _sourceConfig.UpdateBatchSize = 100000;
+            }
+            if (rowCount >= 50000 && rowCount <=180000)
+            {
+                _sourceConfig.UpdateBatchSize = 50000;
+            }
             int? batchSize = _sourceConfig.UpdateBatchSize;
-            isRolledBack = false;
+            IsRolledBack = false;
             if (batchSize == null ||
                 batchSize <= 0)
             {
@@ -158,21 +164,15 @@ namespace DataMasker.DataSources
                     objects,
                     enumerable) => enumerable.Count() < batchSize);
 
-            int totalUpdated = 0;
-          
+            int totalUpdated = 0;          
             if (!(File.Exists(_successfulCommit) && File.Exists(_exceptionpath)))
-            {
-                
+            {                
                     //write to the file
-                    File.Create(_successfulCommit).Close();
-               
+                    File.Create(_successfulCommit).Close();              
                     //write to the file
-                    File.Create(_exceptionpath).Close();
-               
-               
-               
+                    File.Create(_exceptionpath).Close();                
             }
-            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_exceptionpath))
+            using (StreamWriter sw = File.AppendText(_exceptionpath))
             {
                 if (new FileInfo(_exceptionpath).Length == 0)
                 {
@@ -193,31 +193,78 @@ namespace DataMasker.DataSources
             using (OracleConnection connection = new OracleConnection(_connectionString))
             {
                 connection.Open();
+                OracleCommand cmd = connection.CreateCommand();
+                cmd.Parameters.Clear();
+                var Parameters = Mapping(cmdParameters);
+                OracleParameterCollection orp = cmd.Parameters;
+               
+
                 foreach (Batch<IDictionary<string, object>> batch in batches)
                 {
-                    using (IDbTransaction sqlTransaction = connection.BeginTransaction())
+                    using (OracleTransaction sqlTransaction = connection.BeginTransaction())
                     {
-                        //OracleBulkCopy oracleBulkCopy = new OracleBulkCopy(connection, OracleBulkCopyOptions.UseInternalTransaction);
-
-
                         string sql = BuildUpdateSql(tableConfig, config);
-                       
-                        
                         try
-                        {
-                            //File.AppendAllText(_successfulCommit, "Successful Commit on table " + config.Name + Environment.NewLine + Environment.NewLine);
+                        {                            
+                            foreach (var columnParameter in Parameters)
+                            {
+                                if (columnParameter.Value.Key == OracleDbType.Object)
+                                {
+                                    cmd.Parameters.Add(new OracleParameter(columnParameter.Key, columnParameter.Value.Key)
+                                    {
+                                        Value = batch.Items.SelectMany(n => n.ToList()).Where(n => n.Key.Equals(columnParameter.Key)).Select(n => n.Value).ToArray(),
+                                        UdtTypeName = "MDSYS.SDO_GEOMETRY"
+                                    });
 
-                            connection.Execute(sql, batch.Items, sqlTransaction);
+                                }
+                                else if (columnParameter.Value.Key == OracleDbType.Varchar2 || columnParameter.Value.Key == OracleDbType.NVarchar2)
+                                {
+                                    int size = Convert.ToInt32(columnParameter.Value.Value);
+                                    cmd.Parameters.Add(new OracleParameter(columnParameter.Key, columnParameter.Value.Key, size)
+                                    {
+                                        Value = batch.Items.SelectMany(n => n.ToList()).Where(n => n.Key.Equals(columnParameter.Key)).Select(n => n.Value).ToArray()
+                                    });
+                                }
+                                else
+                                    cmd.Parameters.Add(new OracleParameter(columnParameter.Key, columnParameter.Value.Key)
+                                    {
+                                        Value = batch.Items.SelectMany(n => n.ToList()).Where(n => n.Key.Equals(columnParameter.Key)).Select(n => n.Value).ToArray()
+                                    });
 
+                            }
+                            cmd.CommandText = sql;
+                            cmd.CommandTimeout = 0;
+                            cmd.BindByName = true;
+                            cmd.ArrayBindCount = batch.Items.Count;
+                            int affectedRows = cmd.ExecuteNonQuery();
+                            if (affectedRows > 0)
+                            {
+                                sqlTransaction.Commit();
+                                cmd.Parameters.Clear();
+                                File.AppendAllText(_successfulCommit, $"Batch {batch.BatchNo} - Successfully Commit {affectedRows} records on table  {tableConfig.TargetSchema}.{tableConfig.Name} - " + DateTime.Now.ToString() + Environment.NewLine + Environment.NewLine);
+                            }
+                            else
+                                IsRolledBack = true;
+                    
+                                
+
+                            //var columns = tableConfig.Columns.Where(n => !n.Ignore).Select(n => n.Name);
+                            //IBulkOperations bulk = new BulkOperations();
+                            //bulk.Setup().ForCollection(batch.Items)
+                            //    .WithTable(tableConfig.Name)
+                            //    .AddColumns(x=>columns)
+                            //    .BulkUpdate()
+                            //    .SetIdentityColumn(x=>tableConfig.PrimaryKeyColumn)
+                            //    .MatchTargetOn(x => tableConfig.PrimaryKeyColumn)
+                            //    .Commit(connection);
+
+                            // bulk.Setup<TableConfig>(x=>x.ForCollection)
+
+                            //connection.Execute(sql, batch.Items, sqlTransaction);
                             if (_sourceConfig.DryRun)
                             {
                                 sqlTransaction.Rollback();
-                                isRolledBack = true;
-                            }
-                            else
-                            {
-                                sqlTransaction.Commit();
-                                File.AppendAllText(_successfulCommit, $"Successful Commit on table  {tableConfig.TargetSchema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);
+                                IsRolledBack = true;
                             }
                             if (updatedCallback != null)
                             {
@@ -227,17 +274,15 @@ namespace DataMasker.DataSources
                         }
                         catch (Exception ex)
                         {
-                            sqlTransaction.Rollback();
-                            isRolledBack = true;
+                            IsRolledBack = true;
                             Console.WriteLine(ex.Message);
                             File.AppendAllText(_exceptionpath, ex.Message + $" on table {tableConfig.TargetSchema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);                       
-                        }
-
-                        
+                        }                        
                     }
+                    cmd.Parameters.Clear();
                 }
             }
-            return isRolledBack;
+            return IsRolledBack;
         }
         public string BuildUpdateSql(
            TableConfig tableConfig, Config config)
@@ -268,6 +313,12 @@ namespace DataMasker.DataSources
             {
                 sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name} WHERE rownum <=" + n;
             }
+            else if (tableConfig.RowCount.Contains("-") && tableConfig.RowCount.Split('-').Count() == 2)
+            {
+                int j = Convert.ToInt32(tableConfig.RowCount.Split('-').FirstOrDefault());
+                int k = Convert.ToInt32(tableConfig.RowCount.Split('-')[1]);
+                sql = $"SELECT * FROM (SELECT {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)}, rownum r FROM {tableConfig.Schema}.{tableConfig.Name}) WHERE r BETWEEN {j} AND {k}";
+            }
             else if (rowCount > 100000 && offset != null && fetch != null)
             {
                 sql = $"SELECT  {tableConfig.Columns.GetSelectColumns(tableConfig.PrimaryKeyColumn, config)} FROM {tableConfig.Schema}.{tableConfig.Name} ORDER BY {tableConfig.PrimaryKeyColumn} OFFSET {offset} ROWS FETCH NEXT {fetch} ROWS ONLY";
@@ -288,19 +339,9 @@ namespace DataMasker.DataSources
         public object Shuffle(string schema, string table, string column, object existingValue, bool retainNull, IEnumerable<IDictionary<string,object>> dataTable)
         {
             CompareLogic compareLogic = new CompareLogic();
-            //string _connectionStringGet = ConfigurationManager.AppSettings["ConnectionStringPrd"];
             Random rnd = new Random();
-            //string sql = $"SELECT {column} FROM {schema}.{table}";
-            //using (var connection = new OracleConnection(_connectionStringPrd))
-            //{
-            //    connection.Open();
-            //    var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
-                //var values = Array();
-                //Randomizer randomizer = new Randomizer();
                 try
                 {
-
-
                     if (retainNull)
                     {
                         Values = dataTable.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();
@@ -362,7 +403,143 @@ namespace DataMasker.DataSources
         {
             throw new NotImplementedException();
         }
+        public static Dictionary<string, KeyValuePair<OracleDbType, string>> Mapping(IDictionary<string, KeyValuePair<string,string>> oracleColumn)
+        {
+            Dictionary<string, KeyValuePair<OracleDbType, string>> val = new Dictionary<string, KeyValuePair<OracleDbType, string>>();
+            foreach (var item in oracleColumn)
+            {
+                switch (ToEnum(item.Value.Key, Orctypes.none))
+                {
+                    case Orctypes.VARCHAR2:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Varchar2, item.Value.Value));
+                        break;
+                    case Orctypes.NVARCHAR2:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.NVarchar2, item.Value.Value));
+                        break;
+                    case Orctypes.VARCHAR:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Varchar2, item.Value.Value));
+                        break;
+                    case Orctypes.CHAR:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Char,item.Value.Value));
+                        break;
+                    case Orctypes.NCHAR:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.NChar, item.Value.Value));
+                        break;
+                    case Orctypes.NUMBER:
+                        if (string.IsNullOrEmpty(item.Value.Value))
+                        {
+                            val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Decimal, item.Value.Value));
+                            break;
+                        }
+                        else if (Convert.ToInt32(item.Value.Value) >= 2 && Convert.ToInt32(item.Value.Value) >= 9)
+                        {
+                            val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Int32, item.Value.Value));
+                            break;
+                        }
+                        else if (Convert.ToInt32(item.Value.Value) >= 10 && Convert.ToInt32(item.Value.Value) >= 18)
+                        {
+                            val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Int64, item.Value.Value));
+                            break;
+                        }
+                        else 
+                        {
+                            val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Int32, item.Value.Value));
+                            break;
+                        }                       
+                    case Orctypes.BINARY_FLOAT:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.BinaryFloat, item.Value.Value));
+                        break;
+                    case Orctypes.BINARY_DOUBLE:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.BinaryDouble, item.Value.Value));
+                        break;
+                    case Orctypes.BOOLEAN:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Boolean, item.Value.Value));
+                        break;
+                    case Orctypes.PLS_INTEGER:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Int64, item.Value.Value));
+                        break;
+                    case Orctypes.LONG:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Long, item.Value.Value));
+                        break;
+                    case Orctypes.DATE:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Date, item.Value.Value));
+                        break;
+                    case Orctypes.TIMESTAMP:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.TimeStamp, item.Value.Value));
+                        break;
+                    case Orctypes.RAW:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Raw, item.Value.Value));
+                        break;
+                    case Orctypes.CLOB:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Clob, item.Value.Value));
+                        break;
+                    case Orctypes.NCLOB:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.NClob, item.Value.Value));
+                        break;
+                    case Orctypes.BLOB:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Blob, item.Value.Value));
+                        break;
+                    case Orctypes.BFILE:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.BFile, item.Value.Value));
+                        break;
+                    case Orctypes.XMLType:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.XmlType, item.Value.Value));
+                        break;
+                    case Orctypes.SDO_GEOMETRY:
+                        val.Add(item.Key, new KeyValuePair<OracleDbType, string>(OracleDbType.Object, item.Value.Value));
+                        break;
+                    case Orctypes.none:
+                        throw new ArgumentOutOfRangeException();
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            return val;
+        }
+        public enum Orctypes
+        {
+            VARCHAR2,
+            NVARCHAR2,
+            VARCHAR,
+            CHAR,
+            NCHAR,
+            NUMBER,
+            BINARY_FLOAT,
+            BINARY_DOUBLE,
+            BOOLEAN,
+            PLS_INTEGER,
+            LONG,
+            DATE,
+            TIMESTAMP,
+            RAW,
+            CLOB,
+            NCLOB,
+            BLOB,
+            BFILE,
+            XMLType,
+            SDO_GEOMETRY,
+            none
+        }
+        public static T ToEnum<T>(string value, T defaultValue) where T : struct
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return defaultValue;
+            }
 
+            try
+            {
+                if (!Enum.TryParse(value, true, out T enumValue))
+                {
+                    return defaultValue;
+                }
+                return enumValue;
+            }
+            catch (Exception)
+            {
+                return defaultValue;
+            }
+        }
         public DataTableCollection DataTableFromCsv(string csvPath, TableConfig tableConfig)
         {
             throw new NotImplementedException();
@@ -637,7 +814,7 @@ namespace DataMasker.DataSources
 
 
             }
-            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_exceptionpath))
+            using (StreamWriter sw = File.AppendText(_exceptionpath))
             {
                 if (new FileInfo(_exceptionpath).Length == 0)
                 {
@@ -646,7 +823,7 @@ namespace DataMasker.DataSources
                 }
                 // sw.WriteLine(""); 
             }
-            using (System.IO.StreamWriter sw = System.IO.File.AppendText(_successfulCommit))
+            using (StreamWriter sw = File.AppendText(_successfulCommit))
             {
                 //write my text 
                 if (new FileInfo(_successfulCommit).Length == 0)
@@ -747,5 +924,7 @@ namespace DataMasker.DataSources
                 return result;
             }
         }
+
+   
     }
 }

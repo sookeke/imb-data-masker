@@ -154,8 +154,17 @@ namespace DataMasker.DataSources
             IEnumerable<IDictionary<string, object>> rows,
             int rowCount,
             TableConfig tableConfig, Config config,
+          IDictionary<string, KeyValuePair<string, string>> cmdParameters,
             Action<int> updatedCallback)
         {
+            if (rowCount > 200000)
+            {
+                _sourceConfig.UpdateBatchSize = 100000;
+            }
+            if (rowCount >= 50000 && rowCount <= 200000)
+            {
+                _sourceConfig.UpdateBatchSize = 50000;
+            }
             int? batchSize = _sourceConfig.UpdateBatchSize;
             isRolledBack = false;
             if (batchSize == null ||
@@ -186,7 +195,6 @@ namespace DataMasker.DataSources
                     try
                     {
 
-
                         connection.Execute(sql, batch.Items, sqlTransaction,0,CommandType.Text);
                         
                         if (_sourceConfig.DryRun)
@@ -197,7 +205,8 @@ namespace DataMasker.DataSources
                         else
                         {
                             sqlTransaction.Commit();
-                            File.AppendAllText(_successfulCommit, $"Successful Commit on table {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);
+                           // File.AppendAllText(_successfulCommit, $"Successful Commit on table {tableConfig.Schema}.{tableConfig.Name}" + Environment.NewLine + Environment.NewLine);
+                            File.AppendAllText(_successfulCommit, $"Batch {batch.BatchNo} - Successfully Commit {batch.Items.Count} records on table  {tableConfig.TargetSchema}.{tableConfig.Name} - " + DateTime.Now.ToString() + Environment.NewLine + Environment.NewLine);
                         }
 
 
@@ -259,17 +268,8 @@ namespace DataMasker.DataSources
             //ArrayList list = new ArrayList();
           
             Random rnd = new Random();
-            //string sql = $"SELECT [{column}] FROM  [{schema}].[{table}]";
-            //using (var connection = new SqlConnection(_connectionStringPrd))
-            //{
                 try
                 {
-
-
-                    //connection.Open();
-                    //var result = (IEnumerable<IDictionary<string, object>>)connection.Query(sql);
-                    //var values = Array();
-                    //Randomizer randomizer = new Randomizer();
                     if (retainNull)
                     {
                         Values = dataTable.Select(n => n.Values).SelectMany(x => x).ToList().Where(n => n != null).Distinct().ToArray();

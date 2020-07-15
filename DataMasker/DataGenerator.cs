@@ -342,13 +342,9 @@ namespace DataMasker
                   return _faker.Date.Between(
                         ParseMinMaxValue(columnConfig, MinMax.Min, DEFAULT_MIN_DATE),
                         ParseMinMaxValue(columnConfig, MinMax.Max, DEFAULT_MAX_DATE)).ToString(columnConfig.StringFormatPattern);
-                    //DateTime start_time = DateTime.Today.AddHours(rnd.Next(3600));
-                    //DateTime span = start_time.AddMinutes(rnd.Next(241));
-                    //return span.ToString(columnConfig.StringFormatPattern);
                 case DataType.Rant:
                     var rant = WaffleEngine.Text(rnd, ToInt32(columnConfig.Min), false);
                     return !string.IsNullOrEmpty(columnConfig.Max) && rant.Length > ToInt32(columnConfig.Max) ? rant.Substring(0, ToInt32(columnConfig.Max)) : rant;
-                     // return _faker.Rant.Review(columnConfig.StringFormatPattern);
                 case DataType.Lorem:
                     var lorem =  _faker.Lorem.Sentences();
                     return !string.IsNullOrEmpty(columnConfig.Max) && lorem.Length > ToInt32(columnConfig.Max) ? lorem.Substring(0, ToInt32(columnConfig.Max)) : lorem;
@@ -372,32 +368,51 @@ namespace DataMasker
                     }
                     return file.Remove(file.Length - 1);
                 case DataType.SecondaryAddress:
-                    return _faker.Address.SecondaryAddress();
+                    var secAddress = _faker.Address.SecondaryAddress();
+                    return !string.IsNullOrEmpty(columnConfig.Max) && secAddress.Length > ToInt32(columnConfig.Max) ? secAddress.Substring(0 - ToInt32(columnConfig.Max), ToInt32(columnConfig.Max)) : secAddress;
                 case DataType.Vehicle:
                     switch (ToEnum(columnConfig.StringFormatPattern, Vehicles.None))
                     {
                         case Vehicles.Manufacturer:
-                            return _faker.Vehicle.Manufacturer();
+                            var ManuF = _faker.Vehicle.Manufacturer();
+                            return !string.IsNullOrEmpty(columnConfig.Max) && ManuF.Length > ToInt32(columnConfig.Max) ? ManuF.Substring(0, ToInt32(columnConfig.Max)) : ManuF;
                         case Vehicles.Model:
-                            return _faker.Vehicle.Model();
+                            var model = _faker.Vehicle.Model();
+                            return !string.IsNullOrEmpty(columnConfig.Max) && model.Length > ToInt32(columnConfig.Max) ? model.Substring(0, ToInt32(columnConfig.Max)) : model;
                         case Vehicles.Type:
-                            return _faker.Vehicle.Type();
+                            var type = _faker.Vehicle.Type();
+                            return !string.IsNullOrEmpty(columnConfig.Max) && type.Length > ToInt32(columnConfig.Max) ? type.Substring(0, ToInt32(columnConfig.Max)) : type;
                         case Vehicles.Vin:
-                            return _faker.Vehicle.Vin();
+                            var vin = _faker.Vehicle.Vin();
+                            return !string.IsNullOrEmpty(columnConfig.Max) && vin.Length > ToInt32(columnConfig.Max) ? vin.Substring(0, ToInt32(columnConfig.Max)) : vin;
                         case Vehicles.Fuel:
-                            return _faker.Vehicle.Fuel();
+                            var fuel = _faker.Vehicle.Fuel();
+                            return !string.IsNullOrEmpty(columnConfig.Max) && fuel.Length > ToInt32(columnConfig.Max) ? fuel.Substring(0, ToInt32(columnConfig.Max)) : fuel;
                         default:
                             break;
                     }
-
                     throw new ArgumentOutOfRangeException(nameof(columnConfig.StringFormatPattern),columnConfig.StringFormatPattern,"Invalid Vehicle String Format value: " + columnConfig.StringFormatPattern.AddDoubleQuotes()); ;
                 case DataType.State:
-                    var state = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).Where(n=>n.Name.Length < ToInt32(columnConfig.Max)).First().Name;
-                    return state;
+                    switch (ToEnum(columnConfig.StringFormatPattern, CountryLoad.None))
+                    {
+                        case CountryLoad.Australia:
+                            return CountryLoader.LoadAustraliaLocationData().States.OrderBy(x => rnd.Next()).Where(n => n.Name.Length < ToInt32(columnConfig.Max)).First().Name;
+                        case CountryLoad.Canada:
+                            return CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).Where(n => n.Name.Length < ToInt32(columnConfig.Max)).First().Name;
+                        case CountryLoad.UnitedStates:
+                            return CountryLoader.LoadUnitedStatesLocationData().States.OrderBy(x => rnd.Next()).Where(n => n.Name.Length < ToInt32(columnConfig.Max)).First().Name;
+                        case CountryLoad.UnitedKingdom:
+                            return CountryLoader.LoadUnitedKingdomLocationData().States.OrderBy(x => rnd.Next()).Where(n => n.Name.Length < ToInt32(columnConfig.Max)).First().Name;
+                        case CountryLoad.France:
+                            return CountryLoader.LoadFranceLocationData().States.OrderBy(x => rnd.Next()).Where(n => n.Name.Length < ToInt32(columnConfig.Max)).First().Name;
+                        default:
+                            break;
+                    }
+                    throw new ArgumentOutOfRangeException(nameof(columnConfig.StringFormatPattern), columnConfig.StringFormatPattern, "Invalid Vehicle String Format value: " + columnConfig.StringFormatPattern.AddDoubleQuotes());
                 case DataType.City:
                     var cities = CountryLoader.LoadCanadaLocationData().States.OrderBy(x => rnd.Next()).Where(n=>n.Code.Equals(columnConfig.StringFormatPattern) && n.Name != null).First().Provinces.Where(n=>n.Name != null && n.Name.Length < ToInt32(columnConfig.Max)).Select(n=>n).ToArray();
                     var provinces = cities[rnd.Next(0, cities.Count())];
-                    return cities.Count() != 0 ? provinces.Name : null;
+                    return cities.Count() != 0 ? provinces.Name : "VIC";
                 case DataType.Blob:
                     var fileUrl = _faker.Image.PicsumUrl();
                     string someUrl = fileUrl;
@@ -425,14 +440,10 @@ namespace DataMasker
                     {
                         return _faker.Date.Month();
                     }
-                    DateTime startM = new DateTime(1999, 1, 1);
-                    var ranMonth = _faker.Date.Between(startM, DateTime.Now).ToString("MM");
-                    return ranMonth;
+                    return _faker.Date.Between(DEFAULT_MIN_DATE, DEFAULT_MAX_DATE).ToString("MM");
                 case DataType.RandomSeason:
-                    DateTime _start = new DateTime(1995, 1, 1);
-                    Random _genD = new Random();
-                    int _range = (DateTime.Today - _start).Days;
-                    var _randomYear = _start.AddDays(_genD.Next(_range));
+                    int _range = (DateTime.Today - DEFAULT_MIN_DATE).Days;
+                    var _randomYear = DEFAULT_MIN_DATE.AddDays(rnd.Next(_range));
                     return _randomYear.Year + "/" + _randomYear.AddYears(1).ToString("yy");             
                 case DataType.RandomInt:
                     return _faker.Random.Int(ToInt32(columnConfig.Min), ToInt32(columnConfig.Max));
