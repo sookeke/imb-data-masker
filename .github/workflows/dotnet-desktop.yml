@@ -56,6 +56,7 @@ jobs:
       Test_Project_Path: DataMasker.UnitTest                # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
       Wap_Project_Directory: DataMasker.Main    # Replace with the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
       Wap_Project_Path: DataMasker.Main.csproj                   # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
+      DataMasker_Base: DataMasker.sln
 
     steps:
     - name: Checkout
@@ -81,9 +82,12 @@ jobs:
 
     # Execute all unit tests in the solution
     #Nuget Restore
-    - name: NuGet Restore
+    - name: NuGet Restore DataMasker.Main
       run: nuget restore $env:Solution_Name -PackagesDirectory Packages
       working-directory: .\DataMasker.Main
+      
+    - name: NuGet Restore DataMasker Base
+      run: nuget restore $env:DataMasker_Base -PackagesDirectory Packages
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
