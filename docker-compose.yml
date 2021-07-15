@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  datamasker.examples:
+    image: ${DOCKER_REGISTRY-}datamasker
+    build:
+      context: .\DataMasker.Examples
+      dockerfile: Dockerfile

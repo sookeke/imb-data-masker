@@ -68,9 +68,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DataMasker.Examples\DataMasker.Examples.csproj">
+    <ProjectReference Include="..\DataMasker.Main\DataMasker.Main.csproj">
       <Project>{8a9d5be8-8f74-45c4-9532-385c3c65f751}</Project>
-      <Name>DataMasker.Examples</Name>
+      <Name>DataMasker.Main</Name>
     </ProjectReference>
     <ProjectReference Include="..\DataMasker\DataMasker.csproj">
       <Project>{1E05311D-DE9F-4F2A-9168-B2B053E8D805}</Project>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PublishUrlHistory>C:\Users\sookeke\DataMasker\bin\Debug\publish\</PublishUrlHistory>
+    <InstallUrlHistory />
+    <SupportUrlHistory>https://projects.sp.th.gov.bc.ca/guidelines/data_masking/_layouts/15/start.aspx#/</SupportUrlHistory>
+    <UpdateUrlHistory />
+    <BootstrapperUrlHistory />
+    <ErrorReportUrlHistory>https://projects.sp.th.gov.bc.ca/guidelines/data_masking/_layouts/15/start.aspx#/</ErrorReportUrlHistory>
+    <FallbackCulture>en-US</FallbackCulture>
+    <VerifyUploadedFiles>false</VerifyUploadedFiles>
+  </PropertyGroup>
+</Project>
