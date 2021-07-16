@@ -110,9 +110,12 @@ jobs:
         
     # Build Unit Test Proj 
     - name: Rebuild DataMasker UnitTest Proj
-      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
+      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64 /p:Configuration="Debug|Release" 
       working-directory: .\DataMasker.UnitTest
       env:
+        Appx_Bundle: Always
+        Appx_Bundle_Platforms: x64
+        Appx_Package_Build_Mode: StoreUpload
         Configuration: ${{ matrix.configuration }}
         
     # Decode the base 64 encoded pfx and save the Signing_Certificate
@@ -136,7 +139,7 @@ jobs:
         
     
     - name: Run Unit Test
-      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64 /p:Configuration=$env:Configuration
+      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64
       working-directory: .\DataMasker.UnitTest
       env:
         Appx_Bundle: Always
