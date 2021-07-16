@@ -96,6 +96,10 @@ jobs:
       
     - name: NuGet Restore DataMasker Base
       run: nuget restore $env:DataMasker_Base -PackagesDirectory Packages
+      
+    - name: NuGet Restore DataMasker UnitTest
+      run: nuget restore $env:DataMasker_UnitTest -PackagesDirectory Packages
+      working-directory: .\DataMasker.UnitTest
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
@@ -106,7 +110,7 @@ jobs:
         
     # Build Unit Test Proj 
     - name: Rebuild DataMasker UnitTest Proj
-      run: msbuild $env:DataMasker_UnitTest /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
+      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
       working-directory: .\DataMasker.UnitTest
       env:
         Configuration: ${{ matrix.configuration }}
