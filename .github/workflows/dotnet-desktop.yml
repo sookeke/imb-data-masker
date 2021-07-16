@@ -61,7 +61,8 @@ jobs:
       Wap_Project_Directory: DataMasker.Package    # Replace with the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
       Wap_Project_Path: DataMasker.Main.csproj                   # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
       DataMasker_Base: DataMasker.sln
-
+      DataMasker_UnitTest: DataMasker.UnitTest.csproj  
+        
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -79,6 +80,9 @@ jobs:
       with:
         nuget-api-key: ${{ secrets.NuGetAPIKey }}
         nuget-version: '5.x'
+        
+    - name: Install and Setup VSTest Path
+      uses: darenm/Setup-VSTest@v1
 
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - name: Setup MSBuild.exe
@@ -95,11 +99,18 @@ jobs:
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration /p:Platform=x64
+      run: msbuild $env:Solution_Name /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
       working-directory: .\DataMasker.Main
       env:
         Configuration: ${{ matrix.configuration }}
-
+        
+    # Build Unit Test Proj 
+    - name: Rebuild DataMasker UnitTest Proj
+      run: msbuild $env:DataMasker_UnitTest /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
+      working-directory: .\DataMasker.UnitTest
+      env:
+        Configuration: ${{ matrix.configuration }}
+        
     # Decode the base 64 encoded pfx and save the Signing_Certificate
    # - name: Decode the pfx
    #   run: |
@@ -118,7 +129,10 @@ jobs:
         Appx_Bundle_Platforms: x64
         Appx_Package_Build_Mode: StoreUpload
         Configuration: ${{ matrix.configuration }}
-
+    
+    - name: Run Unit Test
+      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64 
+      working-directory: .\DataMasker.UnitTest
     # Remove the pfx
     #- name: Remove the pfx
      # run: Remove-Item -path $env:Wap_Project_Directory\$env:Signing_Certificate
