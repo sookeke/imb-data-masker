@@ -135,7 +135,7 @@ jobs:
         Configuration: ${{ matrix.configuration }}
     
     - name: Run Unit Test
-      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64 
+      run: vstest.console.exe bin\x64\Debug\DataMasker.UnitTest.dll /Platform:x64 
       working-directory: .\DataMasker.UnitTest
     # Remove the pfx
     #- name: Remove the pfx
