@@ -72,6 +72,8 @@ namespace DataMasker.Models
             {
 
                 Console.WriteLine("Exception caught: {0}", ex.Message);
+                Console.ReadKey();
+                Environment.Exit(1);
             }
             finally
             {

@@ -33,7 +33,7 @@ using ChoETL;
     Version copies : SVN
  * */
 
-namespace DataMasker.Examples
+namespace DataMasker.Main
 {
     public class Program
     {
@@ -2133,7 +2133,7 @@ namespace DataMasker.Examples
 
         public  static bool CheckAppConfig()
         {
-            bool flag = false;
+            bool flag = false; allkey.Clear();
             //string valid = EmailValidation;
             List<string> allKeys = new List<string>();
 
