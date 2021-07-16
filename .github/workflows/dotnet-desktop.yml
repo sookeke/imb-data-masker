@@ -107,7 +107,7 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:Platform=x64 /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx
+      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:Platform=x64 /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx /t:Publish /p:PublishSingleFile=True /p:SelfContained=True /p:PublishProtocol=FileSystem /p:Configuration=Release /p:Platform=x64 /p:PublishDir=bin\Release\publish\win-x64 /p:RuntimeIdentifier=win-x64 /p:PublishReadyToRun=False /p:PublishTrimmed=False
       working-directory: .\DataMasker.Main
       env:
         Appx_Bundle: Always
@@ -124,4 +124,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: MSIX Package
-        path: ${{ env.Wap_Project_Directory }}\AppPackages
+        path: DataMasker.Main\bin\Release\publish
