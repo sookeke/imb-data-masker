@@ -2,8 +2,7 @@
   "dataSource": {
     "type": "SqlServer",//OracleServer
     "config": {
-      //"connectionString": "Data Source=localhost\\sqlexpress;Initial Catalog=sysdb;Integrated Security=SSPI;",
-      "connectionString": "Data Source=sql.th.gov.bc.ca;Initial Catalog=LIS_Prd_copy;Integrated Security= False;Persist Security Info=True;User Id=LIS_USER_COPY; Password=LIS_Copy_DB;"
+      "connectionString": "Data Source=localhost\\sqlexpress;Initial Catalog=sysdb;Integrated Security=SSPI;",
 
     }
   },

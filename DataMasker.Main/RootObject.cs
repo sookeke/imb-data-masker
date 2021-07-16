@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DataMasker.Examples
+namespace DataMasker.Main
 {
     public class RootObject
     {

@@ -349,11 +349,6 @@
     <Compile Include="DataSources\SqlDataSource.cs" />
     <Compile Include="Models\TableConfig.cs" />
     <Compile Include="Utils\Utils.cs" />
-    <Compile Include="Web References\GetUserInfo\Reference.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Reference.map</DependentUpon>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
@@ -363,17 +358,6 @@
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <None Include="Web References\GetUserInfo\GetUserInfo.wsdl" />
-    <None Include="Web References\GetUserInfo\OUCount.datasource">
-      <DependentUpon>Reference.map</DependentUpon>
-    </None>
-    <None Include="Web References\GetUserInfo\Reference.map">
-      <Generator>MSDiscoCodeGenerator</Generator>
-      <LastGenOutput>Reference.cs</LastGenOutput>
-    </None>
-    <None Include="Web References\GetUserInfo\Users.datasource">
-      <DependentUpon>Reference.map</DependentUpon>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -399,7 +383,6 @@
     <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="Web References\GetUserInfo\GetUserInfo.disco" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="System\" />
@@ -409,19 +392,6 @@
   </ItemGroup>
   <ItemGroup>
     <WebReferences Include="Web References\" />
-  </ItemGroup>
-  <ItemGroup>
-    <WebReferenceUrl Include="https://sand-pims.th.gov.bc.ca/idir_GetUsersInfo/GetUserInfo.asmx%3fop=GetUserbyName">
-      <UrlBehavior>Dynamic</UrlBehavior>
-      <RelPath>Web References\GetUserInfo\</RelPath>
-      <UpdateFromURL>https://sand-pims.th.gov.bc.ca/idir_GetUsersInfo/GetUserInfo.asmx%3fop=GetUserbyName</UpdateFromURL>
-      <ServiceLocationURL>
-      </ServiceLocationURL>
-      <CachedDynamicPropName>
-      </CachedDynamicPropName>
-      <CachedAppSettingsObjectName>Settings</CachedAppSettingsObjectName>
-      <CachedSettingsPropName>DataMasker_GetUserInfo_GetUserInfo</CachedSettingsPropName>
-    </WebReferenceUrl>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

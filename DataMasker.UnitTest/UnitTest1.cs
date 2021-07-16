@@ -2,8 +2,9 @@
 using DataMasker.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Configuration;
+using System.IO;
 
-namespace DataMasker.Examples.Tests
+namespace DataMasker.Main.Tests
 {
     [TestClass()]
     public class UnitTest1
@@ -26,16 +27,23 @@ namespace DataMasker.Examples.Tests
             Assert.IsTrue(config.Tables.Count > 0);
         }
         [TestMethod]
-        public void GetCount()
+        public void LoadConfig()
         {
             Program.CheckAppConfig();
             var _SpreadSheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
             var copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
             Program.JsonConfig(copyjsonPath, _SpreadSheetPath);
             var config = Program.LoadConfig(1);
-            var type = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
-            var data = type.GetData(config.Tables[1], config, type.GetCount(config.Tables[1]), null, null);
-            Assert.IsTrue(data != null);
+            //var type = DataSourceProvider.Provide(config.DataSource.Type, config.DataSource);
+            Assert.IsTrue(config != null);
+        }
+        public void ConvertExcelToJson()
+        {
+            Program.CheckAppConfig();
+            var _SpreadSheetPath = ConfigurationManager.AppSettings["ExcelSheetPath"];
+            var copyjsonPath = ExcelToJson.ToJson(_SpreadSheetPath);
+            
+            Assert.IsTrue(File.Exists(copyjsonPath));
         }
     }
 
