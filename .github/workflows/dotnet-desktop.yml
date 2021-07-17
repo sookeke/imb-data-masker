@@ -139,7 +139,7 @@ jobs:
         Appx_Package_Build_Mode: StoreUpload
         Configuration: ${{ matrix.configuration }}
       
-     # Archive the package
+     # Archive the package for release
     - name: Create archive
       run: |
         Add-Type -Assembly "System.IO.Compression.FileSystem"
