@@ -110,7 +110,7 @@ jobs:
         
     # Build Unit Test Proj 
     - name: Rebuild DataMasker UnitTest Proj
-      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64" 
+      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
       working-directory: .\DataMasker.UnitTest
       env:
         Appx_Bundle: Always
