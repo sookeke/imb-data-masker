@@ -141,8 +141,9 @@ jobs:
       
      # Archive the package
     - name: Create archive
-      run: Add-Type -Assembly "System.IO.Compression.FileSystem"
-      run: [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path .\).Path + "\DataMasker.Main\bin\Release\publish\", (Resolve-Path .\).Path + "\DataMasker.Main\$env:App_Packages_Archive")       
+      run: |
+        Add-Type -Assembly "System.IO.Compression.FileSystem"
+        [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path .\).Path + "\DataMasker.Main\bin\Release\publish\", (Resolve-Path .\).Path + "\DataMasker.Main\$env:App_Packages_Archive")       
     
     - name: Run Unit Test
       run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64
