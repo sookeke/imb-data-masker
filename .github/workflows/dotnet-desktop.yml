@@ -141,9 +141,8 @@ jobs:
       
      # Archive the package
     - name: Create archive
-      run: Compress-Archive -Path DataMasker.Main\bin\Release\publish\* -DestinationPath DataMasker.Main\bin\Release\publish\$env:App_Packages_Archive
-
-        
+      run: Add-Type -Assembly "System.IO.Compression.FileSystem"
+      run: [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path .\).Path + "\DataMasker.Main\bin\Release\publish\", (Resolve-Path .\).Path + "\DataMasker.Main\$env:App_Packages_Archive")       
     
     - name: Run Unit Test
       run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64
@@ -184,6 +183,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}  # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-        asset_path: DataMasker.Main\bin\Release\publish\$env:App_Packages_Archive
+        asset_path: DataMasker.Main\$env:App_Packages_Archive
         asset_name: ${{ env.App_Packages_Archive }}
         asset_content_type: application/zip
