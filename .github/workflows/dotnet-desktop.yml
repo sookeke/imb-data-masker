@@ -170,8 +170,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
       with:
-        tag_name: DataMasker.Main.${{ github.run_number}}.${{ matrix.targetplatform }}
-        release_name: DataMasker.Main${{ github.run_number }}.${{ matrix.targetplatform }}
+        tag_name: DataMasker.Main.${{ github.run_number}}.${{ matrix.targetplatform }}.${{ github.ref}}
+        release_name: DataMasker.Main${{ github.run_number }}.${{ matrix.targetplatform }}.${{ github.ref}}
         draft: false
         prerelease: false
     
