@@ -141,10 +141,10 @@ jobs:
       
      # Archive the package for release
     - name: Create archive
-      run: |
-        Add-Type -Assembly "System.IO.Compression.FileSystem"
-        [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path .\).Path + "\DataMasker.Main\bin\Release\publish\", (Resolve-Path .\).Path + "\DataMasker.Main\$env:App_Packages_Archive")       
-    
+      uses: montudor/action-zip@v1
+      with:
+        arg: zip -qq -r AppPackages.zip .\DataMasker.Main\bin\Release\publish\
+      
     - name: Run Unit Test
       run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64
       working-directory: .\DataMasker.UnitTest
@@ -161,7 +161,7 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: MSIX Package
+        name: DataMasker MSIX Package
         path: DataMasker.Main\bin\Release\publish
         
     # Create the release:  https://github.com/actions/create-release
@@ -184,6 +184,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}  # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-        asset_path: D:\a\imb-data-masker\imb-data-masker\DataMasker.Main\$env:App_Packages_Archive
+        asset_path: AppPackages.zip
         asset_name: ${{ env.App_Packages_Archive }}
         asset_content_type: application/zip
