@@ -141,10 +141,10 @@ jobs:
       
      # Archive the package for release
     - name: Create archive
-      uses: montudor/action-zip@v1
-      with:
-        arg: zip -qq -r AppPackages.zip .\DataMasker.Main\bin\Release\publish\
-      
+      run: |
+        Add-Type -Assembly "System.IO.Compression.FileSystem"
+        [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path .\).Path + "\DataMasker.Main\bin\Release\publish\", (Resolve-Path .\).Path + "\DataMasker.Main\AppPackages.zip")       
+    
     - name: Run Unit Test
       run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64
       working-directory: .\DataMasker.UnitTest
@@ -167,6 +167,7 @@ jobs:
     # Create the release:  https://github.com/actions/create-release
     - name: Create release
       id: create_release
+      working-directory: .\DataMasker.Main
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
