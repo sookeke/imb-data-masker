@@ -1,9 +1,5 @@
-#Depending on the operating system of the host machines(s) that will build or run the containers, the image specified in the FROM statement may need to be changed.
-#For more information, please see https://aka.ms/containercompat
-
-FROM microsoft/dotnet:1.1-runtime-nanoserver
-#ARG source
+FROM mcr.microsoft.com/dotnet/framework/runtime
+ARG source
 WORKDIR /app
-
-COPY \bin\x64\Debug\publish\ .
-ENTRYPOINT ["setup.exe"]
+COPY ${source:-DataMasker.Main/bin/x64/Release} .
+CMD ["DataMasker.Mask.exe"]
