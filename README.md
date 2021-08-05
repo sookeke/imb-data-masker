@@ -1,7 +1,5 @@
 
-# imb-data-masker
-
-  #Overview of Data Masking
+ #Overview of Data Masking
 
 If you've ever needed to pull down databases from a live environment to stage or even dev you'll need to think about masking any personal and business-sensitive information. Enterprises run the risk of breaching sensitive information when sharing data to the public or copying production data into non-production environments for the purposes of application development, testing, or data analysis. This tool was designed to help reduce this risk by irreversibly replacing the original sensitive data with fictitious data so that production data can be shared safely with non-production users.
 
