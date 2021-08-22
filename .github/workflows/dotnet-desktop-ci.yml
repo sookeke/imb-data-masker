@@ -150,7 +150,7 @@ jobs:
         Configuration: ${{ matrix.configuration }}
    
     - name: Run Unit Test
-      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64 /p:UseSharedCompilation=false
+      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64 
       working-directory: .\DataMasker.UnitTest
       env:
         Appx_Bundle: Always
