@@ -49,6 +49,7 @@ jobs:
   build:
 
     strategy:
+      fail-fast: false
       matrix:
         configuration: [Release]
         targetPlatform: [x64]
@@ -114,14 +115,14 @@ jobs:
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
+      run: msbuild $env:Solution_Name /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64 /p:UseSharedCompilation=false
       working-directory: .\DataMasker.Main
       env:
         Configuration: ${{ matrix.configuration }}
         
     # Build Unit Test Proj 
     - name: Rebuild DataMasker UnitTest Proj
-      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
+      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64 /p:UseSharedCompilation=false
       working-directory: .\DataMasker.UnitTest
       env:
         Appx_Bundle: Always
@@ -140,7 +141,7 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:Platform=x64 /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx /t:Publish /p:PublishSingleFile=True /p:SelfContained=True /p:PublishProtocol=FileSystem /p:Configuration=Release /p:Platform=x64 /p:PublishDir=bin\Release\publish\win-x64 /p:RuntimeIdentifier=win-x64 /p:PublishReadyToRun=False /p:PublishTrimmed=False
+      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:Platform=x64 /p:UseSharedCompilation=false /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx /t:Publish /p:PublishSingleFile=True /p:SelfContained=True /p:PublishProtocol=FileSystem /p:Configuration=Release /p:Platform=x64 /p:PublishDir=bin\Release\publish\win-x64 /p:RuntimeIdentifier=win-x64 /p:PublishReadyToRun=False /p:PublishTrimmed=False
       working-directory: .\DataMasker.Main
       env:
         Appx_Bundle: Always
@@ -149,7 +150,7 @@ jobs:
         Configuration: ${{ matrix.configuration }}
    
     - name: Run Unit Test
-      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64
+      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64 /p:UseSharedCompilation=false
       working-directory: .\DataMasker.UnitTest
       env:
         Appx_Bundle: Always
