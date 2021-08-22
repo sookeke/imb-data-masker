@@ -52,9 +52,13 @@ jobs:
       matrix:
         configuration: [Release]
         targetPlatform: [x64]
+        language: [ 'csharp' ]
 
     runs-on: windows-latest  # For a list of available runner types, refer to
-                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    permissions:
+      actions: read
+      contents: read
+      security-events: write                        # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
 
     env:
       Solution_Name: DataMasker.Main.csproj                         # Replace with your solution name, i.e. MyWpfApp.sln.
