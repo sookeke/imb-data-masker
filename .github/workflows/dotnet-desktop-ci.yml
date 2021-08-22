@@ -36,24 +36,30 @@
 # For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
 # refer to https://github.com/microsoft/github-actions-for-desktop-apps
 
-name: .NET Data Masker CD
+name: .NET Data Masker CI
 
 on: 
   push:
-    tags:
-      - '*'
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
 
 jobs:
 
   build:
 
     strategy:
+      fail-fast: false
       matrix:
         configuration: [Release]
         targetPlatform: [x64]
+        language: [ 'csharp' ]
 
     runs-on: windows-latest  # For a list of available runner types, refer to
-                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    permissions:
+      actions: read
+      contents: read
+      security-events: write                        # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
 
     env:
       Solution_Name: DataMasker.Main.csproj                         # Replace with your solution name, i.e. MyWpfApp.sln.
@@ -75,6 +81,11 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
+  
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: ${{ matrix.language }}
         
     - name: Install Nuget
       uses: nuget/setup-nuget@v1
@@ -104,14 +115,14 @@ jobs:
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
+      run: msbuild $env:Solution_Name /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64 /p:UseSharedCompilation=false
       working-directory: .\DataMasker.Main
       env:
         Configuration: ${{ matrix.configuration }}
         
     # Build Unit Test Proj 
     - name: Rebuild DataMasker UnitTest Proj
-      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
+      run: msbuild $env:DataMasker_UnitTest /t:Restore /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64 /p:UseSharedCompilation=false
       working-directory: .\DataMasker.UnitTest
       env:
         Appx_Bundle: Always
@@ -130,22 +141,16 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:Platform=x64 /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx /t:Publish /p:PublishSingleFile=True /p:SelfContained=True /p:PublishProtocol=FileSystem /p:Configuration=Release /p:Platform=x64 /p:PublishDir=bin\Release\publish\win-x64 /p:RuntimeIdentifier=win-x64 /p:PublishReadyToRun=False /p:PublishTrimmed=False
+      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:Platform=x64 /p:UseSharedCompilation=false /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx /t:Publish /p:PublishSingleFile=True /p:SelfContained=True /p:PublishProtocol=FileSystem /p:Configuration=Release /p:Platform=x64 /p:PublishDir=bin\Release\publish\win-x64 /p:RuntimeIdentifier=win-x64 /p:PublishReadyToRun=False /p:PublishTrimmed=False
       working-directory: .\DataMasker.Main
       env:
         Appx_Bundle: Always
         Appx_Bundle_Platforms: x64
         Appx_Package_Build_Mode: StoreUpload
         Configuration: ${{ matrix.configuration }}
-      
-     # Archive the package for release
-    - name: Create archive
-      run: |
-        Add-Type -Assembly "System.IO.Compression.FileSystem"
-        [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path .\).Path + "\DataMasker.Main\bin\Release\publish\", (Resolve-Path .\).Path + "\DataMasker.Main\$env:App_Packages_Archive")       
-    
+   
     - name: Run Unit Test
-      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64
+      run: vstest.console.exe bin\x64\Release\DataMasker.UnitTest.dll /Platform:x64 
       working-directory: .\DataMasker.UnitTest
       env:
         Appx_Bundle: Always
@@ -161,28 +166,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: DataMasker MSIX Package
-        path: DataMasker.Main\bin\Release\publish
+        path: DataMasker.Main\bin\Release\publish 
         
-    # Create the release:  https://github.com/actions/create-release
-    - name: Create release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-      with:
-        tag_name: DataMasker.Main.${{ github.run_number}}.${{ matrix.targetplatform }}.${{ github.ref}}
-        release_name: DataMasker.Main${{ github.run_number }}.${{ matrix.targetplatform }}.${{ github.ref}}
-        draft: false
-        prerelease: false
-    
-        # Upload release asset:   https://github.com/actions/upload-release-asset
-    - name: Update release asset
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}  # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-        asset_path: .\DataMasker.Main\${{ env.App_Packages_Archive }}
-        asset_name: ${{ env.App_Packages_Archive }}
-        asset_content_type: application/zip
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1       

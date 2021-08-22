@@ -1,1 +1,26 @@
+version: '3.4'
 
+services:
+  datamasker:
+    restart: on-failure:1
+    container_name: data-masker
+    image: datamasker:1.0.0.0
+    build:
+      context: .\DataMasker.Main\
+      args:
+        source: DataMasker.Main\bin\x64\Release
+    volumes:
+      - C:\Users\sookeke\DataMasker\DataMasker.Main:C:\app
+    networks:
+      - data-masker
+
+####################### Networks Definition #######################
+networks:
+  data-masker:
+    name: data-masker-net
+    driver: bridge
+
+####################### Volumes Definition #######################
+volumes:
+  logging-data:
+    name: data-masker-data
