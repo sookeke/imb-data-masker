@@ -36,10 +36,45 @@ jobs:
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
         # Learn more:
         # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
+    env:
+      Solution_Name: DataMasker.Main.csproj                         # Replace with your solution name, i.e. MyWpfApp.sln.
+      Test_Project_Path: DataMasker.UnitTest                # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
+      Wap_Project_Directory: DataMasker.Package    # Replace with the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
+      Wap_Project_Path: DataMasker.Main.csproj                   # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
+      DataMasker_Base: DataMasker.sln
+      DataMasker_UnitTest: DataMasker.UnitTest.csproj  
+      App_Packages_Archive: DataMaskerInstaller.zip
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+        
+    - name: Install Nuget
+      uses: nuget/setup-nuget@v1
+      with:
+        nuget-api-key: ${{ secrets.NuGetAPIKey }}
+        nuget-version: '5.x'
+        
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v1.0.2    
+      
+    - name: NuGet Restore DataMasker.Main
+      run: nuget restore $env:Solution_Name -PackagesDirectory Packages
+      working-directory: .\DataMasker.Main
+      
+    - name: NuGet Restore DataMasker Base
+      run: nuget restore $env:DataMasker_Base -PackagesDirectory Packages
+
+    - name: Restore the application
+      run: msbuild $env:Solution_Name /t:Rebuild /p:Configuration=$env:Configuration /p:Platform=x64
+      working-directory: .\DataMasker.Main
+      env:
+        Configuration: ${{ matrix.configuration }}
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
@@ -53,9 +88,9 @@ jobs:
 
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
-      working-directory: .\DataMasker.Main
+   # - name: Autobuild
+     # uses: github/codeql-action/autobuild@v1
+     # working-directory: ./DataMasker.Main
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl
