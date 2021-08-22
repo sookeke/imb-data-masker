@@ -162,14 +162,14 @@ jobs:
      # run: Remove-Item -path $env:Wap_Project_Directory\$env:Signing_Certificate
 
     # Upload the MSIX package: https://github.com/marketplace/actions/upload-artifact
-
-        
-    - name: Perform CodeQL Analysis
-      id: scan
-      uses: github/codeql-action/analyze@v1       
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: DataMasker MSIX Package
+        path: DataMasker.Main\bin\Release\publish      
 
     - name: Upload SARIF file
-      uses: actions/upload-artifact@v2
+      uses: github/codeql-action/upload-sarif@v1
       with:
           # Path to SARIF file relative to the root of the repository
         sarif_file: D:\\a\\imb-data-masker\\results\\csharp.sarif      
