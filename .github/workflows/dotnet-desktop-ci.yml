@@ -76,6 +76,11 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
+  
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: ${{ matrix.language }}
         
     - name: Install Nuget
       uses: nuget/setup-nuget@v1
@@ -156,4 +161,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: DataMasker MSIX Package
-        path: DataMasker.Main\bin\Release\publish          
+        path: DataMasker.Main\bin\Release\publish 
+        
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1        
