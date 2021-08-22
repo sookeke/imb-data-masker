@@ -86,6 +86,7 @@ jobs:
       uses: github/codeql-action/init@v1
       with:
         languages: ${{ matrix.language }}
+        config-file: ./.github/workflows/codeql/codeql-config.yml
         
     - name: Install Nuget
       uses: nuget/setup-nuget@v1
